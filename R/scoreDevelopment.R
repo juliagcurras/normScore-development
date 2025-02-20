@@ -16,7 +16,8 @@ source(file = "supportFunctions.R", encoding = "UTF-8")
 
 # Trial data ####
 ## Load quantification matrix 
-archivo <- "../Datos/trialDatashort.xlsx" ####
+archivo <- "../Data/trialDatashort.xlsx" ####
+archivo <- "../Data/SEProt_11min200ng.xlsx" ####
 intensityMatrix <- as.data.frame(readxl::read_excel(path = archivo, sheet = 1,
                                                     col_names = TRUE))
 intensityMatrix[,-1] <- apply(intensityMatrix[,-1], 2, as.numeric)
@@ -26,7 +27,8 @@ logIntensityMatrix <- as.matrix(log(intensityMatrix, base = 2))
 logIntensityMatrix[is.infinite(logIntensityMatrix)] <- NA
 
 ## Load design matrix ####
-archivoG <- "../Datos/LabelsShort.xlsx"
+archivoG <- "../Data/LabelsShort.xlsx"
+archivoG <- "../Data/SEProt_11min200ng_groups.xlsx"
 dfGrupos <- as.data.frame(readxl::read_excel(path = archivoG, sheet = 1, 
                                                col_names = T))[-3]
 colnames(dfGrupos) <- c("Samples", "Groups")
@@ -45,7 +47,89 @@ mydata <- list(log = logIntensityMatrix,
 
 
 
+
+
+
+
 # This score will be divided in items - one item by each metric/graphic of assessment #
+
+# ITEM 0 - raw intensity ####
+
+## Example & building code ####
+dfSample <- intensityMatrix
+df0 <- intensityMatrix
+
+df <- dfSample
+df <- df0
+df <- as.data.frame(apply(df, 2, sum, na.rm = T))
+colnames(df) <- "Intensity"
+
+max(df$Intensity)/min(df$Intensity)
+sortedVals <- sort(df$Intensity, decreasing = T)
+sortedVals[length(sortedVals)]/sortedVals[1]
+sortedVals[length(sortedVals)-1]/sortedVals[2]
+sortedVals[length(sortedVals)-3]/sortedVals[3]
+sortedVals[length(sortedVals)-4]/sortedVals[4]
+sortedVals[length(sortedVals)-5]/sortedVals[5]
+sortedVals[length(sortedVals)-6]/sortedVals[6]
+
+# Max/min
+mean(sortedVals[length(sortedVals)]/sortedVals[-length(sortedVals)])
+mean(sortedVals[length(sortedVals)-1]/sortedVals[-(length(sortedVals)-1)])
+mean(sortedVals[length(sortedVals)-2]/sortedVals[-(length(sortedVals)-2)])
+
+# Min/max
+median(sortedVals[length(sortedVals)]/sortedVals[-length(sortedVals)])
+median(sortedVals[length(sortedVals)-1]/sortedVals[-(length(sortedVals)-1)])
+median(sortedVals[length(sortedVals)-2]/sortedVals[-((length(sortedVals)-2):length(sortedVals))])
+
+# algorithm
+nSamples <- 3
+if (ncol(df) >= 16){
+  nSamples <- floor(ncol(df)*0.3)
+}
+
+sortedVals <- sort(unname(apply(df, 2, sum, na.rm = T)), decreasing = T)
+
+ratioMinMax <- function(sortedVals, minID = 1){
+  subsItems <- minID-1
+  minID <- length(sortedVals)
+  median(sortedVals[minID-subsItems]/sortedVals[-((minID-subsItems):minID)])
+}
+item0 <- mean(sapply(1:nSamples, ratioMinMax, sortedVals = sortedVals, simplify = T))
+
+
+## Main function ####
+getItem0 <- function(dfRaw){
+  nSamples <- 3
+  if (ncol(dfRaw) >= 16){
+    nSamples <- floor(ncol(dfRaw)*0.3)
+  }
+  
+  sortedVals <- sort(unname(apply(dfRaw, 2, sum, na.rm = T)), decreasing = T)
+  
+  ratioMinMax <- function(sortedVals, minID = 1){
+    subsItems <- minID-1
+    minID <- length(sortedVals)
+    # median(sortedVals[minID-subsItems]/sortedVals[-((minID-subsItems):minID)])
+    median(sortedVals[minID-subsItems]/sortedVals[1:nSamples])
+  }
+  item0 <- 1 - mean(sapply(1:nSamples, ratioMinMax, sortedVals = sortedVals, simplify = T))
+  if (item0 >= 0.5) { # media(ratio intensidades) máis do doble => xa é necesario normalizar => non se corrixe o log
+    item0 <- 1
+  }
+  
+  return(item0)
+}
+getItem0(intensityMatrix)
+
+#
+
+
+
+
+
+
 
 scoreFinal <- list()
 
@@ -122,7 +206,7 @@ rankingDF
 
 # Función ####
 
-normScore <- function(normMatrixList, designMatrix, 
+normScore <- function(normMatrixList, designMatrix, dfRaw, 
                       refGroup = NULL, altGroup = NULL){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
@@ -132,6 +216,9 @@ normScore <- function(normMatrixList, designMatrix,
   
   totalGroups <- levels(as.factor(designMatrix$Groups))
   scoreFinal <- list()
+  
+  # ITEM 0 - correction factor ####
+  item0 <- getItem0(dfRaw)
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 
@@ -197,6 +284,8 @@ normScore <- function(normMatrixList, designMatrix,
   rankingDF <- as.data.frame(apply(scoreDF, 2, dplyr::dense_rank, simplify = T))
   rownames(rankingDF) <- rownames(scoreDF)
   rankingDF$Total <- rowSums(rankingDF)
+  rankingDF[which(rownames(rankingDF) == "log"), "Total"] <- rankingDF[which(rownames(rankingDF) == "log"), "Total"]*item0
+  
   ## Sort ####
   rankingDF <- rankingDF %>% dplyr::arrange(Total)
   finalRank <- stats::setNames(rankingDF$Total, rownames(rankingDF))
@@ -207,10 +296,16 @@ normScore <- function(normMatrixList, designMatrix,
               detailScore = scoreDF))
 }
 
-resultado <- normScore(normMatrixList = mydata, designMatrix = dfGrupos)
+getItem0(dfRaw = intensityMatrix)
+resultado <- normScore(normMatrixList = mydata, 
+                       designMatrix = dfGrupos, 
+                       dfRaw = intensityMatrix)
 resultado$detailScore
 resultado$detailRaking
 resultado$finalRanking
+
+
+
 
 
 # Trying other datasets ####

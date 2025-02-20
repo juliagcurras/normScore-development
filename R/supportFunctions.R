@@ -236,6 +236,30 @@ doNormalization <- function(listaNorm, rawData, logData){
 
 # Support funcions for getting score #### 
 
+getItem0 <- function(dfRaw){
+  nSamples <- 3
+  if (ncol(dfRaw) >= 16){
+    nSamples <- floor(ncol(dfRaw)*0.3)
+  }
+  
+  sortedVals <- sort(unname(apply(dfRaw, 2, sum, na.rm = T)), decreasing = T)
+  
+  ratioMinMax <- function(sortedVals, minID = 1, nSamples = 3){
+    subsItems <- minID-1
+    minID <- length(sortedVals)
+    # median(sortedVals[minID-subsItems]/sortedVals[-((minID-subsItems):minID)])
+    median(sortedVals[minID-subsItems]/sortedVals[1:nSamples])
+  }
+  item0 <- 1 - mean(sapply(1:nSamples, ratioMinMax, sortedVals = sortedVals,
+                           nSamples = nSamples, simplify = T))
+  if (item0 >= 0.5) { # media(ratio intensidades) máis do doble => xa é necesario normalizar => non se corrixe o log
+    item0 <- 1
+  }
+  
+  return(item0)
+}
+
+
 diffAreas <- function(intPred, coefPred, minRange, maxRange, intExpected = 0){
   
   # Moving regression lines to reach B=0, a=0
@@ -411,7 +435,7 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 
 # SCORE: main function #### 
 
-normScore <- function(normMatrixList, designMatrix, 
+normScore <- function(normMatrixList, designMatrix, dfRaw, 
                       refGroup = NULL, altGroup = NULL){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
@@ -421,6 +445,9 @@ normScore <- function(normMatrixList, designMatrix,
   
   totalGroups <- levels(as.factor(designMatrix$Groups))
   scoreFinal <- list()
+  
+  # ITEM 0 - correction factor ####
+  item0 <- getItem0(dfRaw)
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 
@@ -471,7 +498,7 @@ normScore <- function(normMatrixList, designMatrix,
   scoreFinal[["RLEplot"]] <- item5
   
   
-  # ITEM 6 - total intensity: MSE median sample (ref = 0) ####
+  # ITEM 6 - total intensity: MSE median sample (ref = global median) ####
   item6 <- sapply(normMatrixList, tiMSE)
   scoreFinal[["totalIntensity"]] <- item6
   
@@ -486,16 +513,17 @@ normScore <- function(normMatrixList, designMatrix,
   rankingDF <- as.data.frame(apply(scoreDF, 2, dplyr::dense_rank, simplify = T))
   rownames(rankingDF) <- rownames(scoreDF)
   rankingDF$Total <- rowSums(rankingDF)
+  rankingDF[which(rownames(rankingDF) == "Log"), "Total"] <- rankingDF[which(rownames(rankingDF) == "Log"), "Total"]*item0
+  
   ## Sort ####
   rankingDF <- rankingDF %>% dplyr::arrange(Total)
   finalRank <- stats::setNames(rankingDF$Total, rownames(rankingDF))
   
   
   return(list(finalRanking = finalRank, 
-              detailRaking = rankingDF, 
+              detailRanking = rankingDF, 
               detailScore = scoreDF))
 }
-
 
 # resultado <- normScore(normMatrixList = mydata, designMatrix = dfGrupos)
 # Example in scoreDevelopment
