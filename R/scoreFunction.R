@@ -64,7 +64,6 @@ mse <- function(actual, predicted){
   
 }
 
-
 rleMSE <- function(dfDatos) {
   medianaProt <- apply(dfDatos, 1, stats::median, na.rm = T)
   
@@ -73,6 +72,34 @@ rleMSE <- function(dfDatos) {
   medianVector <- apply(rleData, 2, median, na.rm = T)
   
   return(mse(actual = 0, predicted = medianVector))
+}
+
+rleKS <- function(dfDatos) {
+  medianaProt <- apply(dfDatos, 1, stats::median, na.rm = T)
+  
+  rleData <- as.data.frame(log(t(t(dfDatos) / medianaProt), base = 2))
+  
+  ksStatistic <- apply(rleData, 2, function(i) ks.test(x = i, y = "pnorm", mean = 0, sd = 1)$statistic)
+  
+  return(median(ksStatistic))
+}
+
+# MAPE removing the logarithm
+mape <- function(actual, predicted, prop = F){
+  metric <- mean(abs((actual - predicted)/actual))
+  metric <- ifelse(!prop, metric*100, metric)
+  return(metric)
+}
+
+rleMAPE <- function(dfDatos) {
+  medianaProt <- apply(dfDatos, 1, stats::median, na.rm = T)
+  
+  ## non log data
+  rleData <- as.data.frame(t(t(dfDatos) / medianaProt))
+  
+  medianVector <- apply(rleData, 2, median, na.rm = T)
+  
+  return(mape(actual = 1, predicted = medianVector, prop = F))
 }
 
 
@@ -260,8 +287,9 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreFinal[["MeanSDplot"]] <- item4
   
   
-  # ITEM 5 - RLE: MSE median sample (ref = 0) ####
-  item5 <- sapply(normMatrixList, rleMSE)
+  # ITEM 5 - RLE: MAPE median sample (ref = 1) ####
+  item5 <- sapply(normMatrixList, rleMAPE)
+  # item5 <- sapply(normMatrixList, rleMSE)
   scoreFinal[["RLEplot"]] <- item5
   
   

@@ -103,8 +103,44 @@ item4 <- sapply(mydata, meanSDdiffArea)
 scoreFinal[["MeanSDplot"]] <- item4
 
 
-# ITEM 5 - RLE: MSE median sample (ref = 0) ####
-item5 <- sapply(mydata, rleMSE)
+# ITEM 5 - RLE:  ####
+
+# adjustment to distribution N(0,1) but SD not equal to 1 
+rleKS <- function(dfDatos) {
+  medianaProt <- apply(dfDatos, 1, stats::median, na.rm = T)
+  
+  rleData <- as.data.frame(log(t(t(dfDatos) / medianaProt), base = 2))
+  
+  ksStatistic <- apply(rleData, 2, function(i) ks.test(x = i, y = "pnorm", mean = 0, sd = 1)$statistic)
+  
+  return(median(ksStatistic))
+}
+item5 <- sapply(mydata, rleMAPE)
+
+
+# MAPE removing the logarithm
+mape <- function(actual, predicted, prop = F){
+  metric <- mean(abs((actual - predicted)/actual))
+  metric <- ifelse(!prop, metric*100, metric)
+  return(metric)
+}
+
+rleMAPE <- function(dfDatos) {
+  # dfDatos <- mydata$Mean
+  medianaProt <- apply(dfDatos, 1, stats::median, na.rm = T)
+  
+  ## log data
+  # rleData <- as.data.frame(log(t(t(dfDatos) / medianaProt), base = 2))
+  
+  ## non log data
+  rleData <- as.data.frame(t(t(dfDatos) / medianaProt))
+  
+  medianVector <- apply(rleData, 2, median, na.rm = T)
+  
+  return(mape(actual = 1, predicted = medianVector, prop = T))
+}
+
+item5 <- sapply(mydata, rleMAPE)
 scoreFinal[["RLEplot"]] <- item5
 
 

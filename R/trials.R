@@ -36,7 +36,7 @@ colnames(dfGrupos) <- c("Samples", "Groups")
 grupos <- levels(as.factor(dfGrupos$Groups))
 
 ## Normalization ####
-mydata <- list(log = logIntensityMatrix,
+mydata <- list(Log = logIntensityMatrix,
                Mean = meanNorm(rawMatrix = intensityMatrix), 
                Median = medianNorm(rawMatrix = intensityMatrix), 
                GI = GINorm(rawMatrix = intensityMatrix),
