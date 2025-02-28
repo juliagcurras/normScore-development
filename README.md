@@ -18,7 +18,7 @@ The normalization with the lowest scores will be the one with the best performan
 Main features:
 
 * The input for item 0 estimation is the raw data matrix, without normalization or transformation. 
-The output is a correction factor with a value between 1 and 0. 
+The output is a correction factor with a value from 0 to infinite. 
 
 * For each data matrix normalized with a different method, items 1 to 6 are obtained. 
 The input is the normalized data matrix, but sometimes group infomation is also required. 
@@ -38,50 +38,8 @@ In the following sections, the estimation of each item is explaining.
 ## Item 0 - correction factor
 
 To assess the magnitude of the systematic bias, total intensity (sum of protein 
-intensities) is estimated for each sample. Then, the maximum values are
-compared with the minimal ones. An strong difference between the previous values 
-indicates the presence of important variability in the data, that has to be removed 
-using a normalization method. 
-
-
-In this line, the estimation of the correction factor is based on the magnitude 
-of the systematic bias present in the data. Steps:
-
-1. Using the sum of total intensity in each sample, the ratio between the lowest 
-value and each of the rest intensities is calculated, getting a group of ratios.
-
-2. Then, the median value of the previous ratios is estimated.
-
-3. Step 1 and 2 are repeated for: A) the 3 lowest values of total intensity when 
-the number of samples < 16; B) the 30% of minimal values when the number of samples
-is equal to or higher than 16. 
-
-4. The mean of the ratios generated in the previous steps (one ratio for each 
-minimum value of total intensity considered in step 3) is calculated. 
-
-5. The correction factor is obtained as 1 - mean from step 4. 
-
-
-The score for the non-normalized data (only log transformed) is corrected using 
-this factor, so:
-
-* If the final ratio between minimal and other values is close to 1, the correction
-factor will be close to 0, so after the correction, the score for non-normalized
-data will decrease, climbing on the ranking positions. A ratio close to 1 means that
-there is no big differences between total intensities, which reflecs a 
-lack of systematic biased. 
-
-* If the final ratio is close to 0, the correction factor will be close to 1, so
-after the correction the score for non-normalized data will remain practically 
-the same. A final ratio similar to 0 reflects an important systematic bias in the 
-data, so applying a normalization method to remove that variations is necessary. 
-
-A final ratio is 0.5 or lower means that minimum intentisities are half or 
-more than half of the maximum intensities. In this situation, the corrected factor 
-become 1 automatically, because a normalization is needed and there is no reason
-to decrease the score of only log-transformed data. 
-
-
+intensities) is estimated for each sample. Then, the coefficiente of variance is 
+estimated for this data. This coefficiente is used as the correction factor. 
 
 ## Item 1
 
@@ -125,13 +83,14 @@ for each sample of 0. Why? Because the correspondent value without transformatio
 is 1 which means that ratio protein quantity = average quantity across samples. 
 
 Thus, we expected a median value in each of the samples for this log-transformed 
-ratio of 0. So we estimate the mean squared error (MSE) between observed and expected
-medians, and the normalization we the lowest MSE will be the best one. 
+ratio of 0. So we estimate the mean absolute percentage error (MAPE) between observed 
+and expected medians of non log-transformed data, and the normalization with the 
+lowest MAPE will be the best one. 
 
 ## Item 6
 
 The distribution of the protein quantities across samples should be aligned in 
-the perfect normalization. Thus, the following mse are computed:
+the perfect normalization. Thus, the following MAPE are computed:
 
 * Median of protein quantity in each samples (observed) vs global median (expected)
 
