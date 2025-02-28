@@ -103,15 +103,18 @@ rleMAPE <- function(dfDatos) {
 }
 
 
-tiMSE <- function(dfDatos) {
+tiMAPE <- function(dfDatos) {
   allMetrics <- apply(dfDatos, 2, stats::quantile, na.rm = T, simplify = F)
   q1 <- sapply(allMetrics, "[[", 2)
   q3 <- sapply(allMetrics, "[[", 4)
   medianVector <- sapply(allMetrics, "[[", 3)
   finalMetric <- 
-    mse(actual = median(medianVector), predicted = medianVector)/median(medianVector) + 
-    mse(actual = median(q1), predicted = q1)/median(q1) +
-    mse(actual = median(q3), predicted = q3)/median(q3)
+    # mse(actual = median(medianVector), predicted = medianVector)/median(medianVector) + 
+    mape(actual = median(medianVector), predicted = medianVector)/median(medianVector) + 
+    # mse(actual = median(q1), predicted = q1)/median(q1) +
+    mape(actual = median(q1), predicted = q1)/median(q1) +
+    # mse(actual = median(q3), predicted = q3)/median(q3)
+    mape(actual = median(q3), predicted = q3)/median(q3)
   
   return(finalMetric)
 }
@@ -294,7 +297,7 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   
   
   # ITEM 6 - total intensity: MSE median sample (ref = global median) ####
-  item6 <- sapply(normMatrixList, tiMSE)
+  item6 <- sapply(normMatrixList, tiMAPE)
   scoreFinal[["totalIntensity"]] <- item6
   
   
