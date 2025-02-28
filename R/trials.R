@@ -1,17 +1,23 @@
 
 # Julia G Currás - 2025/02/20
 
-
 # Just another script to test the normScore 
 
-setwd("C:/Users/julia/Documents/GitHub/normScore/R")
 
+
+# Set up ####
+rm(list=ls())
+graphics.off()
+setwd("C:/Users/julia/Documents/GitHub/normScore/R")
 library(dplyr)
 source(file = "supportFunctions.R", encoding = "UTF-8")
+source(file = "scoreFunction.R", encoding = "UTF-8")
+
 
 
 
 # Example data ####
+
 ## Load quantification matrix ####
 archivo <- "../Data/trialDatashort.xlsx" 
 intensityMatrix <- as.data.frame(readxl::read_excel(path = archivo, sheet = 1,
@@ -51,7 +57,7 @@ resultado$finalRanking
 
 
 
-# Benchmarking data ####
+# Benchmarking data DIA ####
 ruta <- "H:/Mi unidad/Doctorado/SEProt_ProteoRed/Data/NewData/DIA/"
 designMatrix <- readRDS(file = paste0(ruta, "3_desingMatrix.rds"))
 datosNorm <- readRDS(file = paste0(ruta, "3_normData.rds"))
@@ -59,34 +65,69 @@ rawMatrix <- readRDS(file = paste0(ruta, "3_rawData.rds"))
 refGroup <- "A"
 altGroup <- "B"
 
+## One dataset ####
 resultado <- normScore(normMatrixList = datosNorm$`88min_200ng`,
                        designMatrix = designMatrix,
                        dfRaw = rawMatrix$`88min_200ng`,
                        refGroup = refGroup, 
                        altGroup = altGroup)
-getItem0(rawMatrix$`88min_200ng`)
 
 resultado$finalRanking
 
-
+## All datasets ####
 totalResults <- sapply(names(datosNorm), function (i) normScore( 
-                       designMatrix = designMatrix, 
-                       normMatrixList = datosNorm[[i]], 
-                       dfRaw = rawMatrix[[i]],
-                       refGroup = refGroup, 
-                       altGroup = altGroup), simplify = F)
+  designMatrix = designMatrix, 
+  normMatrixList = datosNorm[[i]], 
+  dfRaw = rawMatrix[[i]],
+  refGroup = refGroup, 
+  altGroup = altGroup), simplify = F)
 
-sapply(totalResults, "[[", 1, simplify = F)
-lapply(rawMatrix, getItem0)
-
-
-totalResults$`44min_200ng`$detailRaking %>% View
-totalResults$`44min_200ng`$detailScore %>% View
 scoreAllDatasets <- sapply(totalResults, "[[", 1, simplify = F)
 scoreAllDatasets
 View(scoreAllDatasets)
+
+totalResults$`44min_200ng`$detailRaking %>% View
+totalResults$`44min_200ng`$detailScore %>% View
+
+rankingAllDatasets <- sapply(scoreAllDatasets, function(i)  names(i))
+View(rankingAllDatasets)
+
+
+
+
+# Benchmarking data DDA ####
+ruta <- "H:/Mi unidad/Doctorado/SEProt_ProteoRed/Data/NewData/DDA/"
+designMatrix <- readRDS(file = paste0(ruta, "3_desingMatrix.rds"))
+datosNorm <- readRDS(file = paste0(ruta, "3_normData.rds"))
+rawMatrix <- readRDS(file = paste0(ruta, "3_rawData.rds"))
+refGroup <- "A"
+altGroup <- "B"
+
+## One dataset ####
+resultado <- normScore(normMatrixList = datosNorm$`88min 200ng`,
+                       designMatrix = designMatrix,
+                       dfRaw = rawMatrix$`88min 200ng`,
+                       refGroup = refGroup, 
+                       altGroup = altGroup)
+resultado$finalRanking
+
+## All datasets ####
+totalResults <- sapply(names(datosNorm), function (i) normScore( 
+  designMatrix = designMatrix, 
+  normMatrixList = datosNorm[[i]], 
+  dfRaw = rawMatrix[[i]],
+  refGroup = refGroup, 
+  altGroup = altGroup), simplify = F)
+
+scoreAllDatasets <- sapply(totalResults, "[[", 1, simplify = F)
+scoreAllDatasets
+View(scoreAllDatasets)
+
 rankingAllDataseta <- sapply(scoreAllDatasets, function(i)  names(i))
 View(rankingAllDataseta)
+
+totalResults$`44min 200ng`$detailRaking %>% View
+totalResults$`44min 200ng`$detailScore %>% View
 
 
 
