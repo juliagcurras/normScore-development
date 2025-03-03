@@ -51,7 +51,7 @@ resultado <- normScore(normMatrixList = mydata,
                        designMatrix = dfGrupos, 
                        dfRaw = intensityMatrix)
 
-resultado$detailRaking
+resultado$detailRanking
 resultado$detailScore
 resultado$finalRanking
 
@@ -86,7 +86,7 @@ scoreAllDatasets <- sapply(totalResults, "[[", 1, simplify = F)
 scoreAllDatasets
 View(scoreAllDatasets)
 
-totalResults$`44min_200ng`$detailRaking %>% View
+totalResults$`44min_200ng`$detailRanking %>% View
 totalResults$`44min_200ng`$detailScore %>% View
 
 rankingAllDatasets <- sapply(scoreAllDatasets, function(i)  names(i))

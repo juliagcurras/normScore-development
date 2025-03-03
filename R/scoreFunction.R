@@ -307,19 +307,23 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF <- dplyr::bind_cols(scoreFinal)
   scoreDF <- as.data.frame(scoreDF)
   rownames(scoreDF) <- names(scoreFinal[[1]])
+  
+  ## Scale ####
+  scoreDF_norm <- apply(scoreDF, 2, function(col) (col - min(col)) / (max(col) - min(col)))
+  scoreDF_norm <- as.data.frame(scoreDF_norm)
+  
   ## Rank ####
-  rankingDF <- as.data.frame(apply(scoreDF, 2, dplyr::dense_rank, simplify = T))
-  rownames(rankingDF) <- rownames(scoreDF)
-  rankingDF$Total <- rowSums(rankingDF)
-  rankingDF[which(rownames(rankingDF) == "Log"), "Total"] <- rankingDF[which(rownames(rankingDF) == "Log"), "Total"]*item0
+  rownames(scoreDF_norm) <- rownames(scoreDF_norm)
+  scoreDF_norm$Total <- rowSums(scoreDF_norm)
+  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
   
   ## Sort ####
-  rankingDF <- rankingDF %>% dplyr::arrange(Total)
-  finalRank <- stats::setNames(rankingDF$Total, rownames(rankingDF))
+  scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
+  finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
   
   
   return(list(finalRanking = finalRank, 
-              detailRaking = rankingDF, 
+              detailRanking = scoreDF_norm, 
               detailScore = scoreDF))
 }
 

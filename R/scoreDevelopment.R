@@ -11,13 +11,14 @@
 setwd("C:/Users/julia/Documents/GitHub/normScore/R")
 library(dplyr)
 source(file = "supportFunctions.R", encoding = "UTF-8")
+source(file = "scoreFunction.R", encoding = "UTF-8")
 
 
 #...........................................................................####
 # Trial data ####
 ## Load quantification matrix 
 archivo <- "../Data/trialDatashort.xlsx" ####
-archivo <- "../Data/SEProt_11min200ng.xlsx" ####
+# archivo <- "../Data/SEProt_11min200ng.xlsx" ####
 intensityMatrix <- as.data.frame(readxl::read_excel(path = archivo, sheet = 1,
                                                     col_names = TRUE))
 intensityMatrix[,-1] <- apply(intensityMatrix[,-1], 2, as.numeric)
@@ -28,7 +29,7 @@ logIntensityMatrix[is.infinite(logIntensityMatrix)] <- NA
 
 ## Load design matrix ####
 archivoG <- "../Data/LabelsShort.xlsx"
-archivoG <- "../Data/SEProt_11min200ng_groups.xlsx"
+# archivoG <- "../Data/SEProt_11min200ng_groups.xlsx"
 dfGrupos <- as.data.frame(readxl::read_excel(path = archivoG, sheet = 1, 
                                                col_names = T))[-3]
 colnames(dfGrupos) <- c("Samples", "Groups")
@@ -145,7 +146,7 @@ scoreFinal[["RLEplot"]] <- item5
 
 
 # ITEM 6 - total intensity: MSE median sample (ref = 0) ####
-item6 <- sapply(mydata, tiMSE)
+item6 <- sapply(mydata, tiMAPE)
 scoreFinal[["totalIntensity"]] <- item6
 
 
@@ -156,14 +157,25 @@ scoreDF <- dplyr::bind_cols(scoreFinal)
 scoreDF <- as.data.frame(scoreDF)
 rownames(scoreDF) <- names(scoreFinal[[1]])
 
+## Scale ####
+# media <- mean(scoreDF$PCV)
+# desEst <- sd(scoreDF$PCV)
+# (scoreDF$PCV - media)/desEst
+# (scoreDF$PCV - min(scoreDF$PCV)) / (max(scoreDF$PCV) - min(scoreDF$PCV))
+
+scoreDF_norm <- apply(scoreDF, 2, function(col) (col - min(col)) / (max(col) - min(col)))
+
+scoreDF_norm <- as.data.frame(scoreDF_norm)
+
+
 ## Rank ####
-rankingDF <- as.data.frame(apply(scoreDF, 2, dplyr::dense_rank, simplify = T))
-rownames(rankingDF) <- rownames(scoreDF)
-rankingDF$Total <- rowSums(rankingDF)
+rownames(scoreDF_norm) <- rownames(scoreDF_norm)
+scoreDF_norm$Total <- rowSums(scoreDF_norm)
+scoreDF_norm
 
 ## Sort ####
-rankingDF <- rankingDF %>% dplyr::arrange(Total)
-rankingDF
+scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
+scoreDF_norm
 
 
 
@@ -179,7 +191,7 @@ resultado <- normScore(normMatrixList = mydata,
                        designMatrix = dfGrupos, 
                        dfRaw = intensityMatrix)
 resultado$detailScore
-resultado$detailRaking
+resultado$detailRanking
 resultado$finalRanking
 
 
