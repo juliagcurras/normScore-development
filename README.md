@@ -21,16 +21,18 @@ Main features:
 The output is a correction factor with a value from 0 to infinite. 
 
 * For each data matrix normalized with a different method, items 1 to 6 are obtained. 
-The input is the normalized data matrix, but sometimes group infomation is also required. 
+The input is the normalized data matrix, but sometimes group information is also required. 
 The output is a different value for each item. 
 
-* Once an item is estimated, the different normalizations are ranked based on the 
-item values. The highest values corresponds to the poorest performance. 
+* Once an item is estimated, the different normalizations are normalized using the
+min - max normalization, so in each column values range from 0 to 1. 
 
-* Finally, the sum of ranking positions for each normalization is computed. A correction
-factor for taking into account the normalization requirement is applied to the 
-logarithm method (non-normalised data). Then, the normalization with the lowest 
-score is selected as the best one. 
+* Finally, the sum of scaled values for each normalization is computed. The highest 
+values corresponds to the poorest performance. A correction factor for taking into
+account the normalization requirement is applied to the logarithm method 
+(non-normalised data). 
+
+The normalization with the lowest score is selected as the best one. 
 
 In the following sections, the estimation of each item is explaining. 
 
