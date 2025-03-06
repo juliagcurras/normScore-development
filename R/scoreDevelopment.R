@@ -57,8 +57,8 @@ scoreFinal <- list()
 
 total_intensities <- colSums(intensityMatrix, na.rm = T)
 cv(total_intensities, proportion = T, na.rm = T)
-cv <- sd(total_intensities) / mean(total_intensities)
-cv
+item0 <- sd(total_intensities) / mean(total_intensities)
+item0
 
 
 # ITEM 1 - PVC ####
@@ -169,13 +169,48 @@ scoreDF_norm <- as.data.frame(scoreDF_norm)
 
 
 ## Rank ####
-rownames(scoreDF_norm) <- rownames(scoreDF_norm)
+rownames(scoreDF_norm) <- rownames(scoreDF)
+scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+scores_matrix <- t(scoreDF_norm)
 scoreDF_norm$Total <- rowSums(scoreDF_norm)
+# scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
+
 scoreDF_norm
 
 ## Sort ####
 scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
 scoreDF_norm
+
+
+# CI bootstrap ####
+
+library(boot)
+
+# scores_matrix <- t(scoreDF_norm)
+
+# Computing total score for each normalization after resampling proteins (rows)
+bootstrap_score_rows <- function(data, indices) {
+  resampled_matrix <- data[indices, , drop = FALSE]
+  total_scores <- colSums(resampled_matrix)
+  return(total_scores)  # One score per normalization
+}
+
+# Bootstrap
+n_boot <- 1000
+boot_results <- boot(data = scores_matrix,              # data
+                     statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
+                     R = n_boot)                        # number of resamples  
+
+# Output mean scores and confidence intervals
+bootstrap_means <- colMeans(boot_results$t)
+
+score_bootstrap <- as.data.frame(t(sapply(1:ncol(scores_matrix), function(i){
+  ci <- boot.ci(boot_results, type = "perc", index = i)
+  return(c(colnames(scores_matrix)[i], bootstrap_means[i], 
+           ci$percent[4], ci$percent[5]))
+}, simplify = T)))
+
+colnames(score_bootstrap) <- c("Normalization", "Mean Total Score", "LL95%", "UL95%")
 
 
 
@@ -193,6 +228,8 @@ resultado <- normScore(normMatrixList = mydata,
 resultado$detailScore
 resultado$detailRanking
 resultado$finalRanking
+resultado$bootstrapScore
+resultado$graphic
 
 
 

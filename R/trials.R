@@ -54,6 +54,8 @@ resultado <- normScore(normMatrixList = mydata,
 resultado$detailRanking
 resultado$detailScore
 resultado$finalRanking
+resultado$bootstrapScore
+resultado$graphic
 
 
 
@@ -73,6 +75,7 @@ resultado <- normScore(normMatrixList = datosNorm$`88min_200ng`,
                        altGroup = altGroup)
 
 resultado$finalRanking
+resultado$graphic
 
 ## All datasets ####
 totalResults <- sapply(names(datosNorm), function (i) normScore( 
@@ -93,6 +96,12 @@ rankingAllDatasets <- sapply(scoreAllDatasets, function(i)  names(i))
 View(rankingAllDatasets)
 
 
+totalResults$`44min_150ng`$graphic
+totalResults$`44min_150ng`$bootstrapScore
+totalResults$`44min_200ng`$graphic
+totalResults$`44min_200ng`$bootstrapScore
+
+
 
 
 # Benchmarking data DDA ####
@@ -110,6 +119,7 @@ resultado <- normScore(normMatrixList = datosNorm$`88min 200ng`,
                        refGroup = refGroup, 
                        altGroup = altGroup)
 resultado$finalRanking
+resultado$graphic
 
 ## All datasets ####
 totalResults <- sapply(names(datosNorm), function (i) normScore( 
@@ -129,6 +139,19 @@ View(rankingAllDataseta)
 totalResults$`44min 200ng`$detailRaking %>% View
 totalResults$`44min 200ng`$detailScore %>% View
 
+totalResults$`88min 200ng`$graphic
+totalResults$`88min 200ng`$bootstrapScore
+
+totalResults$`11min 100ng`$graphic # Score: MAD / Accuracy = MAD / MAPE = MAD
+totalResults$`11min 150ng`$graphic # Score: Log / Accuracy = Log / MAPE = MAD
+totalResults$`22min 100ng`$graphic # Score: Log / Accuracy = MAD / MAPE = MAD
+totalResults$`22min 150ng`$graphic # Score: Log / Accuracy = Log / MAPE = MAD
+totalResults$`22min 200ng`$graphic # Score: Log / Accuracy = MAD / MAPE = VSN
+totalResults$`44min 100ng`$graphic # Score: Log / Accuracy = MAD (log worst) / MAPE = MAD
+totalResults$`44min 150ng`$graphic # Score: Log / Accuracy = Median (log worst) / MAPE = VSN
+totalResults$`44min 200ng`$graphic # Score: Log / Accuracy = MAD (log worst) / MAPE = VSN
+totalResults$`88min 100ng`$graphic # Score: Log / Accuracy = MAD (log worst) / MAPE = MAD
+totalResults$`88min 200ng`$graphic # Score: Log / Accuracy = MAD (log worst) / MAPE = VSN
 
 
 

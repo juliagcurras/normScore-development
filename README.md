@@ -24,13 +24,18 @@ The output is a correction factor with a value from 0 to infinite.
 The input is the normalized data matrix, but sometimes group information is also required. 
 The output is a different value for each item. 
 
-* Once an item is estimated, the different normalizations are normalized using the
-min - max normalization, so in each column values range from 0 to 1. 
+* Once estimated for all normalization, the six items are scaled to 0-1 using the
+min - max normalization, so in each column values will range from 0 to 1. 
 
-* Finally, the sum of scaled values for each normalization is computed. The highest 
+* The sum of scaled values for each normalization is computed. The highest 
 values corresponds to the poorest performance. A correction factor for taking into
 account the normalization requirement is applied to the logarithm method 
 (non-normalised data). 
+
+* Finally, a 95% cofident interval is estimated for each score using a bootstrap
+resample strategy (number of resampling = 1000) and a forest plot is created using
+the scores and their interval. 
+
 
 The normalization with the lowest score is selected as the best one. 
 

@@ -7,10 +7,11 @@ library(tidyr)
 library(stats)
 library(MASS)
 
-options(repos = BiocManager::repositories())
+# options(repos = BiocManager::repositories())
 # library(MSnSet.utils)
 library(vsn)
 library(preprocessCore)
+library(boot)
 
 
 #...........................................................................####
@@ -313,17 +314,61 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF_norm <- as.data.frame(scoreDF_norm)
   
   ## Rank ####
-  rownames(scoreDF_norm) <- rownames(scoreDF_norm)
+  rownames(scoreDF_norm) <- rownames(scoreDF)
+  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+  scores_matrix <- t(scoreDF_norm)
   scoreDF_norm$Total <- rowSums(scoreDF_norm)
-  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
+  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
   
   ## Sort ####
   scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
   finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
   
   
+  # CI bootstrap ####
+
+  # Computing total score for each normalization after resampling proteins (rows)
+  bootstrap_score_rows <- function(data, indices) {
+    resampled_matrix <- data[indices, , drop = FALSE]
+    total_scores <- colSums(resampled_matrix)
+    return(total_scores)  # One score per normalization
+  }
+  
+  # Bootstrap
+  # n_boot <- 1000
+  boot_results <- boot(data = scores_matrix,              # data
+                       statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
+                       R = 1000)                        # number of resamples  
+  
+  # Output mean scores and confidence intervals
+  bootstrap_means <- colMeans(boot_results$t)
+  
+  score_bootstrap <- as.data.frame(t(sapply(1:ncol(scores_matrix), function(i){
+    ci <- boot.ci(boot_results, type = "perc", index = i)
+    return(c(colnames(scores_matrix)[i], bootstrap_means[i], 
+             ci$percent[4], ci$percent[5]))
+  }, simplify = T)))
+  
+  colnames(score_bootstrap) <- c("Normalization", "Mean Total Score", "LL95%", "UL95%")
+  score_bootstrap <- score_bootstrap %>%
+    dplyr::arrange(`Mean Total Score`)
+  
+  
+  
+  # Gráfico ####
+  
+  p1 <- Biostatech::plotForest(etiquetas = score_bootstrap$Normalization, 
+                         estPunt = score_bootstrap$`Mean Total Score`, 
+                          LI = score_bootstrap$`LL95%`, 
+                          LS = score_bootstrap$`UL95%`, 
+                         tituloX = "normScore with bootstrap interval")$grafico
+  
+  
+  # Return ####
   return(list(finalRanking = finalRank, 
               detailRanking = scoreDF_norm, 
-              detailScore = scoreDF))
+              detailScore = scoreDF, 
+              bootstrapScore = score_bootstrap, 
+              graphic = p1))
 }
 
