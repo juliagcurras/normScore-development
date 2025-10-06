@@ -27,36 +27,36 @@ cv <- function(x, proportion = T, na.rm = TRUE) {
 
 diffAreas <- function(intPred, coefPred, minRange, maxRange, intExpected = 0){
   
-  # Moving regression lines to reach B=0, a=0
-  intPred <- intPred - intExpected
+  # # Moving regression lines to reach B=0, a=0
+  # intPred <- intPred - intExpected
+  # 
+  # if (coefPred < 0){
+  #   a = 1
+  #   b = -1
+  # } else if (coefPred > 0){
+  #   a = -1
+  #   b = 1
+  # }
+  # 
+  # # Cutpoint regression line with expected line
+  # cpX <- (-intPred)/coefPred
+  # cpY <- 0
+  # 
+  # # Is cutpoint located inside the range?
+  # if (all(cpX >= minRange, cpX <= maxRange)){
+  #   area1 <- coefPred*a*(((minRange + (intPred/coefPred))^2)/2 - ((cpX + (intPred/coefPred))^2)/2)
+  #   area2 <- coefPred*b*(((cpX + (intPred/coefPred))^2)/2 - ((maxRange + (intPred/coefPred))^2)/2)
+  #   areaMetric <- abs(area1+area2)
+  # } else if (any(cpX < minRange, cpX > maxRange)){
+  #   areaMetric <- abs(coefPred*(((maxRange + (intPred/coefPred))^2)/2 - ((minRange + (intPred/coefPred))^2)/2))
+  # }
+  # 
+  # areaMetric <- areaMetric/(maxRange-minRange)
+  # return(areaMetric)
   
-  if (coefPred < 0){
-    a = 1
-    b = -1
-  } else if (coefPred > 0){
-    a = -1
-    b = 1
-  }
-  
-  # Cutpoint regression line with expected line
-  cpX <- (-intPred)/coefPred
-  cpY <- 0
-  
-  # Is cutpoint located inside the range?
-  if (all(cpX >= minRange, cpX <= maxRange)){
-    area1 <- coefPred*a*(((minRange + (intPred/coefPred))^2)/2 - ((cpX + (intPred/coefPred))^2)/2)
-    area2 <- coefPred*b*(((cpX + (intPred/coefPred))^2)/2 - ((maxRange + (intPred/coefPred))^2)/2)
-    areaMetric <- abs(area1+area2)
-  } else if (any(cpX < minRange, cpX > maxRange)){
-    areaMetric <- abs(coefPred*(((maxRange + (intPred/coefPred))^2)/2 - ((minRange + (intPred/coefPred))^2)/2))
-  }
-  
-  areaMetric <- areaMetric/(maxRange-minRange)
-  return(areaMetric)
-  
-  # outra forma de calculalo
-  # recta <- function(x){coefPred*x+intPred}
-  # integrate(recta, minRange, maxRange)
+  # outra forma de calculalo que non da error cando coefPred == 0
+  recta <- function(x){coefPred*x+intPred}
+  return(integrate(recta, minRange, maxRange)$value)
 }
 
 
@@ -232,7 +232,7 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 # SCORE: main function #### 
 
 normScore <- function(normMatrixList, designMatrix, dfRaw, 
-                      refGroup = NULL, altGroup = NULL){
+                      refGroup = NULL, altGroup = NULL, onlyFinalRank = T){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
   # 2. Design matrix (designMatrix)
@@ -309,7 +309,7 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF <- as.data.frame(scoreDF)
   rownames(scoreDF) <- names(scoreFinal[[1]])
   
-  ## Scale ####
+  # Scale ####
   scoreDF_norm <- apply(scoreDF, 2, function(col) (col - min(col)) / (max(col) - min(col)))
   scoreDF_norm <- as.data.frame(scoreDF_norm)
   
@@ -324,51 +324,55 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
   finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
   
+  if (onlyFinalRank){
+    return(list(finalRanking = finalRank))
+  } else {
+    # CI bootstrap ####
   
-  # CI bootstrap ####
-
-  # Computing total score for each normalization after resampling proteins (rows)
-  bootstrap_score_rows <- function(data, indices) {
-    resampled_matrix <- data[indices, , drop = FALSE]
-    total_scores <- colSums(resampled_matrix)
-    return(total_scores)  # One score per normalization
+    # Computing total score for each normalization after resampling proteins (rows)
+    bootstrap_score_rows <- function(data, indices) {
+      resampled_matrix <- data[indices, , drop = FALSE]
+      total_scores <- colSums(resampled_matrix)
+      return(total_scores)  # One score per normalization
+    }
+    
+    # Bootstrap
+    # n_boot <- 1000
+    boot_results <- boot(data = scores_matrix,              # data
+                         statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
+                         R = 1000)                        # number of resamples  
+    
+    # Output mean scores and confidence intervals
+    bootstrap_means <- colMeans(boot_results$t)
+    
+    score_bootstrap <- as.data.frame(t(sapply(1:ncol(scores_matrix), function(i){
+      ci <- boot.ci(boot_results, type = "perc", index = i)
+      return(c(colnames(scores_matrix)[i], bootstrap_means[i], 
+               ci$percent[4], ci$percent[5]))
+    }, simplify = T)))
+    
+    colnames(score_bootstrap) <- c("Normalization", "Mean Total Score", "LL95%", "UL95%")
+    score_bootstrap <- score_bootstrap %>%
+      dplyr::arrange(`Mean Total Score`)
+    
+    
+    
+    # Gráfico ####
+    
+    p1 <- Biostatech::plotForest(etiquetas = score_bootstrap$Normalization, 
+                           estPunt = score_bootstrap$`Mean Total Score`, 
+                            LI = score_bootstrap$`LL95%`, 
+                            LS = score_bootstrap$`UL95%`, 
+                           tituloX = "normScore with bootstrap interval")$grafico
+    
+    
+    # Return ####
+    return(list(finalRanking = finalRank, 
+                detailRanking = scoreDF_norm, 
+                detailScore = scoreDF, 
+                bootstrapScore = score_bootstrap, 
+                graphic = p1))
   }
   
-  # Bootstrap
-  # n_boot <- 1000
-  boot_results <- boot(data = scores_matrix,              # data
-                       statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
-                       R = 1000)                        # number of resamples  
-  
-  # Output mean scores and confidence intervals
-  bootstrap_means <- colMeans(boot_results$t)
-  
-  score_bootstrap <- as.data.frame(t(sapply(1:ncol(scores_matrix), function(i){
-    ci <- boot.ci(boot_results, type = "perc", index = i)
-    return(c(colnames(scores_matrix)[i], bootstrap_means[i], 
-             ci$percent[4], ci$percent[5]))
-  }, simplify = T)))
-  
-  colnames(score_bootstrap) <- c("Normalization", "Mean Total Score", "LL95%", "UL95%")
-  score_bootstrap <- score_bootstrap %>%
-    dplyr::arrange(`Mean Total Score`)
-  
-  
-  
-  # Gráfico ####
-  
-  p1 <- Biostatech::plotForest(etiquetas = score_bootstrap$Normalization, 
-                         estPunt = score_bootstrap$`Mean Total Score`, 
-                          LI = score_bootstrap$`LL95%`, 
-                          LS = score_bootstrap$`UL95%`, 
-                         tituloX = "normScore with bootstrap interval")$grafico
-  
-  
-  # Return ####
-  return(list(finalRanking = finalRank, 
-              detailRanking = scoreDF_norm, 
-              detailScore = scoreDF, 
-              bootstrapScore = score_bootstrap, 
-              graphic = p1))
 }
 
