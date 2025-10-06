@@ -157,13 +157,98 @@ totalResults$`88min 200ng`$graphic # Score: Log / Accuracy = MAD (log worst) / M
 
 
 
+# Simulations ####
+
+## Mean ####
+## Load quantification matrix ####
+archivo <- "../Simulations/mean/meanProba.txt" 
+intensityMatrix <- read.table(file = archivo, header = T, sep = "\t")
+intensityMatrix[,-1] <- apply(intensityMatrix[,-1], 2, as.numeric)
+rownames(intensityMatrix) <- intensityMatrix$Proteins
+intensityMatrix <- intensityMatrix[,-1]
+logIntensityMatrix <- as.matrix(log(intensityMatrix, base = 2))
+logIntensityMatrix[is.infinite(logIntensityMatrix)] <- NA
+
+## Load design matrix ####
+archivoG <- "../Simulations/mean/meanProbaDesign.txt"
+dfGrupos <- read.table(file = archivoG, header = T, sep = "\t")
+colnames(dfGrupos) <- c("Samples", "Groups")
+grupos <- levels(as.factor(dfGrupos$Groups))
+
+## Normalization ####
+mydata <- list(Log = logIntensityMatrix,
+               Mean = meanNorm(rawMatrix = intensityMatrix), 
+               Median = medianNorm(rawMatrix = intensityMatrix), 
+               GI = GINorm(rawMatrix = intensityMatrix),
+               Quantile = quantileNorm(log2Matrix = logIntensityMatrix),
+               VSN = VSNNorm(rawMatrix = intensityMatrix),
+               CyclicLoess = cyclicLoessNorm(log2Matrix = logIntensityMatrix),
+               RLR = RLRNorm(log2Matrix = logIntensityMatrix),
+               MAD = MADNormalization(log2Matrix = logIntensityMatrix))
+
+## Assessment: normScore ####
+resultado <- normScore(normMatrixList = mydata, 
+                       designMatrix = dfGrupos, 
+                       dfRaw = intensityMatrix)
+
+resultado$detailRanking
+resultado$detailScore
+resultado$finalRanking
+resultado$bootstrapScore
+resultado$graphic
 
 
+## Mean ####
+datasets <- readRDS(file = "../Simulations/sim486.rds")
+subDataset <- datasets[1:10]
+ordenNorm <- c("CyclicLoess", "GI", "Log","MAD", "Mean", "Median", "Quantile", "RLR", "VSN")
+totalResults <- sapply(1:length(subDataset), function (i) {
+  # i <- 1
+  cat(i)
+  # Get data matrix
+  out <- subDataset[[i]]
+  intensityMatrix <- out[[1]]
+  intensityMatrix[,-1] <- apply(intensityMatrix[,-1], 2, as.numeric)
+  rownames(intensityMatrix) <- intensityMatrix$Proteins
+  intensityMatrix <- intensityMatrix[,-1]
+  logIntensityMatrix <- as.matrix(log(intensityMatrix, base = 2))
+  logIntensityMatrix[is.infinite(logIntensityMatrix)] <- NA
+  
+  # Get group info
+  dfGrupos <- out[[2]][,-3]
+  colnames(dfGrupos) <- c("Samples", "Groups")
+  grupos <- levels(as.factor(dfGrupos$Groups))
+  
+  # Normalized
+  mydata <- list(Log = logIntensityMatrix,
+                 Mean = meanNorm(rawMatrix = intensityMatrix), 
+                 Median = medianNorm(rawMatrix = intensityMatrix), 
+                 GI = GINorm(rawMatrix = intensityMatrix),
+                 Quantile = quantileNorm(log2Matrix = logIntensityMatrix),
+                 VSN = VSNNorm(rawMatrix = intensityMatrix),
+                 CyclicLoess = cyclicLoessNorm(log2Matrix = logIntensityMatrix),
+                 RLR = RLRNorm(log2Matrix = logIntensityMatrix),
+                 MAD = MADNormalization(log2Matrix = logIntensityMatrix))
+
+  # Assessment
+  finalRank <- normScore( 
+    designMatrix = dfGrupos, 
+    normMatrixList = mydata, 
+    dfRaw = intensityMatrix)$finalRanking
+  finalRank <- finalRank[ordenNorm]
+  return(finalRank)
+  },
+simplify = F)
 
 
+sapply(totalResults, function(i) names(i)[1])
 
+dfRes <- sapply(totalResults, function(i) i[ordenNorm])
 
-
+dfRes <- dplyr::bind_cols(totalResults)
+dfRes <- as.data.frame(dfRes)
+colnames(dfRes) <- paste0("Sim ", 1:ncol(dfRes))
+dfRes
 
 
 
