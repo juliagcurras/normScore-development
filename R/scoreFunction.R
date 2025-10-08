@@ -271,8 +271,8 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
     # menor número, mellor é a métrica, para que está tamén sexa así. 
     1-(median(i, na.rm = T)-IQR(i, na.rm = T)/3) 
   }, simplify = T, USE.NAMES = T)
-  
-  scoreFinal[["Correlation"]] <- item2
+  # item2["CyclicLoess"] <- item2["CyclicLoess"]*1.2
+  scoreFinal[["Correlation"]] <- item2*0.5
   
   
   # ITEM 3 - MAplot regression line 0 ####
@@ -313,9 +313,18 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF_norm <- apply(scoreDF, 2, function(col) (col - min(col)) / (max(col) - min(col)))
   scoreDF_norm <- as.data.frame(scoreDF_norm)
   
-  ## Rank ####
+  # Corrections ####
   rownames(scoreDF_norm) <- rownames(scoreDF)
+  # 1) Small variability: no need for normalization
   scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+  # 2) CyclicLoess outstands in correlation: small correction
+  scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.5
+  # 3) MAD outstands in PVC: small correction
+  scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 1]*0.8
+  # 4) Quantile outstands in TI graphics: small correction
+  scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
+  
+  # Rank ####
   scores_matrix <- t(scoreDF_norm)
   scoreDF_norm$Total <- rowSums(scoreDF_norm)
   # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0

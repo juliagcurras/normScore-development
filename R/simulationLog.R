@@ -1,5 +1,9 @@
 
 # Julia G Curras - 07/10/2025
+
+setwd("C:/Users/julia/Documents/GitHub/normScore/R/")
+
+# Julia G Curras - 07/10/2025
 # Simulación de datos de proteómica (log2-scal e)
 rm(list=ls())
 graphics.off()
@@ -15,14 +19,14 @@ source(file = "supportFunctions.R", encoding = "UTF-8")
 source(file = "scoreFunction.R", encoding = "UTF-8")
 
 pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/"
-norm <- "mean"
+norm <- "log"
 set.seed(9396)
 
 
 #.........................................................................####
 # Function ####
 #.........................................................................####
-simulate_mean <- 
+simulate_log <- 
   function(
     n_proteins = 1000, # total proteínas
     n_per_group = 10, # muestras por grupo
@@ -39,8 +43,6 @@ simulate_mean <-
     prop_de = 0.05, # proporción de proteínas DE
     logFC_mean = 2.0, # distribución de valores de logFC de proteínas DE
     logFC_sd   = 0.6, 
-    sd_tech_effect = 1.5, # variabilidad del efecto técnico
-    asym_factor = 0.5, # magnitud de la asimetría del efecto técnico
     semilla = NULL
   ){
     if (!is.null(semilla)) set.seed(semilla)
@@ -66,9 +68,7 @@ simulate_mean <-
 
     # Cada proteína tiene una "carga" frente a esos efectos de muestra (heterogeneidad entre proteínas)
     # generamos cargas y aseguramos que sean ortogonales a 'mu'
-    loadings_raw <- rnorm(n_proteins, mean = 0, sd = loading_sd)
-    # eliminar cualquier correlación lineal con 'mu' (conservar variabilidad)
-    loadings <- resid(lm(loadings_raw ~ mu))
+    loadings <- rnorm(n_proteins, mean = 0, sd = loading_sd)
 
     # ----- definir proteínas diferencialmente abundantes (DE) -----
     # Seleccionamos preferentemente DE entre proteínas con medias NO MUY ALTAS
@@ -100,29 +100,6 @@ simulate_mean <-
     rownames(mat) <- paste0("P", sprintf("%05d", 1:n_proteins))
     colnames(mat) <- paste0(groups, "_", rep(1:n_per_group, k_groups))
     
-    
-    # ------ Añadir efecto técnico por muestra -----
-    # 1. Efecto multiplicativo por muestra (bias de calibración del instrumento)
-    tech_mult <- rlnorm(m, meanlog = 0, sdlog = asym_factor)  # siempre positivo, centrado en 1
-    names(tech_mult) <- colnames(mat)
-    
-    # 2. Aplicamos el efecto en escala lineal, luego volvemos a log2
-    # (recordemos que mat está en log2, así que multiplicar en escala lineal = sumar en log2)
-    mat_lin <- 2^mat
-    mat_tech_lin <- sweep(mat_lin, 2, tech_mult, FUN = "*")
-    mat <- log2(mat_tech_lin)
-    # # 1) simulamos un sesgo técnico que afecte a cada muestra
-    # # (por ejemplo, distinta eficiencia de cuantificación)
-    # tech_shift <- rnorm(m, mean = 0, sd = sd_tech_effect)  # cambia sd para ajustar magnitud del sesgo
-    # # 2) efecto adicional dependiente de la abundancia (asimetría): las proteínas con abundancias altas se ven más afectadas
-    # asym_factor <- asym_factor   # magnitud de la asimetría
-    # mat_rank <- apply(mat, 2, rank) / nrow(mat)  # percentil por muestra (0–1)
-    # # 3) creamos una matriz de efectos técnicos dependiente del percentil
-    # tech_matrix <- sweep(mat_rank, 2, tech_shift * asym_factor, FUN = "*") +
-    #   matrix(rep(tech_shift, each = nrow(mat)), nrow = nrow(mat))
-    # # 4) añadimos este efecto técnico a la matriz
-    # mat <- mat + tech_matrix
-    
     # ----- Matrices finales -----
     meta <- data.frame(
       Samples = colnames(mat),
@@ -143,7 +120,6 @@ simulate_mean <-
 
 
 
-
 #.........................................................................####
 # Multiple simulations ####
 #.........................................................................####
@@ -151,19 +127,15 @@ simulate_mean <-
 ## Settings ####
 n_proteins <- c(1000, 5000, 10000)
 n_per_group <- c(5, 15, 20)
-k_groups <- c(2, 3) # 4)
+k_groups <- c(2, 3, 4)
 sigma_resid <- c(0.2, 0.6, 1) # variación residual
-sd_tech_effect <- c(1.5, 2.5) # variación por efecto técnico a corregir con media
-asym_factor <- c(1.5, 2) # asimetria para mediana
 
 ## All combinations of settings ####
 grid <- expand.grid(
   n_proteins = n_proteins,
   n_per_group = n_per_group,
   k_groups = k_groups,
-  sigma_resid = sigma_resid,
-  sd_tech_effect = sd_tech_effect, 
-  asym_factor = asym_factor
+  sigma_resid = sigma_resid
 )
 grid <- do.call(rbind, replicate(5, grid, simplify = FALSE)) # repetir 3 veces
 nrow(grid)  # 216 combinacions
@@ -186,13 +158,11 @@ with_progress({
     # resultsOri <- sapply(idsMedian, function(i) {
     # Simulate data
     params <- grid[i, ]
-    sim <- simulate_mean(
+    sim <- simulate_log(
       n_proteins = params$n_proteins,
       n_per_group =  params$n_per_group,
       k_groups = params$k_groups,
       sigma_resid = params$sigma_resid,
-      sd_tech_effect = params$sd_tech_effect,
-      asym_factor = asym_factor,
       semilla = 1000 + i
     )
     # return(sim)
@@ -236,22 +206,7 @@ saveRDS(results, file = paste0(pathToData, norm, "/results_sim.RDS"))
 
 # Top 1 norm: mean is the second one
 topNorm <- sapply(results, function(i) names(sort(i))[1])
-table(topNorm) 
-# Top 2 norm: mean is the second one
-top2Norm <- sapply(results, function(i) "Mean" %in% names(sort(i))[1:2])
-table(top2Norm)
-# Top 3 norm: mean is the second one
-top3Norm <- sapply(results, function(i) "Mean" %in% names(sort(i))[1:3])
-table(top3Norm)
-# Top 5 norm: mean is the second one
-top5Norm <- sapply(results, function(i) "Mean" %in% names(sort(i))[1:5])
-table(top5Norm)
-
-## Results for normalizations ####
-dfRes <- sapply(results, function(i) i[ordenNorm])
-# dfRes <- as.data.frame(dplyr::bind_cols(datasets))
-colnames(dfRes) <- paste0("Sim ", 1:ncol(dfRes))
-rownames(dfRes) <- ordenNorm
+table(topNorm) # that is what w
 
 #
 
@@ -270,11 +225,26 @@ rownames(dfRes) <- ordenNorm
 
 
 
-# _ ####
-# _ ####
-# _ ####
-#.........................................................................####
-# COMPLETE AND ORIGINAL CODE ####
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ----- parámetros -----
 n_proteins <- 1000        # número de proteínas (usé 5444 del ejemplo)
 n_per_group <- 10         # 10 muestras por grupo
@@ -307,10 +277,7 @@ sample_effects <- as.numeric(mvrnorm(n = 1, mu = rep(0, m), Sigma = Sigma)) * si
 
 # Cada proteína tiene una "carga" frente a esos efectos de muestra (heterogeneidad entre proteínas)
 loading_sd <- 0.6
-# generamos cargas y aseguramos que sean ortogonales a 'mu'
-loadings_raw <- rnorm(n_proteins, mean = 0, sd = loading_sd)
-# eliminar cualquier correlación lineal con 'mu' (conservar variabilidad)
-loadings <- resid(lm(loadings_raw ~ mu))
+loadings <- rnorm(n_proteins, mean = 0, sd = loading_sd)
 
 # ----- añadir variación residual por proteína-muestra -----
 sigma_resid <- 0.6  # ruido independiente
@@ -349,19 +316,20 @@ for(i in 1:n_proteins){
 rownames(mat) <- paste0("P", sprintf("%05d", 1:n_proteins))
 colnames(mat) <- paste0(groups, "_", rep(1:n_per_group, 2))
 
-# ===== Añadir efecto técnico por muestra =====
-# 1. Efecto multiplicativo por muestra (bias de calibración del instrumento)
-tech_mult <- rlnorm(m, meanlog = 0, sdlog = 0.5)  # siempre positivo, centrado en 1
-names(tech_mult) <- colnames(mat)
+# ----- comprobaciones y diagnósticos rápidos -----
+# log2 fold change estimado (G1 vs G2) por proteína
+mean_G1 <- rowMeans(mat[, groups == "G1", drop = FALSE])
+mean_G2 <- rowMeans(mat[, groups == "G2", drop = FALSE])
+est_logFC <- mean_G1 - mean_G2
 
-# 2. Aplicamos el efecto en escala lineal, luego volvemos a log2
-# (recordemos que mat está en log2, así que multiplicar en escala lineal = sumar en log2)
-mat_lin <- 2^mat
-mat_tech_lin <- sweep(mat_lin, 2, tech_mult, FUN = "*")
-mat <- log2(mat_tech_lin)
+summary_means <- summary(rowMeans(mat))
+summary_logFC <- summary(est_logFC)
 
+cat("Resumen de medias (global por proteína):\n"); print(summary_means)
+cat("\nResumen de log2FC estimado (G1 - G2):\n"); print(summary_logFC)
+cat("\nNúmero de proteínas con |log2FC| >= 1.0 :", sum(abs(est_logFC) >= 1), "\n")
+cat("Número de proteínas con |log2FC| >= 2.0 :", sum(abs(est_logFC) >= 2), "\n")
 
-# ===== Matrices finales =====
 meta <- data.frame(
   Samples = colnames(mat),
   Groups = factor(groups)
@@ -369,8 +337,8 @@ meta <- data.frame(
 matRaw <- 2^mat
 
 # Opcional: guardar
-write.csv(matRaw, file = paste0(pathToData, norm, "/simulated_matrix.csv"), row.names = TRUE)
-write.csv(meta, file = paste0(pathToData, norm, "/simulated_design_matrix.csv"), row.names = FALSE)
+write.csv(matRaw, file = paste0(pathToData, norm, "/simulated_proteomics_log2_matrix.csv"), row.names = TRUE)
+write.csv(meta, file = paste0(pathToData, norm, "simulated_proteomics_design_matrix.csv"), row.names = FALSE)
 # write.csv(data.frame(Protein=rownames(mat), mu=mu, isHigh = (1:n_proteins %in% high_idx),
 #                      isDE = (1:n_proteins %in% de_idx), true_logFC = group_effect),
 #           file = "simulated_proteins_annotation.csv", row.names = FALSE)

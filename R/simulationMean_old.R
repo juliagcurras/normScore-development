@@ -10,7 +10,6 @@ library(MASS)
 library(future.apply)
 library(progressr)
 library(dplyr)
-library(tictoc)
 source(file = "supportFunctions.R", encoding = "UTF-8")
 source(file = "scoreFunction.R", encoding = "UTF-8")
 
@@ -40,7 +39,6 @@ simulate_mean <-
     logFC_mean = 2.0, # distribución de valores de logFC de proteínas DE
     logFC_sd   = 0.6, 
     sd_tech_effect = 1.5, # variabilidad del efecto técnico
-    asym_factor = 0.5, # magnitud de la asimetría del efecto técnico
     semilla = NULL
   ){
     if (!is.null(semilla)) set.seed(semilla)
@@ -102,26 +100,14 @@ simulate_mean <-
     
     
     # ------ Añadir efecto técnico por muestra -----
-    # 1. Efecto multiplicativo por muestra (bias de calibración del instrumento)
-    tech_mult <- rlnorm(m, meanlog = 0, sdlog = asym_factor)  # siempre positivo, centrado en 1
-    names(tech_mult) <- colnames(mat)
+    # simulamos un sesgo técnico que afecte a cada muestra, (por ejemplo, distinta eficiencia de cuantificación)
+    tech_effect <- rnorm(m, mean = 0, sd = sd_tech_effect)  # cambia sd para ajustar magnitud del sesgo
+    # protein_sensitivity <- rnorm(n_proteins, 1, 0.1) # variación entre proteínas (más real, peor para mean)
+    names(tech_effect) <- colnames(mat)
     
-    # 2. Aplicamos el efecto en escala lineal, luego volvemos a log2
-    # (recordemos que mat está en log2, así que multiplicar en escala lineal = sumar en log2)
-    mat_lin <- 2^mat
-    mat_tech_lin <- sweep(mat_lin, 2, tech_mult, FUN = "*")
-    mat <- log2(mat_tech_lin)
-    # # 1) simulamos un sesgo técnico que afecte a cada muestra
-    # # (por ejemplo, distinta eficiencia de cuantificación)
-    # tech_shift <- rnorm(m, mean = 0, sd = sd_tech_effect)  # cambia sd para ajustar magnitud del sesgo
-    # # 2) efecto adicional dependiente de la abundancia (asimetría): las proteínas con abundancias altas se ven más afectadas
-    # asym_factor <- asym_factor   # magnitud de la asimetría
-    # mat_rank <- apply(mat, 2, rank) / nrow(mat)  # percentil por muestra (0–1)
-    # # 3) creamos una matriz de efectos técnicos dependiente del percentil
-    # tech_matrix <- sweep(mat_rank, 2, tech_shift * asym_factor, FUN = "*") +
-    #   matrix(rep(tech_shift, each = nrow(mat)), nrow = nrow(mat))
-    # # 4) añadimos este efecto técnico a la matriz
-    # mat <- mat + tech_matrix
+    # aplicamos el efecto técnico sumando un desplazamiento por muestra
+    # mat <- mat + protein_sensitivity %*% t(tech_effect) # variación entre proteínas
+    mat <- sweep(mat, 2, tech_effect, FUN = "+")
     
     # ----- Matrices finales -----
     meta <- data.frame(
@@ -151,10 +137,9 @@ simulate_mean <-
 ## Settings ####
 n_proteins <- c(1000, 5000, 10000)
 n_per_group <- c(5, 15, 20)
-k_groups <- c(2, 3) # 4)
+k_groups <- c(2, 3, 4)
 sigma_resid <- c(0.2, 0.6, 1) # variación residual
-sd_tech_effect <- c(1.5, 2.5) # variación por efecto técnico a corregir con media
-asym_factor <- c(1.5, 2) # asimetria para mediana
+sd_tech_effect <- c(0.75, 1.5, 2.5) # variación por efecto técnico a corregir con media
 
 ## All combinations of settings ####
 grid <- expand.grid(
@@ -162,28 +147,25 @@ grid <- expand.grid(
   n_per_group = n_per_group,
   k_groups = k_groups,
   sigma_resid = sigma_resid,
-  sd_tech_effect = sd_tech_effect, 
-  asym_factor = asym_factor
+  sd_tech_effect = sd_tech_effect
 )
-grid <- do.call(rbind, replicate(5, grid, simplify = FALSE)) # repetir 3 veces
-nrow(grid)  # 216 combinacions
-saveRDS(grid, file = paste0(pathToData, norm, "/optionsSim.rds"))
+nrow(grid)  # 243 combinacions
+saveRDS(grid, file = paste0(pathToData, norm, "/optionsSim_243.rds"))
 
 ## Execution of simulations ####
 set.seed(9396)
 handlers(global = TRUE)
 handlers("txtprogressbar")  
-plan(multisession, workers = parallel::detectCores() - 10)
+plan(multisession, workers = parallel::detectCores() - 16)
 ordenNorm <- c("CyclicLoess", "GI", "Log","MAD", "Mean", "Median", "Quantile", "RLR", "VSN")
 # datasets <- list()
 
-tic("Tiempo total con las simulaciones")
 with_progress({
   cat("\n\tIniciando simulacións e comparacións de normalizacións... \n\n")
   p <- progressor(steps = nrow(grid))
   results <- future_lapply(seq_len(nrow(grid)), function(i) {
     # results <- future_lapply(1:50, function(i) {
-    # resultsOri <- sapply(idsMedian, function(i) {
+    # resultsOri <- sapply(c(1, 4:5), function(i) {
     # Simulate data
     params <- grid[i, ]
     sim <- simulate_mean(
@@ -192,10 +174,9 @@ with_progress({
       k_groups = params$k_groups,
       sigma_resid = params$sigma_resid,
       sd_tech_effect = params$sd_tech_effect,
-      asym_factor = asym_factor,
       semilla = 1000 + i
     )
-    # return(sim)
+    # datasets[[i]] <- sim
     
     # Retrieving data
     dfGrupos <- sim$metadata
@@ -228,15 +209,21 @@ with_progress({
   # }, simplify = F)
   cat("\n\tSimulacións rematadas. \n\n")
 })
-toc()
 
-saveRDS(results, file = paste0(pathToData, norm, "/results_sim.RDS"))
-# results <- readRDS(file = paste0(pathToData, norm, "/results_sim.RDS"))
+# saveRDS(results, file = paste0(pathToData, norm, "/results_sim243_2.RDS"))
+saveRDS(results, file = paste0(pathToData, norm, "/results_sim243_3.RDS"))
+# results <- readRDS(file = paste0(pathToData, norm, "/results_sim243.RDS"))
 # saveRDS(datasets, file = paste0(pathToData, norm, "/datasets_sim243.RDS"))
+
+## Results for normalizations ####
+dfRes <- sapply(results, function(i) i[ordenNorm])
+# dfRes <- as.data.frame(dplyr::bind_cols(datasets))
+colnames(dfRes) <- paste0("Sim ", 1:ncol(dfRes))
+rownames(dfRes) <- ordenNorm
 
 # Top 1 norm: mean is the second one
 topNorm <- sapply(results, function(i) names(sort(i))[1])
-table(topNorm) 
+table(topNorm)
 # Top 2 norm: mean is the second one
 top2Norm <- sapply(results, function(i) "Mean" %in% names(sort(i))[1:2])
 table(top2Norm)
@@ -247,11 +234,6 @@ table(top3Norm)
 top5Norm <- sapply(results, function(i) "Mean" %in% names(sort(i))[1:5])
 table(top5Norm)
 
-## Results for normalizations ####
-dfRes <- sapply(results, function(i) i[ordenNorm])
-# dfRes <- as.data.frame(dplyr::bind_cols(datasets))
-colnames(dfRes) <- paste0("Sim ", 1:ncol(dfRes))
-rownames(dfRes) <- ordenNorm
 
 #
 
@@ -349,16 +331,17 @@ for(i in 1:n_proteins){
 rownames(mat) <- paste0("P", sprintf("%05d", 1:n_proteins))
 colnames(mat) <- paste0(groups, "_", rep(1:n_per_group, 2))
 
-# ===== Añadir efecto técnico por muestra =====
-# 1. Efecto multiplicativo por muestra (bias de calibración del instrumento)
-tech_mult <- rlnorm(m, meanlog = 0, sdlog = 0.5)  # siempre positivo, centrado en 1
-names(tech_mult) <- colnames(mat)
 
-# 2. Aplicamos el efecto en escala lineal, luego volvemos a log2
-# (recordemos que mat está en log2, así que multiplicar en escala lineal = sumar en log2)
-mat_lin <- 2^mat
-mat_tech_lin <- sweep(mat_lin, 2, tech_mult, FUN = "*")
-mat <- log2(mat_tech_lin)
+# ===== Añadir efecto técnico por muestra =====
+# simulamos un sesgo técnico que afecte a cada muestra
+# (por ejemplo, distinta eficiencia de cuantificación)
+tech_effect <- rnorm(m, mean = 0, sd = 1.5)  # cambia sd para ajustar magnitud del sesgo
+# protein_sensitivity <- rnorm(n_proteins, 1, 0.1)
+names(tech_effect) <- colnames(mat)
+
+# aplicamos el efecto técnico sumando un desplazamiento por muestra
+# mat <- mat + protein_sensitivity %*% t(tech_effect)
+mat <- sweep(mat, 2, tech_effect, FUN = "+")
 
 
 # ===== Matrices finales =====

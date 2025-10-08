@@ -49,7 +49,7 @@ mydata <- list(Log = logIntensityMatrix,
 ## Assessment: normScore ####
 resultado <- normScore(normMatrixList = mydata, 
                        designMatrix = dfGrupos, 
-                       dfRaw = intensityMatrix)
+                       dfRaw = intensityMatrix, onlyFinalRank = F)
 
 resultado$detailRanking
 resultado$detailScore
