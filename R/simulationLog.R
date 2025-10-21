@@ -208,6 +208,13 @@ saveRDS(results, file = paste0(pathToData, norm, "/results_sim.RDS"))
 topNorm <- sapply(results, function(i) names(sort(i))[1])
 table(topNorm) # that is what w
 
+
+## Results for normalizations ####
+dfRes <- sapply(results, function(i) i[ordenNorm])
+# dfRes <- as.data.frame(dplyr::bind_cols(datasets))
+colnames(dfRes) <- paste0("Sim ", 1:ncol(dfRes))
+rownames(dfRes) <- ordenNorm
+
 #
 
 
