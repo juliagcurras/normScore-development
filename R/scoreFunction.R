@@ -320,7 +320,7 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   # 2) CyclicLoess outstands in correlation: small correction
   scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.5
   # 3) MAD outstands in PVC: small correction
-  scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 1]*0.8
+  scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
   # 4) Quantile outstands in TI graphics: small correction
   scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
   
