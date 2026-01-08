@@ -127,7 +127,10 @@ add_mean_variance_pg_fn <- function(M, disp = 0.2, pseudocount = 1, seed = NULL)
   rate  <- shape / X
   lambda <- matrix(stats::rgamma(length(X), shape = shape, rate = rate), nrow = nrow(M))
   Y <- matrix(stats::rpois(length(lambda), lambda = as.vector(lambda)), nrow = nrow(M))
-  log2(Y + pseudocount)
+  logY <- log2(Y + pseudocount)
+  colnames(logY) <- colnames(X)
+  rownames(logY) <- rownames(X)
+  logY
 }
 
 # apply_missing_mar_mnar <- function(mat_log,
@@ -404,7 +407,7 @@ evaluate_normalization <- function(rawData_init,
   # --- 2) Métricas por muestra: MAE con ajuste afín + Spearman ---
   m <- ncol(X0w)
   per_sample <- vector("list", m)
-  Xhat_aligned <- Xhw  # guardaremos la versión alineada (ajustada) por muestra
+  # Xhat_aligned <- Xhw  # guardaremos la versión alineada (ajustada) por muestra
   
   for (j in seq_len(m)) {
     x0  <- X0w[, j]
@@ -426,25 +429,35 @@ evaluate_normalization <- function(rawData_init,
     x0o <- x0[ok]
     xho <- xh[ok]
     
+                          # AJUSTE MAE AFIN #
     # Ajuste afín por mínimos cuadrados: x0 ~ a + b * xhat (efectos de escala)
-    v <- stats::var(xho)
-    b <- if (is.finite(v) && v > 0) stats::cov(x0o, xho) / v else 1
-    a <- mean(x0o) - b * mean(xho)
+    # v <- stats::var(xho)
+    # b <- if (is.finite(v) && v > 0) stats::cov(x0o, xho) / v else 1
+    # a <- mean(x0o) - b * mean(xho)
+    # 
+    # xh_adj <- a + b * xh
+    # Xhat_aligned[, j] <- xh_adj
+    # 
+    # # Cálculo de métricas
+    # mae <- mean(abs(x0o - (a + b * xho)))
+    # sp  <- suppressWarnings(stats::cor(x0o, xho, method = "spearman"))
+    # 
+    # per_sample[[j]] <- data.frame(
+    #   sample     = colnames(X0w)[j],
+    #   MAE_affine = mae,
+    #   a_hat      = a,
+    #   b_hat      = b,
+    #   Spearman   = sp,
+    #   n          = sum(ok)
+    # )
     
-    xh_adj <- a + b * xh
-    Xhat_aligned[, j] <- xh_adj
     
-    # Cálculo de métricas
-    mae <- mean(abs(x0o - (a + b * xho)))
-    sp  <- suppressWarnings(stats::cor(x0o, xho, method = "spearman"))
-    
+                            # MAE NORMAL #
     per_sample[[j]] <- data.frame(
-      sample     = colnames(X0w)[j],
-      MAE_affine = mae,
-      a_hat      = a,
-      b_hat      = b,
-      Spearman   = sp,
-      n          = sum(ok)
+      sample   = colnames(X0w)[j],
+      MAE      = mean(abs(x0o - xho)),
+      Spearman = suppressWarnings(stats::cor(x0o, xho, method = "spearman")),
+      n        = sum(ok)
     )
   }
   
@@ -452,7 +465,7 @@ evaluate_normalization <- function(rawData_init,
   
   # --- 3) Resumen global ---
   summary_df <- data.frame(
-    MAE_affine_mean = mean(per_sample_df$MAE_affine, na.rm = TRUE),
+    MAE_mean = mean(per_sample_df$MAE, na.rm = TRUE),
     Spearman_mean   = mean(per_sample_df$Spearman,   na.rm = TRUE),
     samples_used    = sum(per_sample_df$n > 0),
     entries_used    = sum(per_sample_df$n)
@@ -480,15 +493,15 @@ n_proteins <- c(1000, 5000, 10000)
 n_per_group <- 20
 k_groups <- 2
 sigma_resid <- c(0.2, 0.6) # variación residual
-add_additive_shift <- c(T, F)
-add_scale_variance <- c(T, F)
+seed <- sample(1:10000, 5)
 
 ## All combinations of settings
 grid <- expand.grid(
   n_proteins = n_proteins,
   n_per_group = n_per_group,
   k_groups = k_groups,
-  sigma_resid = sigma_resid
+  sigma_resid = sigma_resid, 
+  seed = 9396 #seed
 )
 # grid <- do.call(rbind, replicate(5, grid, simplify = FALSE)) # repetir 3 veces
 nrow(grid)  
@@ -545,7 +558,30 @@ for (i in results){
 }
 
 
+# Extended grid 
+# --- nombres de los 8 flags ---
+flags <- c(
+  "add_additive_shift",
+  "add_scale_variance",
+  "add_intensity_bias",
+  "bias_share_shape",
+  "add_shape_mixture",
+  "add_shape_sas",
+  "add_meanvar_lognorm",
+  "add_meanvar_pg"
+)
 
+# --- 9 escenarios: todos FALSE + uno TRUE cada vez ---
+flag_grid <- as.data.frame(matrix(FALSE, nrow = length(flags) + 1, ncol = length(flags)))
+names(flag_grid) <- flags
+for (i in seq_along(flags)) flag_grid[i + 1, flags[i]] <- TRUE
+
+# --- cross join (base R) ---
+grid_final <- merge(grid, flag_grid, by = NULL)
+
+# listo
+dim(grid_final)   # 6 * 9 = 54 filas (habería que ejecutar con diferentes semillas)
+head(grid_final)
 
 
 
@@ -553,21 +589,25 @@ for (i in results){
 #.........................................................................####
 # Assessing normalization ####
 #.........................................................................####
-
-results <- sapply(1:nrow(grid), function(i) {
+priority <- c("Log", "Median", "Mean", "GI", "Quantile", "VSN", "cyclicloess", "RLR")
+tictoc::tic()
+results <- sapply(1:nrow(grid_final), function(i) {
   # Simulate data
-  params <- grid[i, ]
+  params <- grid_final[i, ]
   sim <- simulate_proteomics(
     n_proteins = params$n_proteins,
     n_per_group =  params$n_per_group,
     k_groups = params$k_groups,
     sigma_resid = params$sigma_resid,
-    semilla = i, 
-    add_additive_shift = T, # Log but second median, mean, TI
-    add_scale_variance = F,  # Cyclic
-    add_meanvar_lognorm = F, 
-    add_intensity_bias = F, # ClycLoess
-    add_shape_mixture = F
+    semilla = params$seed, 
+    add_additive_shift = params$add_additive_shift, # Log but second median, mean, TI
+    add_scale_variance = params$add_scale_variance,
+    bias_share_shape = params$bias_share_shape, 
+    add_intensity_bias = params$add_intensity_bias, 
+    add_shape_mixture = params$add_shape_mixture,
+    add_shape_sas = params$add_shape_sas,
+    add_meanvar_lognorm = params$add_meanvar_lognorm, 
+    add_meanvar_pg = params$add_meanvar_pg
   )
   
   # Retrieving data
@@ -585,8 +625,8 @@ results <- sapply(1:nrow(grid), function(i) {
                  Quantile = quantileNorm(log2Matrix = logIntensityMatrix),
                  VSN = VSNNorm(rawMatrix = intensityMatrix),
                  CyclicLoess = cyclicLoessNorm(log2Matrix = logIntensityMatrix),
-                 RLR = RLRNorm(log2Matrix = logIntensityMatrix),
-                 MAD = MADNormalization(log2Matrix = logIntensityMatrix))
+                 RLR = RLRNorm(log2Matrix = logIntensityMatrix))
+                 # MAD = MADNormalization(log2Matrix = logIntensityMatrix))
   mydata <- lapply(mydata, function(i) {
     rownames(i) =  rownames(intensityMatrix)
     return(i)
@@ -597,27 +637,80 @@ results <- sapply(1:nrow(grid), function(i) {
                       rawData_init = originalData, 
                       simplify = T, USE.NAMES = F)
   finalDF <- do.call(rbind, finalRank)
-  finalDF <- finalDF %>% arrange(MAE_affine_mean, Spearman_mean)
+  finalDF <- finalDF %>% arrange(MAE_mean, Spearman_mean)
+  rownames(finalDF) <- gsub(x = rownames(finalDF), pattern = ".summary", replacement = "")
   
   # Score ranking
   finalRank <- normScore( 
     designMatrix = dfGrupos, 
     normMatrixList = mydata, 
     dfRaw = intensityMatrix, 
-    refGroup = "G2", altGroup = "G1", onlyFinalRank = F) #$finalRanking
+    refGroup = "G2", 
+    altGroup = "G1", 
+    onlyFinalRank = T)$finalRanking
   
-  finalDF
-  finalRank
+  # Saving
   
-  write.csv(intensityMatrix, file = paste0(pathToData, "/_TRIAL_matrix_additive.csv"), row.names = TRUE)
-  write.csv(dfGrupos, file = paste0(pathToData, "/_TRIAL_design_additive.csv"), row.names = FALSE)
+  # write.csv(intensityMatrix, file = paste0(pathToData, "/_TRIAL_matrix_additive.csv"), row.names = TRUE)
+  # write.csv(dfGrupos, file = paste0(pathToData, "/_TRIAL_design_additive.csv"), row.names = FALSE)
   
-  return(finalDF)
-}, simplify = F)
+  # Returning
+  # return(
+  # list(
+  #   real = finalDF, 
+  #   score = finalRank
+  # )
+  # )
+  
+  # Join info and final decision #
+  common <- intersect(rownames(finalDF), names(finalRank))
+  out <- data.frame(
+    norm = common,
+    MAE  = as.numeric(finalDF[common, "MAE_mean"]),
+    score = as.numeric(finalRank[common]),
+    stringsAsFactors = FALSE
+  )
+  # Score top
+  if (length(min(out$score)) > 1){
+    normByScore <- out %>% 
+      dplyr::mutate(priority = match(norm, priority)) %>%
+      dplyr::arrange(score, priority) %>%
+      dplyr::pull(norm) 
+    normByScore <- normByScore[1]
+  } else {
+    normByScore <- out[out$score == min(out$score), "norm"]
+  }
+  # MAE TOP
+  normByMAE <- out[out$MAE == min(out$MAE), "norm"]
+  
+  # Decision based on MAE top 
+  if (length(normByMAE) > 1){
+    if (normByScore %in% normByMAE){
+      output <- c(
+        real = paste0(normByScore, "_more"), 
+        score = normByScore
+      )
+    } else {
+      output <- c(
+        real = paste0(normByScore, collapse = T, sep = "/"), 
+        score = normByScore
+      )
+    }
+  } else {
+    output <- c(
+      real = normByMAE, 
+      score = normByScore
+      )
+  }
+  
+  return(output)
+}, simplify = T)
+tictoc::toc()
 
-topNorm <- sapply(results, function(i) rownames(i)[3])
-table(topNorm) 
 
+resFinal <- grid_final
+resFinal$Real <- results["real",]
+resFinal$Score <- results["score",]
 
 
 
