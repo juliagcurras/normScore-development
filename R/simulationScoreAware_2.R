@@ -21,7 +21,12 @@ source(file = "supportFunctions.R", encoding = "UTF-8")
 source(file = "scoreFunction.R", encoding = "UTF-8")
 
 pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/others/"
-norm <- "log"
+
+
+
+#.........................................................................####
+# Auxiliar Functions ####
+#.........................................................................####
 
 
 # Helper: SD en log2 que produce CV objetivo en factores multiplicativos (aprox.)
@@ -60,16 +65,17 @@ simulate_proteomics_scoreaware <- function(
     k_groups    = 2,
     
     # ---- Mezcla de medias proteicas (log2)
-    p_high       = 0.02,
+    p_high       = 0.01,
     mu_low_mean  = 18,
     mu_low_sd    = 1.2,
-    mu_high_mean = 23,
-    mu_high_sd   = 0.6,
+    mu_high_mean = 20,
+    mu_high_sd   = 0.2,
     # ---- Estructura de correlacion entre muestras
     rho_samples  = 0.6,    # correlacion base
     sigma_sample = 1.0,    # escala del efecto por muestra
     loading_sd   = 0.6,    # heterogeneidad entre proteinas frente al efecto de muestra
     sigma_resid  = 0.6,    # ruido residual prot~muestra (log2)
+    
     # ---- DE
     prop_de      = 0.05,
     logFC_mean   = 2.0,
@@ -101,10 +107,8 @@ simulate_proteomics_scoreaware <- function(
     k_mnar             = 1.2,
     missing_by_sample_sd = 0.35,
     
-    seed = NULL
+    semilla = NULL
 ){
-  
-  if (!is.null(seed)) set.seed(seed)
   
   semilla <- ifelse(is.null(semilla), 9396, semilla+9396)
   set.seed(semilla)
@@ -127,11 +131,12 @@ simulate_proteomics_scoreaware <- function(
   loadings <- rnorm(n_proteins, mean = 0, sd = loading_sd)
   
   # DE
-  candidate_idx <- setdiff(1:n_proteins, high_idx)
+  # candidate_idx <- setdiff(1:n_proteins, high_idx)
   n_de <- round(n_proteins * prop_de)
-  de_idx <- if (n_de > 0) sample(candidate_idx, size = n_de) else integer(0)
+  de_idx <- if (n_de > 0) sample(1:n_proteins, size = n_de) else integer(0)
   de_logFC <- if (n_de > 0) rnorm(n_de, mean = logFC_mean, sd = logFC_sd) * sample(c(-1,1), n_de, TRUE) else numeric(0)
-  group_effect <- rep(0, n_proteins); if (n_de > 0) group_effect[de_idx] <- de_logFC
+  group_effect <- rep(0, n_proteins);
+  if (n_de > 0) group_effect[de_idx] <- de_logFC
   
   # matriz base (log2)
   mat <- matrix(NA_real_, nrow = n_proteins, ncol = m)
@@ -169,7 +174,7 @@ simulate_proteomics_scoreaware <- function(
   
   ## --- Error C: sesgo dependiente de intensidad (no-lineal) + group-specific (MAplot + corr) ----
   if (add_intensity_bias) {
-    A <- rowMeans(V0, na.rm = TRUE)                  # gabundancia verdaderah
+    A <- rowMeans(mat, na.rm = TRUE)                  # gabundancia verdaderah
     A_c <- as.numeric(A - mean(A))                   # centrado
     Q <- A_c^2 - mean(A_c^2)                         # componente no-lineal centrada
     
@@ -305,29 +310,6 @@ evaluate_normalization <- function(rawData_init,
     x0o <- x0[ok]
     xho <- xh[ok]
     
-    # AJUSTE MAE AFIN #
-    # Ajuste afin por minimos cuadrados: x0 ~ a + b * xhat (efectos de escala)
-    # v <- stats::var(xho)
-    # b <- if (is.finite(v) && v > 0) stats::cov(x0o, xho) / v else 1
-    # a <- mean(x0o) - b * mean(xho)
-    # 
-    # xh_adj <- a + b * xh
-    # Xhat_aligned[, j] <- xh_adj
-    # 
-    # # Calculo de metricas
-    # mae <- mean(abs(x0o - (a + b * xho)))
-    # sp  <- suppressWarnings(stats::cor(x0o, xho, method = "spearman"))
-    # 
-    # per_sample[[j]] <- data.frame(
-    #   sample     = colnames(X0w)[j],
-    #   MAE_affine = mae,
-    #   a_hat      = a,
-    #   b_hat      = b,
-    #   Spearman   = sp,
-    #   n          = sum(ok)
-    # )
-    
-    
     # MAE NORMAL #
     per_sample[[j]] <- data.frame(
       sample   = colnames(X0w)[j],
@@ -383,16 +365,48 @@ nrow(grid)
 # Simulate data - no effect
 results <- sapply(1:nrow(grid), function(i) {
   params <- grid[i, ]
-  sim <- simulate_proteomics(
+  sim <- simulate_proteomics_scoreaware(
     n_proteins = params$n_proteins,
     n_per_group =  params$n_per_group,
     k_groups = params$k_groups,
     sigma_resid = params$sigma_resid,
     semilla = i, 
-    add_additive_shift = F
+    add_additive_shift = F, 
+    add_scale_variance = F, 
+    add_intensity_bias = F, 
+    add_shape_mixture = F, 
+    add_missing = T, 
+    rho_samples  = 0.9,    # correlacion base
+    sigma_sample = 0.5,    # escala del efecto por muestra
+    loading_sd   = 1,    # heterogeneidad entre proteinas frente al efecto de muestra
+    p_high = 0, 
+    prop_de = 0.05,  
+    logFC_mean = 0, 
+    logFC_sd = 2
   )
   return(sim)
 }, 
 simplify = F
 )
+
+i <- 1
+datos <- as.data.frame(results[[i]]["rawData"])
+colnames(datos) <- gsub(colnames(datos), pattern = "rawData.", replacement = "")
+datos$ProteinID <- rownames(datos)
+datos <- datos %>% dplyr::select(ProteinID, everything())
+writexl::write_xlsx(x = datos, path = "../Simulations/trial_new_error.xlsx")
+dm <- as.data.frame(results[[i]]["metadata"])
+colnames(dm) <- c("Samples", "Groups")
+writexl::write_xlsx(x = dm, path = "../Simulations/trial_new_error_DESIGN.xlsx")
+
+
+
+
+
+
+
+
+
+
+
 

@@ -23,7 +23,8 @@ pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/others/"
 norm <- "log"
 
 
-
+# Adaptado por chatGPT á función orixinal pero non me convence a adaptación dos erros. 
+# Non me ten sentido mesturalos. 
 
 #.........................................................................####
 # SCORE-AWARE ERROR MODELS (drop-in replacement) ####
