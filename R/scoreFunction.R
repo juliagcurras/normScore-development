@@ -230,6 +230,7 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 
 #...........................................................................####
 # SCORE: main function #### 
+#.........................................................................####
 
 normScore <- function(normMatrixList, designMatrix, dfRaw, 
                       refGroup = NULL, altGroup = NULL, onlyFinalRank = T){
@@ -323,7 +324,7 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
   # 4) Quantile outstands in TI graphics: small correction
   scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
-  
+
   # Rank ####
   scores_matrix <- t(scoreDF_norm)
   scoreDF_norm$Total <- rowSums(scoreDF_norm)
