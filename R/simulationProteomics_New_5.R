@@ -1,0 +1,284 @@
+
+##############################################################################- 
+
+#######                         SIMULACIÓNS                         ########## 
+
+##############################################################################- 
+
+# Julia G Curras - 08/01/2026
+
+# Simulación de datos de proteómica (log2-scale)
+rm(list=ls())
+graphics.off()
+setwd("C:/Users/julia/Documents/GitHub/normScore/R")
+
+library(MASS)
+library(future.apply)
+library(progressr)
+library(dplyr)
+library(tictoc)
+# source(file = "supportFunctions.R", encoding = "UTF-8")
+# source(file = "scoreFunction.R", encoding = "UTF-8")
+
+pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/others/"
+
+
+simulate_proteomics_clean <- function(
+    n_proteins = 1000,
+    n_per_group = 20,
+    
+    # Medias por proteína (log2)
+    mu_mean = 18,
+    mu_sd   = 1.2,
+    mu_clip = c(13, 25),
+    
+    # Correlación (intra > inter) vía factor correlacionado entre muestras
+    rho_within  = 0.85,
+    rho_between = 0.55,
+    loading_sd  = 0.40,   # cuánto pesa el factor sobre proteínas
+    
+    # “Cuña” MA: varianza residual depende de abundancia
+    sigma_hi = 0.18,      # ruido en alta expresión
+    sigma_lo = 0.75,      # ruido en baja expresión
+    gamma_sigma = 2.6,    # mayor => cuña más marcada
+    
+    # DE (simétrica entre grupos)
+    prop_de = 0.05,
+    logFC_sd = 2.0,
+    logFC_mean = 0,
+    hetero_logFC = TRUE,  # DE más grandes en baja expresión
+    fc_hi = 0.55,
+    fc_lo = 1.55,
+    gamma_fc = 2.0,
+    
+    # RLE
+    enforce_rle = TRUE,
+    cap_rle = 1.5,
+    
+    # Missing (por defecto OFF para “sin error”)
+    add_missing = FALSE,
+    target_missing = 0.001,
+    k_mnar = 1.2,
+    missing_by_sample_sd = 0.05,
+    
+    semilla = 9396
+){
+  
+  set.seed(semilla)
+  
+  # --------- grupos y nombres ----------
+  groups <- rep(c("G1","G2"), each = n_per_group)
+  m <- length(groups)
+  
+  # --------- medias por proteína ----------
+  mu <- rnorm(n_proteins, mu_mean, mu_sd)
+  mu <- pmin(pmax(mu, mu_clip[1]), mu_clip[2])
+  
+  # peso "baja expresión": 1 en baja (izqda), 0 en alta (dcha)
+  w_low <- (mu_clip[2] - mu) / (mu_clip[2] - mu_clip[1])
+  w_low <- pmin(pmax(w_low, 0), 1)
+  
+  # --------- DE simétrica (+/− logFC/2) ----------
+  n_de <- round(n_proteins * prop_de)
+  de_idx <- if (n_de > 0) sample.int(n_proteins, n_de) else integer(0)
+  
+  logFC <- rep(0, n_proteins)
+  if (n_de > 0) {
+    sd_i <- rep(logFC_sd, n_de)
+    if (hetero_logFC) {
+      mult <- fc_hi + (w_low[de_idx]^gamma_fc) * (fc_lo - fc_hi)
+      sd_i <- logFC_sd * mult
+    }
+    logFC[de_idx] <- rnorm(n_de, logFC_mean, sd_i) * sample(c(-1,1), n_de, TRUE)
+  }
+  
+  # vector de aplicación simétrica
+  gvec <- ifelse(groups == "G1", +0.5, -0.5)  # +logFC/2 y -logFC/2
+  DE_mat <- outer(logFC, gvec)
+  
+  # --------- factor correlacionado para correlación entre muestras ----------
+  # Construimos una correlación por bloques y sampleamos un score s_j
+  R <- matrix(rho_between, m, m); diag(R) <- 1
+  idx1 <- which(groups=="G1"); idx2 <- which(groups=="G2")
+  R[idx1, idx1] <- rho_within; diag(R[idx1, idx1]) <- 1
+  R[idx2, idx2] <- rho_within; diag(R[idx2, idx2]) <- 1
+  
+  ev <- eigen(R, symmetric=TRUE, only.values=TRUE)$values
+  if (min(ev) <= 1e-8) R <- R + diag(abs(min(ev)) + 1e-6, m)
+  
+  s <- as.numeric(MASS::mvrnorm(1, mu = rep(0, m), Sigma = R))
+  
+  # CLAVE: centramos s dentro de cada grupo para que NO meta diferencia en logFC por grupos
+  s[idx1] <- s[idx1] - mean(s[idx1])
+  s[idx2] <- s[idx2] - mean(s[idx2])
+  
+  load <- rnorm(n_proteins, 0, loading_sd)
+  FACT_mat <- outer(load, s)
+  
+  # --------- ruido residual heterocedástico (cuña MA) ----------
+  sigma_i <- sigma_hi + (w_low^gamma_sigma) * (sigma_lo - sigma_hi)
+  EPS <- matrix(rnorm(n_proteins*m), nrow=n_proteins, ncol=m) * sigma_i
+  
+  # --------- matriz final (log2) ----------
+  X <- matrix(mu, nrow=n_proteins, ncol=m) + FACT_mat + DE_mat + EPS
+  
+  rownames(X) <- paste0("P", sprintf("%05d", 1:n_proteins))
+  colnames(X) <- paste0(groups, "_", ave(seq_along(groups), groups, FUN = seq_along))
+  
+  # # --------- helpers RLE robustos ----------
+  # rowMed <- function(M) apply(M, 1, function(v) median(v, na.rm=TRUE))
+  # 
+  # center_rle <- function(M){
+  #   pm <- rowMed(M)
+  #   rle <- sweep(M, 1, pm, "-")
+  #   shifts <- apply(rle, 2, function(v) median(v, na.rm=TRUE))
+  #   sweep(M, 2, shifts, "-")
+  # }
+  # 
+  # cap_rle_global <- function(M, cap=1.5){
+  #   pm <- rowMed(M)
+  #   rle <- sweep(M, 1, pm, "-")
+  #   q <- as.numeric(quantile(abs(rle), probs=0.999, na.rm=TRUE))
+  #   if (!is.finite(q) || q <= cap) return(M)
+  #   s <- cap / q
+  #   pm + s * rle
+  # }
+  # 
+  # if (enforce_rle) {
+  #   X <- center_rle(X)
+  #   if (is.finite(cap_rle)) {
+  #     X <- cap_rle_global(X, cap=cap_rle)
+  #     X <- center_rle(X)  # asegura medianas exactamente 0
+  #   }
+  # }
+  
+  # --------- missing MNAR opcional (self-contained) ----------
+  miss_info <- NULL
+  if (add_missing) {
+    b <- rnorm(m, 0, missing_by_sample_sd)  # efecto por muestra (no por grupo)
+    b <- b - mean(b)
+    
+    # calibrar intercepto a para cumplir target_missing
+    # p_ij = sigmoid(a - k*X_ij + b_j)
+    f <- function(a){
+      p <- plogis(a - k_mnar * X + matrix(b, nrow=n_proteins, ncol=m, byrow=TRUE))
+      mean(p, na.rm=TRUE) - target_missing
+    }
+    a_hat <- uniroot(f, interval=c(-50, 50))$root
+    
+    P <- plogis(a_hat - k_mnar * X + matrix(b, nrow=n_proteins, ncol=m, byrow=TRUE))
+    M <- matrix(runif(n_proteins*m), nrow=n_proteins, ncol=m) < P
+    X[M] <- NA_real_
+    
+    # re-centrar RLE con NA
+    # if (enforce_rle) {
+    #   X <- center_rle(X)
+    #   if (is.finite(cap_rle)) {
+    #     X <- cap_rle_global(X, cap=cap_rle)
+    #     X <- center_rle(X)
+    #   }
+    # }
+    
+    miss_info <- list(P = P, mask = M)
+  }
+  
+  list(
+    logData  = X,
+    rawData  = 2^X,
+    metadata = data.frame(Samples=colnames(X), Groups=factor(groups, levels=c("G1","G2"))),
+    de_info  = data.frame(ProteinID=rownames(X)[de_idx], logFC_expected=logFC[de_idx]),
+    sim_info = list(rho_within=rho_within, rho_between=rho_between, sigma_summary=summary(sigma_i)),
+    miss_info = miss_info
+  )
+}
+
+
+
+# Execution
+
+
+results <- simulate_proteomics_clean(
+  n_proteins = 10000,
+  enforce_rle = F,
+  add_missing = T, 
+  gamma_sigma = 2.5,
+  sigma_hi = 0.05,
+  sigma_lo = 0.4,
+  prop_de = 0.5,
+  logFC_mean = 0, 
+  logFC_sd = 1, 
+  hetero_logFC = T, 
+  fc_hi = 0.5,
+  fc_lo = 2.5,
+  gamma_fc = 7, 
+  loading_sd = 0.25
+  )
+
+
+# trials
+results <- simulate_proteomics_clean(
+  n_proteins = 5000,
+  enforce_rle = FALSE,
+  add_missing = TRUE,
+  
+  gamma_sigma = 3.5,
+  sigma_hi = 0.04,
+  sigma_lo = 0.70,
+  
+  prop_de = 0.08,
+  logFC_sd = 0.75,
+  hetero_logFC = TRUE,
+  fc_hi = 0.15,
+  fc_lo = 2.5,
+  gamma_fc = 7,
+  
+  loading_sd = 0.25
+)
+a <- 1.5
+results <- simulate_proteomics_clean(
+  n_proteins = 5000,
+  enforce_rle = FALSE,
+  add_missing = TRUE,
+  
+  gamma_sigma = 4.0*a,
+  sigma_hi = 0.03*a,
+  sigma_lo = 0.85*a,
+  
+  prop_de = 0.05*a,
+  logFC_sd = 1.0*a,
+  hetero_logFC = TRUE,
+  fc_hi = 0.10*a,
+  fc_lo = 2.5*a,
+  gamma_fc = 7*a,
+  
+  loading_sd = 0.25*a
+)
+
+
+
+dfRaw <- as.data.frame(results["rawData"])
+colnames(dfRaw) <- gsub(colnames(dfRaw), pattern = "rawData.", replacement = "")
+datos <- as.data.frame(results["logData"])
+colnames(datos) <- gsub(colnames(datos), pattern = "logData.", replacement = "")
+dm <- as.data.frame(results["metadata"])
+colnames(dm) <- c("Samples", "Groups")
+
+p1 <- Biomics::plotBarTI(data = dfRaw, interact = F)$grafico
+p11 <- Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos), 
+                             interact = F, tituloX = "TI distribution")$grafico
+p2 <- Biomics::plotRLE(df = datos, normalizacion = "log", interact = F)$grafico
+p3 <- Biomics::plotMeanSD(df = datos, interact = F)$grafico
+p4 <- Biomics::plotMA(df = datos, dfGrupos = dm, gControl = "G1",
+                      gCase = "G2", showR2 = F, interact = F 
+                      # limY = c(-2,2)
+                      )$grafico
+
+ggpubr::ggarrange(p1, p11, p2, p3, p4, ncol = 2, nrow = 3)
+
+
+
+
+
+
+
+
