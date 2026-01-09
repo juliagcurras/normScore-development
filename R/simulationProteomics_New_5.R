@@ -29,28 +29,53 @@ pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/others/"
 #.............................................................................
 
 getResults <- function(results){
-  dfRaw <- as.data.frame(results["rawData"])
-  colnames(dfRaw) <- gsub(colnames(dfRaw), pattern = "rawData.", replacement = "")
-  datos <- as.data.frame(results["logData"])
-  colnames(datos) <- gsub(colnames(datos), pattern = "logData.", replacement = "")
-  dm <- as.data.frame(results["metadata"])
-  colnames(dm) <- c("Samples", "Groups")
+  # Extract data
+  dfRaw <- as.data.frame(results[["rawData"]])
+  datos <- as.data.frame(results[["logData"]])
+  dm <- as.data.frame(results[["metadata"]])
+  grupos <- unique(dm$Groups)
+  # colnames(dfRaw) <- gsub(colnames(dfRaw), pattern = "rawData.", replacement = "")
+  # colnames(datos) <- gsub(colnames(datos), pattern = "logData.", replacement = "")
+  # colnames(dm) <- c("Samples", "Groups")
   
-  p1 <- Biomics::plotBarTI(data = dfRaw, interact = F)$grafico
-  p11 <- Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos),
+  # Plot graphics
+  p0 <- Biomics::plotBarTI(data = dfRaw, interact = F)$grafico
+  p1 <- Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos),
                                interact = F, tituloX = "TI distribution")$grafico
   p2 <- Biomics::plotRLE(df = datos, normalizacion = "log", interact = F)$grafico
   p3 <- Biomics::plotMeanSD(df = datos, interact = F)$grafico
   p4 <- Biomics::plotMA(df = datos, dfGrupos = dm, gControl = "G1",
-                        gCase = "G2", showR2 = F, interact = F
-                        # limY = c(-2,2)
-  )$grafico
+                        gCase = "G2", showR2 = F, interact = F)$grafico
+  
+  # Get metrics and plot graphics
+      # PVC #
+  dfPCV <- Biomics::getPCVSimple(dfDatos = datos, grupos = grupos, dfGrupos = dm)
+  dfPCV <-  as.data.frame(dfPCV)
+  if (length(grupos) < 5) {
+    p5 <- Biostatech::plotForest(
+      etiquetas = rep(colnames(dfPCV), length(grupos)), 
+      estPunt = as.vector(t(as.matrix(dfPCV[seq(1, nrow(dfPCV), 3), ]))), 
+      LI = as.vector(t(as.matrix(dfPCV[seq(2, nrow(dfPCV), 3), ]))), 
+      LS = as.vector(t(as.matrix(dfPCV[seq(3, nrow(dfPCV), 3), ]))), 
+      grupos = rep(grupos, each = ncol(dfPCV)), 
+      vertical = T, 
+      tituloX = "Mean of the pooled variation coefficient - PVC (%)", 
+      referenceLine = F, interact = F)$grafico
+  }
+  else {
+    p5 <- Biomics::plotBoxMulti(base = dfPCV[seq(1, nrow(dfPCV), 3), ], 
+                                  varResumen = colnames(dfPCV), 
+                                  tituloX = "Normalizations", tituloY = "PVC (%)", 
+                                  interact = F)$grafico
+  }
+      # Correlations #
   correlations <- data.frame(Biomics::getPooledCor(df = datos, dfGrupos = dm, metodo = "spearman"))
   colnames(correlations) <- "cor"
-  p5 <- Biostatech::plotBox(base = correlations, tituloX = "Correlation (Spearman)",
+  p6 <- Biostatech::plotBox(base = correlations, tituloX = "Correlation (Spearman)",
                             varResumen = "cor", interact = F)$grafico
   
-  ggpubr::ggarrange(p1, p11, p2, p3, p4, p5, ncol = 2, nrow = 3)
+  # Patch together
+  ggpubr::ggarrange(p0, p1, p2, p3, p4, p5, p6, ncol = 2, nrow = 4)
 }
 
 
@@ -309,13 +334,24 @@ simulate_proteomics_clean <- function(
 ## Standard ####
 results <- simulate_proteomics_clean()
 getResults(results)
-dfRaw <- as.data.frame(results[["rawData"]])
-datos <- as.data.frame(results[["logData"]])
-dm <- as.data.frame(results[["metadata"]])
 
 
 #......................
 ## Item 0, 1, 5, 6 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(loading_sd = 0.25)
+getResults(results)
+results <- simulate_proteomics_clean(loading_sd = 1)
+getResults(results)
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.1, sample_shift_cap = 0.15)
+getResults(results)
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.3, sample_shift_cap = 0.4)
+getResults(results)
+
+
+# Simulación final 
 valores <- c(seq(0, 0.49, 0.1), 0.75, 1, 2)
 tictoc::tic()
 resByItem <- lapply(valores, function(x) simulate_proteomics_clean(
@@ -323,14 +359,71 @@ resByItem <- lapply(valores, function(x) simulate_proteomics_clean(
   n_proteins = 100,
   sample_shift_sd = x,
   sample_shift_cap = x+0.05))
-  # loading_sd = x, semilla = 1000))
 tictoc::toc()
 getResultsByItem(resByItem, item = "item0")
 getResultsByItem(resByItem, item = "item6")
 getResultsByItem(resByItem, item = "item5")
-getResultsByItem(resByItem, item = "item3") # algo influye si , pero croe que non vai ser a mellor forma de medilo
 getResultsByItem(resByItem, item = "item1") # influyeeee
-getResultsByItem(resByItem, item = "item2") # Aumenta lixeiramente a correlación si... moi lixeiramente
+# getResultsByItem(resByItem, item = "item3") # algo influye si , pero creo que non vai ser a mellor forma de medilo
+# getResultsByItem(resByItem, item = "item2") # Aumenta lixeiramente a correlación si... moi lixeiramente
+
+
+#......................
+## Item 2 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(
+  rho_between = 0.1, 
+  rho_within = 1) # Valores baixos de between e altos de within dan boa correlacion
+getResults(results)
+results <- simulate_proteomics_clean(
+  rho_between = 1, 
+  rho_within = 0.1)
+getResults(results)
+
+# Xa sabemos como funciona, ahora a usar varios valores #
+values_rho_between <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
+tictoc::tic()
+resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  rho_between = values_rho_between[x],
+  rho_within = values_rho_within[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item2")
+getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 respecto a betw>0.5+within<0.5
+getResultsByItem(resByItem, item = "item0")
+# getResultsByItem(resByItem, item = "item3")
+
+
+
+
+#......................
+## Item 3 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(
+  rho_between = 0.1, 
+  rho_within = 1) # Valores baixos de between e altos de within dan boa correlacion
+getResults(results)
+results <- simulate_proteomics_clean(
+  rho_between = 1, 
+  rho_within = 0.1)
+getResults(results)
+
+# Xa sabemos como funciona, ahora a usar varios valores #
+values_rho_between <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
+tictoc::tic()
+resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  rho_between = values_rho_between[x],
+  rho_within = values_rho_within[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item2")
+getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 respecto a betw>0.5+within<0.5
+getResultsByItem(resByItem, item = "item0")
+# getResultsByItem(resByItem, item = "item3")
 
 
 
