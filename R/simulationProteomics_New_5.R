@@ -161,7 +161,7 @@ getResultsByItem <- function(lista, item){
 #.............................................................................
 
 simulate_proteomics_clean <- function(
-    n_proteins = 10000, # 1000,
+    n_proteins = 10000,
     n_per_group = 20,
     
     # Medias por proteína (log2)
@@ -172,27 +172,32 @@ simulate_proteomics_clean <- function(
     # Correlación (intra > inter) vía factor correlacionado entre muestras
     rho_within  = 0.85,
     rho_between = 0.55,
-    loading_sd  = 0.25,   # cuánto pesa el factor sobre proteínas (0.4)
+    loading_sd  = 0.25,
     
     # “Cuña” MA: varianza residual depende de abundancia
-    sigma_hi = 0.05,      # ruido en alta expresión (0.18)
-    sigma_lo = 0.4,      # ruido en baja expresión (0.75)
-    gamma_sigma = 2.5,    # mayor => cuña más marcada en MAplot (2.6)
+    sigma_hi = 0.05,
+    sigma_lo = 0.4,
+    gamma_sigma = 2.5,
     
     # DE (simétrica entre grupos)
-    prop_de = 0.5, # 0.05
-    logFC_sd = 1, # 2.0
+    prop_de = 0.35,
+    logFC_sd = 1,
     logFC_mean = 0,
-    hetero_logFC = TRUE,  # DE más grandes en baja expresión
-    fc_hi = 0.55, # 0.55
-    fc_lo = 2.5, # 1.55
-    gamma_fc = 7, # 2.0
+    hetero_logFC = TRUE,
+    fc_hi = 0.55,
+    fc_lo = 2.5,
+    gamma_fc = 7,
     
-    # Item 0
-    sample_shift_sd = 0, 
+    # Item 0 (shift global por muestra, afecta sumas)
+    sample_shift_sd = 0,
     sample_shift_cap = 0.2,
     
-    # Missing (por defecto OFF para “sin error”)
+    # Item 4 (dependencia media–SD por muestra)
+    sample_sd_strength = 0,   # 0 = independencia
+    sample_sd_rho      = 0.8, # 0..1
+    sample_sd_cap      = 0.35,# cap en log-multiplicador
+    
+    # Missing
     add_missing = TRUE,
     target_missing = 0.001,
     k_mnar = 1.2,
@@ -200,27 +205,21 @@ simulate_proteomics_clean <- function(
     
     semilla = 9396
 ){
-  
   set.seed(semilla)
   
   # --------- grupos y nombres ----------
   groups <- rep(c("G1","G2"), each = n_per_group)
   m <- length(groups)
   
-  
   # --------- medias por proteína ----------
   mu <- rnorm(n_proteins, mu_mean, mu_sd)
   mu <- pmin(pmax(mu, mu_clip[1]), mu_clip[2])
-  
-  # peso "baja expresión": 1 en baja (izqda), 0 en alta (dcha)
   w_low <- (mu_clip[2] - mu) / (mu_clip[2] - mu_clip[1])
   w_low <- pmin(pmax(w_low, 0), 1)
-  
   
   # --------- DE simétrica (+/− logFC/2) ----------
   n_de <- round(n_proteins * prop_de)
   de_idx <- if (n_de > 0) sample.int(n_proteins, n_de) else integer(0)
-  
   logFC <- rep(0, n_proteins)
   if (n_de > 0) {
     sd_i <- rep(logFC_sd, n_de)
@@ -230,14 +229,10 @@ simulate_proteomics_clean <- function(
     }
     logFC[de_idx] <- rnorm(n_de, logFC_mean, sd_i) * sample(c(-1,1), n_de, TRUE)
   }
-  
-  # vector de aplicación simétrica
-  gvec <- ifelse(groups == "G1", +0.5, -0.5)  # +logFC/2 y -logFC/2
+  gvec <- ifelse(groups == "G1", +0.5, -0.5)
   DE_mat <- outer(logFC, gvec)
   
-  
   # --------- factor correlacionado para correlación entre muestras ----------
-  # Construimos una correlación por bloques y sampleamos un score s_j
   R <- matrix(rho_between, m, m); diag(R) <- 1
   idx1 <- which(groups=="G1"); idx2 <- which(groups=="G2")
   R[idx1, idx1] <- rho_within; diag(R[idx1, idx1]) <- 1
@@ -247,80 +242,78 @@ simulate_proteomics_clean <- function(
   if (min(ev) <= 1e-8) R <- R + diag(abs(min(ev)) + 1e-6, m)
   
   s <- as.numeric(MASS::mvrnorm(1, mu = rep(0, m), Sigma = R))
-  
-  # CLAVE: centramos s dentro de cada grupo para que NO meta diferencia en logFC por grupos
   s[idx1] <- s[idx1] - mean(s[idx1])
   s[idx2] <- s[idx2] - mean(s[idx2])
   
   load <- rnorm(n_proteins, 0, loading_sd)
   FACT_mat <- outer(load, s)
   
-  
   # --------- ruido residual heterocedástico (cuña MA) ----------
   sigma_i <- sigma_hi + (w_low^gamma_sigma) * (sigma_lo - sigma_hi)
   EPS <- matrix(rnorm(n_proteins*m), nrow=n_proteins, ncol=m) * sigma_i
   
-  
-  # --------- matriz final (log2) ----------
-  X <- matrix(mu, nrow=n_proteins, ncol=m) + FACT_mat + DE_mat + EPS
-  
-  # ---- Item0: desajuste en suma por muestra (offset en log2) ----
-  # if (sample_shift_sd > 0 || sample_shift_trend != 0) {
-  #   j <- seq_len(m)
-  #   b <- rnorm(m, 0, sample_shift_sd) + sample_shift_trend * scale(j)[,1]
-  #   b <- as.numeric(b - mean(b))     # que el dataset global no se desplace
-  #   X <- sweep(X, 2, b, "+")         # offset log2 por muestra
-  # }
-  
-  # ---- Item0: desajuste en suma por muestra (offset log2 aleatorio) ----
+  # --------- Item0: shift global por muestra ----------
+  b_shift <- rep(0, m)
   if (sample_shift_sd > 0) {
-    b <- rnorm(m, mean = 0, sd = sample_shift_sd)
-    
-    # quitar media global para no desplazar el dataset entero
-    b <- b - mean(b)
-    
-    # cap suave para evitar 1-2 muestras dominantes (winsorize)
+    b_shift <- rnorm(m, mean = 0, sd = sample_shift_sd)
+    b_shift <- b_shift - mean(b_shift)
     if (!is.null(sample_shift_cap) && is.finite(sample_shift_cap)) {
-      b <- pmin(pmax(b, -sample_shift_cap), sample_shift_cap)
-      b <- b - mean(b)  # re-centrar tras cap
+      b_shift <- pmin(pmax(b_shift, -sample_shift_cap), sample_shift_cap)
+      b_shift <- b_shift - mean(b_shift)
     }
-    
-    X <- sweep(X, 2, b, "+")
+  }
+  
+  # --------- matriz base (log2) ----------
+  X <- matrix(mu, nrow=n_proteins, ncol=m) + FACT_mat + DE_mat + EPS
+  if (any(b_shift != 0)) X <- sweep(X, 2, b_shift, "+")
+  
+  # --------- Item4 (EFECTIVO): SD por muestra dependiente de su media ----------
+  if (sample_sd_strength != 0) {
+    m_mean <- colMeans(X, na.rm = TRUE)
+    z_mean <- as.numeric(scale(rank(m_mean, ties.method = "average")))
+    if (anyNA(z_mean)) z_mean <- rep(0, m)
+    u <- as.numeric(scale(rnorm(m)))
+    if (anyNA(u)) u <- rep(0, m)
+    rho <- max(0, min(1, sample_sd_rho))
+    z_sd <- rho * z_mean + sqrt(1 - rho^2) * u
+    log_mult <- sample_sd_strength * z_sd
+    if (!is.null(sample_sd_cap) && is.finite(sample_sd_cap)) {
+      log_mult <- pmin(pmax(log_mult, -sample_sd_cap), sample_sd_cap)
+    }
+    sd_scale <- exp(log_mult)
+    X_center <- sweep(X, 2, m_mean, "-")
+    X <- sweep(X_center, 2, sd_scale, "*")
+    X <- sweep(X, 2, m_mean, "+")
   }
   
   # --------- Aesthetics ----------
   rownames(X) <- paste0("P", sprintf("%05d", 1:n_proteins))
   colnames(X) <- paste0(groups, "_", ave(seq_along(groups), groups, FUN = seq_along))
   
-  
-  # --------- missing MNAR opcional (self-contained) ----------
+  # --------- missing MNAR opcional ----------
   miss_info <- NULL
   if (add_missing) {
-    b <- rnorm(m, 0, missing_by_sample_sd)  # efecto por muestra (no por grupo)
-    b <- b - mean(b)
-    
-    # calibrar intercepto a para cumplir target_missing
-    # p_ij = sigmoid(a - k*X_ij + b_j)
+    b_miss <- rnorm(m, 0, missing_by_sample_sd)
+    b_miss <- b_miss - mean(b_miss)
     f <- function(a){
-      p <- plogis(a - k_mnar * X + matrix(b, nrow=n_proteins, ncol=m, byrow=TRUE))
+      p <- plogis(a - k_mnar * X + matrix(b_miss, nrow=n_proteins, ncol=m, byrow=TRUE))
       mean(p, na.rm=TRUE) - target_missing
     }
     a_hat <- uniroot(f, interval=c(-50, 50))$root
-    
-    P <- plogis(a_hat - k_mnar * X + matrix(b, nrow=n_proteins, ncol=m, byrow=TRUE))
+    P <- plogis(a_hat - k_mnar * X + matrix(b_miss, nrow=n_proteins, ncol=m, byrow=TRUE))
     M <- matrix(runif(n_proteins*m), nrow=n_proteins, ncol=m) < P
     X[M] <- NA_real_
-    
-    miss_info <- list(P = P, mask = M)
+    miss_info <- list(P = P, mask = M, b_miss = b_miss)
   }
   
   list(
     logData  = X,
     rawData  = 2^X,
-    metadata = data.frame(Samples=colnames(X), Groups=factor(groups, levels=c("G1","G2")))
-    # de_info  = data.frame(ProteinID=rownames(X)[de_idx], logFC_expected=logFC[de_idx]),
-    # sim_info = list(rho_within=rho_within, rho_between=rho_between, sigma_summary=summary(sigma_i)),
-    # miss_info = miss_info
+    metadata = data.frame(Samples=colnames(X),
+                          Groups=factor(groups, levels=c("G1","G2"))),
+    item_effects = list(b_shift=b_shift,
+                        sigma_i_summary=summary(sigma_i)),
+    miss_info = miss_info
   )
 }
 
@@ -339,10 +332,12 @@ getResults(results)
 #......................
 ## Item 0, 1, 5, 6 ####
 # Probas iniciales #
+# Opción 1: loading sd
 results <- simulate_proteomics_clean(loading_sd = 0.25)
 getResults(results)
 results <- simulate_proteomics_clean(loading_sd = 1)
 getResults(results)
+# Opción 2: 
 results <- simulate_proteomics_clean(
   sample_shift_sd = 0.1, sample_shift_cap = 0.15)
 getResults(results)
@@ -356,7 +351,7 @@ valores <- c(seq(0, 0.49, 0.1), 0.75, 1, 2)
 tictoc::tic()
 resByItem <- lapply(valores, function(x) simulate_proteomics_clean(
   semilla = 1000, 
-  n_proteins = 100,
+  n_proteins = 1000,
   sample_shift_sd = x,
   sample_shift_cap = x+0.05))
 tictoc::toc()
@@ -395,6 +390,58 @@ getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 re
 getResultsByItem(resByItem, item = "item0")
 # getResultsByItem(resByItem, item = "item3")
 
+# Alternativa #
+sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+tictoc::tic()
+resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  sample_sd_strength = sample_sd_strength[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item2")
+
+
+#......................
+## Item 4 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.1,
+  sample_sd_strength = 1,
+  sample_sd_rho = 1.5, 
+  sample_sd_cap = 0) # Aumentando este valor aumenta a pendiente das rectas
+getResults(results)
+
+
+# Xa sabemos como funciona, ahora a usar varios valores #
+sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+sample_sd_cap <- c(seq(0, 0.5, 0.05), 1.5, 2, 3)
+tictoc::tic()
+resByItem <- lapply(1:length(sample_sd_strength), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  sample_shift_sd = 0.5,  #sample_shift_cap = 0.15,
+  sample_sd_strength = 1,
+  sample_sd_rho = 1.5, 
+  sample_sd_cap = sample_sd_cap[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item4")
+getResultsByItem(resByItem, item = "item3")
+
+# opcion 2 así flipas como cambia e mais aleatorio 
+sample_sd_cap <- seq(1, 3, 1)
+tictoc::tic()
+resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
+  sample_shift_sd = 0.5,
+  sample_sd_strength = 2,
+  sample_sd_rho = 0, 
+  sample_sd_cap = sample_sd_cap[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item4")
+getResultsByItem(resByItem, item = "item3")
+getResultsByItem(resByItem, item = "item0")
+getResultsByItem(resByItem, item = "item1")
+
+
 
 
 
@@ -402,28 +449,48 @@ getResultsByItem(resByItem, item = "item0")
 ## Item 3 ####
 # Probas iniciales #
 results <- simulate_proteomics_clean(
-  rho_between = 0.1, 
-  rho_within = 1) # Valores baixos de between e altos de within dan boa correlacion
+  prop_de = 0.1,
+  sigma_lo = 0.6, # poñendo valores crecientes inversos entre este argumento e o seguinte invírtese a forma de cuña
+  sigma_hi = 2,
+  gamma_sigma = 3) 
 getResults(results)
 results <- simulate_proteomics_clean(
-  rho_between = 1, 
-  rho_within = 0.1)
+  sample_shift_sd = 0.5,
+  sample_sd_strength = 2,
+  sample_sd_rho = 0, 
+  sample_sd_cap = 1) # Aumentando este valor aumenta a pendiente das rectas (co resto de parámetros tal cual)
 getResults(results)
 
+
 # Xa sabemos como funciona, ahora a usar varios valores #
-values_rho_between <- c(seq(0, 1, 0.25), 1.5, 2, 3)
-values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
+# Opcion 1 - cambio forma #
+sigma_lo <- c(seq(0, 1, 0.1), 1.5, 2, 3)
+sigma_hi <- rev(c(seq(0, 1, 0.1), 1.5, 2, 3))
 tictoc::tic()
-resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+resByItem <- lapply(1:length(sigma_lo), function(x) simulate_proteomics_clean(
   semilla = 10000, 
   n_proteins = 1000,
-  rho_between = values_rho_between[x],
-  rho_within = values_rho_within[x]))
+  prop_de = 0.1,
+  sigma_lo = sigma_lo[x],
+  sigma_hi = sigma_hi[x],
+  gamma_sigma = 3))
 tictoc::toc()
-getResultsByItem(resByItem, item = "item2")
-getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 respecto a betw>0.5+within<0.5
-getResultsByItem(resByItem, item = "item0")
-# getResultsByItem(resByItem, item = "item3")
+getResultsByItem(resByItem, item = "item3")
+
+# Opcion 2 - cambio pendiente #
+sample_sd_cap <- -1*c(seq(0, 1, 0.25), 1.5, 2, 3) # Cambia o ancho dos puntos (canto más grande mais estreito)
+sample_sd_cap <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+tictoc::tic()
+resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
+  sample_shift_sd = 0.5,
+  sample_sd_strength = 3,
+  sample_sd_rho = 0, 
+  sample_sd_cap = sample_sd_cap[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item3")
+
+
+
 
 
 
