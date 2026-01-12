@@ -380,7 +380,7 @@ simulate_proteomics_clean <- function(
 # values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
 # tictoc::tic()
 # resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
-#   semilla = 10000, 
+#   semilla = 10000,
 #   n_proteins = 1000,
 #   rho_between = values_rho_between[x],
 #   rho_within = values_rho_within[x]))
