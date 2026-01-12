@@ -1,12 +1,11 @@
-##############################################################################- 
-
-#######                         SIMULACIÓNS                         ##########- 
 
 ##############################################################################- 
 
+#######                         SIMULACIÓNS                         ########## 
 
+##############################################################################- 
 
-# Julia G Curras - 10/11/2025
+# Julia G Curras - 08/01/2026
 
 # Simulación de datos de proteómica (log2-scale)
 rm(list=ls())
@@ -17,700 +16,526 @@ library(MASS)
 library(future.apply)
 library(progressr)
 library(dplyr)
+library(ggplot2)
 library(tictoc)
-source(file = "supportFunctions.R", encoding = "UTF-8")
-source(file = "scoreFunction.R", encoding = "UTF-8")
+# source(file = "supportFunctions.R", encoding = "UTF-8")
+# source(file = "scoreFunction.R", encoding = "UTF-8")
 
 pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/others/"
-norm <- "log"
 
 
-#.........................................................................####
-# Auxiliar Functions ####
-#.........................................................................####
+#.............................................................................
+# Auxiliar functions ####
+#.............................................................................
 
-
-# ----------------- helpers de errores -----------------
-add_shift_additive <- function(M, offsets = NULL, sd_shift = 0.5, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  if (is.null(offsets)) offsets <- rnorm(ncol(M), mean = 0, sd = sd_shift)
-  out <- sweep(M, 2, offsets, FUN = "+")
-  attr(out, "offsets") <- offsets
-  out
-}
-
-add_scale_variance <- function(M, scales = NULL, sd_logscale = 0.3, center = c("row","global"), seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  center <- match.arg(center)
-  if (is.null(scales)) {
-    scales <- exp(rnorm(ncol(M), mean = 0, sd = sd_logscale))
+getResults <- function(results){
+  # Extract data
+  dfRaw <- as.data.frame(results[["rawData"]])
+  datos <- as.data.frame(results[["logData"]])
+  dm <- as.data.frame(results[["metadata"]])
+  grupos <- unique(dm$Groups)
+  # colnames(dfRaw) <- gsub(colnames(dfRaw), pattern = "rawData.", replacement = "")
+  # colnames(datos) <- gsub(colnames(datos), pattern = "logData.", replacement = "")
+  # colnames(dm) <- c("Samples", "Groups")
+  
+  # Plot graphics
+  p0 <- Biomics::plotBarTI(data = dfRaw, interact = F)$grafico
+  p1 <- Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos),
+                               interact = F, tituloX = "TI distribution")$grafico
+  p2 <- Biomics::plotRLE(df = datos, normalizacion = "log", interact = F)$grafico
+  p3 <- Biomics::plotMeanSD(df = datos, interact = F)$grafico
+  p4 <- Biomics::plotMA(df = datos, dfGrupos = dm, gControl = "G1",
+                        gCase = "G2", showR2 = F, interact = F)$grafico
+  
+  # Get metrics and plot graphics
+      # PVC #
+  dfPCV <- Biomics::getPCVSimple(dfDatos = datos, grupos = grupos, dfGrupos = dm)
+  dfPCV <-  as.data.frame(dfPCV)
+  if (length(grupos) < 5) {
+    p5 <- Biostatech::plotForest(
+      etiquetas = rep(colnames(dfPCV), length(grupos)), 
+      estPunt = as.vector(t(as.matrix(dfPCV[seq(1, nrow(dfPCV), 3), ]))), 
+      LI = as.vector(t(as.matrix(dfPCV[seq(2, nrow(dfPCV), 3), ]))), 
+      LS = as.vector(t(as.matrix(dfPCV[seq(3, nrow(dfPCV), 3), ]))), 
+      grupos = rep(grupos, each = ncol(dfPCV)), 
+      vertical = T, 
+      tituloX = "Mean of the pooled variation coefficient - PVC (%)", 
+      referenceLine = F, interact = F)$grafico
   }
-  if (center == "row") {
-    A  <- rowMeans(M, na.rm = TRUE)
-    Mc <- sweep(M, 1, A, FUN = "-")
-    Mc <- sweep(Mc, 2, scales, FUN = "*")
-    out <- sweep(Mc, 1, A, FUN = "+")
-  } else {
-    mu <- mean(M, na.rm = TRUE)
-    Mc <- M - mu
-    Mc <- sweep(Mc, 2, scales, FUN = "*")
-    out <- Mc + mu
+  else {
+    p5 <- Biomics::plotBoxMulti(base = dfPCV[seq(1, nrow(dfPCV), 3), ], 
+                                  varResumen = colnames(dfPCV), 
+                                  tituloX = "Normalizations", tituloY = "PVC (%)", 
+                                  interact = F)$grafico
   }
-  attr(out, "scales") <- scales
-  out
-}
-
-add_intensity_bias_spline <- function(M, n_knots = 5, bias_sd = 0.5, share_shape = FALSE, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  A <- rowMeans(M, na.rm = TRUE)
-  x_min <- quantile(A, 0.02, na.rm = TRUE)
-  x_max <- quantile(A, 0.98, na.rm = TRUE)
-  knots <- seq(x_min, x_max, length.out = n_knots)
-  base_vals <- rnorm(n_knots, 0, bias_sd)
-  out <- M
-  for (j in seq_len(ncol(M))) {
-    vals <- if (share_shape) base_vals * rlnorm(1, 0, 0.2) else rnorm(n_knots, 0, bias_sd)
-    f <- stats::splinefun(x = knots, y = vals, method = "natural")
-    b <- f(A)
-    out[, j] <- out[, j] + b
-  }
-  out
-}
-
-add_intensity_bias_linear <- function(M, sd_slope = 0.1, sd_intercept = 0.2, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  A <- rowMeans(M, na.rm = TRUE)
-  A_c <- A - mean(A, na.rm = TRUE)
-  a1 <- rnorm(ncol(M), 0, sd_slope)
-  a0 <- rnorm(ncol(M), 0, sd_intercept)
-  out <- M
-  for (j in seq_len(ncol(M))) {
-    b <- a0[j] + a1[j] * A_c
-    out[, j] <- out[, j] + b
-  }
-  attr(out, "a0") <- a0; attr(out, "a1") <- a1
-  out
-}
-
-add_shape_mixture_fn <- function(M, prop_mix = 0.15, delta_mean = 1.5, sd_mix = 0.8, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  out <- M
-  mu_row <- rowMeans(M, na.rm = TRUE)
-  idx <- sample(seq_len(nrow(M)), size = round(nrow(M) * prop_mix))
-  mu_row_new <- mu_row
-  mu_row_new[idx] <- rnorm(length(idx), mean = mean(mu_row) + delta_mean, sd = sd_mix)
-  shift_row <- mu_row_new - mu_row
-  out <- out + shift_row
-  out
-}
-
-add_shape_sas_fn <- function(M, skew = 0.0, tail = 1.0) {
-  mu <- mean(M, na.rm = TRUE); sdv <- stats::sd(as.vector(M), na.rm = TRUE)
-  Z  <- (M - mu) / sdv
-  Y  <- sinh((asinh(Z) + skew) * tail)
-  Y  <- Y * sdv + mu
-  Y
-}
-
-add_mean_variance_lognorm_fn <- function(M, a0 = 0.25, a1 = -0.02, min_sd = 0.05, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  A <- rowMeans(M, na.rm = TRUE)
-  sd_row <- pmax(a0 + a1 * A, min_sd)
-  noise <- matrix(rnorm(length(M), 0, rep(sd_row, times = ncol(M))), nrow = nrow(M))
-  M + noise
-}
-
-add_mean_variance_pg_fn <- function(M, disp = 0.2, pseudocount = 1, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
-  X <- 2^M
-  shape <- 1 / disp
-  rate  <- shape / X
-  lambda <- matrix(stats::rgamma(length(X), shape = shape, rate = rate), nrow = nrow(M))
-  Y <- matrix(stats::rpois(length(lambda), lambda = as.vector(lambda)), nrow = nrow(M))
-  logY <- log2(Y + pseudocount)
-  colnames(logY) <- colnames(X)
-  rownames(logY) <- rownames(X)
-  logY
-}
-
-# apply_missing_mar_mnar <- function(mat_log,
-#                                    target_missing = 0.20,
-#                                    mnar_weight    = 0.7,
-#                                    k              = 1.2,
-#                                    per_sample_mar = TRUE,
-#                                    mar_jitter_sd  = 0.02,
-#                                    seed           = NULL) {
-#   if (!is.null(seed)) set.seed(seed)
-#   target_mnar <- target_missing * mnar_weight
-#   f_mean_diff <- function(x0, M, k, target) mean(plogis(k * (x0 - M))) - target
-#   rng <- range(mat_log, na.rm = TRUE)
-#   lo <- rng[1] - 5; hi <- rng[2] + 5
-#   x0_star <- tryCatch(
-#     uniroot(function(z) f_mean_diff(z, mat_log, k, target_mnar), lower = lo, upper = hi)$root,
-#     error = function(e) median(mat_log, na.rm = TRUE)
-#   )
-#   p_mnar <- plogis(k * (x0_star - mat_log))
-#   mean_one_minus_mnar <- mean(1 - p_mnar, na.rm = TRUE)
-#   c_needed <- 1 - (1 - target_missing) / mean_one_minus_mnar
-#   c_needed <- pmin(pmax(c_needed, 0), 1)
-#   if (per_sample_mar) {
-#     c_vec <- pmin(pmax(rnorm(ncol(mat_log), mean = c_needed, sd = mar_jitter_sd), 0), 1)
-#     p_mar <- matrix(rep(c_vec, each = nrow(mat_log)), nrow = nrow(mat_log))
-#   } else {
-#     p_mar <- matrix(c_needed, nrow = nrow(mat_log), ncol = ncol(mat_log))
-#   }
-#   p_total <- 1 - (1 - p_mnar) * (1 - p_mar)
-#   mask_na <- matrix(runif(length(p_total)) < p_total, nrow = nrow(mat_log))
-#   mat_out <- mat_log
-#   mat_out[mask_na] <- NA_real_
-#   list(mat_log_na = mat_out,
-#        p_mnar = p_mnar, p_mar = p_mar, p_total = p_total,
-#        x0 = x0_star, c = c_needed)
-# }
-
-apply_missing_mnar <- function(mat_log, target_missing = 0.15, k = 1.2) {
-  # p_miss(x) = 1/(1 + exp(-k*(x0 - x))) = plogis(k*(x0 - x))
-  # Calibramos x0 para que mean(p_miss) ~= target_missing
-  f_mean_diff <- function(x0, M) mean(plogis(k * (x0 - M))) - target_missing
-  rng <- range(mat_log, na.rm = TRUE)
-  # Ampliamos un poco el intervalo por seguridad
-  lo <- rng[1] - 5; hi <- rng[2] + 5
-  x0_star <- tryCatch(
-    uniroot(function(z) f_mean_diff(z, mat_log), lower = lo, upper = hi)$root,
-    error = function(e) median(mat_log, na.rm = TRUE)  # fallback razonable
-  )
-  prob_miss <- plogis(k * (x0_star - mat_log))
-  mask_na   <- matrix(runif(length(prob_miss)) < prob_miss, nrow = nrow(mat_log))
-  mat_out   <- mat_log
-  mat_out[mask_na] <- NA_real_
-  list(mat_log_na = mat_out, prob_miss = prob_miss, mask_na = mask_na, x0 = x0_star)
-}
-
-
-
-
-
-
-
-
-#.........................................................................####
-# Function  simulation ####
-#.........................................................................####
-
-
-simulate_proteomics <- 
-  function(
-    # ---- Tamaños ----
-    n_proteins   = 1000,
-    n_per_group  = 10,
-    k_groups     = 2,
-    # ---- Mezcla de medias proteicas (log2) ----
-    p_high       = 0.02,
-    mu_low_mean  = 18,
-    mu_low_sd    = 1.2,
-    mu_high_mean = 23,
-    mu_high_sd   = 0.6,
-    # ---- Estructura de correlación entre muestras ----
-    rho_samples  = 0.6,    # correlación base
-    sigma_sample = 1.0,    # escala del efecto por muestra
-    loading_sd   = 0.6,    # heterogeneidad entre proteínas frente al efecto de muestra
-    sigma_resid  = 0.6,    # ruido residual prot×muestra (log2)
-    # ---- DE ----
-    prop_de      = 0.05,
-    logFC_mean   = 2.0,
-    logFC_sd     = 0.6,
-    # ---- Faltantes MNAR ----
-    add_missing    = TRUE,
-    target_missing = 0.20,
-    k         = 1.2,  # pendiente de la sigmoide MNAR
-    # ---- Switches de errores (se aplican en este orden) ----
-    add_additive_shift     = FALSE,
-    additive_sd_shift      = 0.5,
-    add_scale_variance     = FALSE,
-    scale_sd_logscale      = 0.3,  # sd del log(factor) de escala por muestra
-    scale_center           = c("row","global"),
-    add_intensity_bias     = FALSE,
-    bias_mode              = c("spline","linear"),
-    bias_n_knots           = 5,
-    bias_sd                = 0.5,
-    bias_share_shape       = FALSE,
-    bias_sd_slope          = 0.1,  # (linear)
-    bias_sd_intercept      = 0.2,  # (linear)
-    add_shape_mixture      = FALSE,
-    shape_prop_mix         = 0.15,
-    shape_delta_mean       = 1.5,
-    shape_sd_mix           = 0.8,
-    add_shape_sas          = FALSE,
-    sas_skew               = 0.0,  # 0 = sin skew
-    sas_tail               = 1.0,  # 1 = colas normales
-    add_meanvar_lognorm    = FALSE,
-    mv_a0                  = 0.25,
-    mv_a1                  = -0.02,
-    mv_min_sd              = 0.05,
-    add_meanvar_pg         = FALSE,
-    pg_disp                = 0.2,
-    pg_pseudocount         = 1,
-    # ---- Semilla ----
-    semilla        = NULL
-  ){
-    
-    semilla <- ifelse(is.null(semilla), 9396, semilla+9396)
-    set.seed(semilla)
-    
-    # ----------------- inicio simulación base -----------------
-    groups <- paste0("G", rep(1:k_groups, length.out = n_per_group * k_groups))
-    m <- length(groups)
-    
-    # medias de proteína (log2)
-    mu <- rnorm(n_proteins, mean = mu_low_mean, sd = mu_low_sd)
-    high_idx <- if (p_high > 0) sample(1:n_proteins, size = round(n_proteins * p_high)) else integer(0)
-    if (length(high_idx) > 0) {
-      mu[high_idx] <- rnorm(length(high_idx), mean = mu_high_mean, sd = mu_high_sd)
-    }
-    mu <- pmin(pmax(mu, 15), 25)
-    
-    # correlación entre muestras + cargas por proteína
-    Sigma <- matrix(rho_samples, nrow = m, ncol = m); diag(Sigma) <- 1
-    sample_effects <- as.numeric(MASS::mvrnorm(n = 1, mu = rep(0, m), Sigma = Sigma)) * sigma_sample
-    loadings <- rnorm(n_proteins, mean = 0, sd = loading_sd)
-    
-    # DE
-    candidate_idx <- setdiff(1:n_proteins, high_idx)
-    n_de <- round(n_proteins * prop_de)
-    de_idx <- if (n_de > 0) sample(candidate_idx, size = n_de) else integer(0)
-    de_logFC <- if (n_de > 0) rnorm(n_de, mean = logFC_mean, sd = logFC_sd) * sample(c(-1,1), n_de, TRUE) else numeric(0)
-    group_effect <- rep(0, n_proteins); if (n_de > 0) group_effect[de_idx] <- de_logFC
-    
-    # matriz base (log2)
-    mat <- matrix(NA_real_, nrow = n_proteins, ncol = m)
-    for (i in 1:n_proteins) {
-      base     <- mu[i]
-      samp_eff <- loadings[i] * sample_effects
-      grp_eff  <- ifelse(groups == "G1", group_effect[i], 0)
-      resid    <- rnorm(m, mean = 0, sd = sigma_resid)
-      mat[i, ] <- base + samp_eff + grp_eff + resid
-    }
-    rownames(mat) <- paste0("P", sprintf("%05d", 1:n_proteins))
-    colnames(mat) <- paste0(groups, "_", ave(seq_along(groups), groups, FUN = seq_along))
-    originalMat <- mat
-    
-    # ----------------- inyección de errores (en orden) -----------------
-    # 1) Aditivo
-    if (add_additive_shift) {
-      mat <- add_shift_additive(mat, sd_shift = additive_sd_shift, seed = semilla)
-    }
-    # 2) Escala/varianza
-    if (add_scale_variance) {
-      mat <- add_scale_variance(mat, sd_logscale = scale_sd_logscale, center = match.arg(scale_center), seed = semilla)
-    }
-    # 3) Sesgo dependiente de intensidad
-    if (add_intensity_bias) {
-      mode <- match.arg(bias_mode)
-      if (mode == "spline") {
-        mat <- add_intensity_bias_spline(mat, n_knots = bias_n_knots, bias_sd = bias_sd,
-                                         share_shape = bias_share_shape, seed = semilla)
-      } else {
-        mat <- add_intensity_bias_linear(mat, sd_slope = bias_sd_slope, sd_intercept = bias_sd_intercept, seed = semilla)
-      }
-    }
-    # 4) Cambio de forma
-    if (add_shape_mixture) {
-      mat <- add_shape_mixture_fn(mat, prop_mix = shape_prop_mix, delta_mean = shape_delta_mean,
-                                  sd_mix = shape_sd_mix, seed = semilla)
-    }
-    if (add_shape_sas) {
-      mat <- add_shape_sas_fn(mat, skew = sas_skew, tail = sas_tail)
-    }
-    # 5) Relación media–varianza
-    if (add_meanvar_lognorm) {
-      mat <- add_mean_variance_lognorm_fn(mat, a0 = mv_a0, a1 = mv_a1, min_sd = mv_min_sd, seed = semilla)
-    }
-    if (add_meanvar_pg) {
-      mat <- add_mean_variance_pg_fn(mat, disp = pg_disp, pseudocount = pg_pseudocount, seed = semilla)
-    }
-    
-    # ----------------- faltantes  MNAR -----------------
-    if (add_missing) {
-      miss <- apply_missing_mnar(mat, target_missing = target_missing, k = k)
-      mat <- miss$mat_log_na
-    }
-    
-    
-    # ----------------- salida -----------------
-    meta <- data.frame(
-      Samples = colnames(mat),
-      Groups  = factor(groups, levels = paste0("G", 1:k_groups))
-    )
-    matRaw <- 2^mat
-    
-    de_info <- data.frame(
-        ProteinID      = rownames(mat)[de_idx],
-        logFC_expected = group_effect[de_idx],
-        ref_group      = "G1",
-        other_group    = if (k_groups == 2) "G2" else "others",
-        stringsAsFactors = FALSE
-    )
-    
-    return(list(
-      originalMat = originalMat,
-      rawData  = matRaw,              # intensidades lineales CON NA
-      logData  = as.data.frame(mat),  # log2 CON NA
-      metadata = meta,
-      de_info  = de_info
-    ))
-  }
-
-
-
-
-#.........................................................................####
-# Function  assessment normalization ####
-#.........................................................................####
-
-# Evalúa una normalización comparando la matriz inicial (rawData) con la final (normData)
-# - Ambas pueden contener NA.
-# - Por defecto trabaja en log2 con pseudoconteo.
-# Devuelve métricas por muestra y un resumen.
-
-evaluate_normalization <- function(rawData_init,
-                                   normData_final
-                                   # use_log2 = TRUE, pseudocount = 1
-                                   ) {
+      # Correlations #
+  correlations <- data.frame(Biomics::getPooledCor(df = datos, dfGrupos = dm, metodo = "spearman"))
+  colnames(correlations) <- "cor"
+  p6 <- Biostatech::plotBox(base = correlations, tituloX = "Correlation (Spearman)",
+                            varResumen = "cor", interact = F)$grafico
   
-  # --- 0) Alineación por IDs (filas=proteínas, columnas=muestras) ---
-  stopifnot(is.matrix(rawData_init) || is.data.frame(rawData_init))
-  stopifnot(is.matrix(normData_final) || is.data.frame(normData_final))
-  X0  <- as.matrix(rawData_init)
-  Xh  <- as.matrix(normData_final)
-  
-  # Alinear por nombres si existen
-  common_rows <- intersect(rownames(X0), rownames(Xh))
-  common_cols <- intersect(colnames(X0), colnames(Xh))
-  if (length(common_rows) == 0 || length(common_cols) == 0) {
-    stop("No hay intersección de filas o columnas entre rawData_init y normData_final.")
-  }
-  X0w <- X0[common_rows, common_cols, drop = FALSE]
-  Xhw <- Xh[common_rows, common_cols, drop = FALSE]
-  
-  # # --- 1) Escala de trabajo (log2 recomendado) ---
-  # if (use_log2) {
-  #   if (any(X0 < 0, na.rm = TRUE) || any(Xh < 0, na.rm = TRUE)) {
-  #     stop("Hay valores negativos pero se pidió log2. Ajusta pseudocount/explora tu pipeline.")
-  #   }
-  #   X0w <- log2(X0 + pseudocount)
-  #   Xhw <- log2(Xh + pseudocount)
-  # } else {
-  #   X0w <- X0
-  #   Xhw <- Xh
-  # }
-  
-  # --- 2) Métricas por muestra: MAE con ajuste afín + Spearman ---
-  m <- ncol(X0w)
-  per_sample <- vector("list", m)
-  # Xhat_aligned <- Xhw  # guardaremos la versión alineada (ajustada) por muestra
-  
-  for (j in seq_len(m)) {
-    x0  <- X0w[, j]
-    xh  <- Xhw[, j]
-    ok  <- is.finite(x0) & is.finite(xh)
-    
-    if (!any(ok)) {
-      per_sample[[j]] <- data.frame(
-        sample     = colnames(X0w)[j],
-        MAE_affine = NA_real_,
-        a_hat      = NA_real_,
-        b_hat      = NA_real_,
-        Spearman   = NA_real_,
-        n          = 0
-      )
-      next
-    }
-    
-    x0o <- x0[ok]
-    xho <- xh[ok]
-    
-                          # AJUSTE MAE AFIN #
-    # Ajuste afín por mínimos cuadrados: x0 ~ a + b * xhat (efectos de escala)
-    # v <- stats::var(xho)
-    # b <- if (is.finite(v) && v > 0) stats::cov(x0o, xho) / v else 1
-    # a <- mean(x0o) - b * mean(xho)
-    # 
-    # xh_adj <- a + b * xh
-    # Xhat_aligned[, j] <- xh_adj
-    # 
-    # # Cálculo de métricas
-    # mae <- mean(abs(x0o - (a + b * xho)))
-    # sp  <- suppressWarnings(stats::cor(x0o, xho, method = "spearman"))
-    # 
-    # per_sample[[j]] <- data.frame(
-    #   sample     = colnames(X0w)[j],
-    #   MAE_affine = mae,
-    #   a_hat      = a,
-    #   b_hat      = b,
-    #   Spearman   = sp,
-    #   n          = sum(ok)
-    # )
-    
-    
-                            # MAE NORMAL #
-    per_sample[[j]] <- data.frame(
-      sample   = colnames(X0w)[j],
-      MAE      = mean(abs(x0o - xho)),
-      Spearman = suppressWarnings(stats::cor(x0o, xho, method = "spearman")),
-      n        = sum(ok)
-    )
-  }
-  
-  per_sample_df <- do.call(rbind, per_sample)
-  
-  # --- 3) Resumen global ---
-  summary_df <- data.frame(
-    MAE_mean = mean(per_sample_df$MAE, na.rm = TRUE),
-    Spearman_mean   = mean(per_sample_df$Spearman,   na.rm = TRUE),
-    samples_used    = sum(per_sample_df$n > 0),
-    entries_used    = sum(per_sample_df$n)
-  )
-  
-  # Salida:
-  return(list(
-    summary      = summary_df         # resumen global
-    # per_sample   = per_sample_df      # métricas por muestra
-    # X0_work      = X0w,                # matriz "verdad" en escala de trabajo
-    # Xhat_aligned = Xhat_aligned        # normData ajustada (afín) en escala de trabajo
-  ))
+  # Patch together
+  ggpubr::ggarrange(p0, p1, p2, p3, p4, p5, p6, ncol = 2, nrow = 4)
 }
 
 
-
-
-
-#.........................................................................####
-# Execution simulations ####
-#.........................................................................####
-
-## Settings 
-n_proteins <- c(1000, 5000, 10000)
-n_per_group <- 20
-k_groups <- 2
-sigma_resid <- c(0.2, 0.6) # variación residual
-seed <- sample(1:10000, 5)
-
-## All combinations of settings
-grid <- expand.grid(
-  n_proteins = n_proteins,
-  n_per_group = n_per_group,
-  k_groups = k_groups,
-  sigma_resid = sigma_resid, 
-  seed = 9396 #seed
-)
-# grid <- do.call(rbind, replicate(5, grid, simplify = FALSE)) # repetir 3 veces
-nrow(grid)  
-
-# Simulate data - no effect
-results <- sapply(1:nrow(grid), function(i) {
-  params <- grid[i, ]
-  sim <- simulate_proteomics(
-    n_proteins = params$n_proteins,
-    n_per_group =  params$n_per_group,
-    k_groups = params$k_groups,
-    sigma_resid = params$sigma_resid,
-    semilla = i, 
-    add_additive_shift = F
-    )
-  return(sim)
-  }, 
-  simplify = F
-)
-
-a <- 0
-for (i in results){
-  a <- a + 1 
-  write.csv(i$rawData, file = paste0(pathToData, "/", a, "_matrix.csv"), row.names = TRUE)
-  write.csv(i$metadata, file = paste0(pathToData, "/", a, "_design.csv"), row.names = FALSE)
-  write.csv(i$de_info, file = paste0(pathToData, "/", a, "_de_info.csv"), row.names = FALSE)
-}
-
-abc <- evaluate_normalization(rawData_init = i$logData, normData_final = i$logData+rnorm(1))
-
-
-# Simulate data - additive effect
-results <- sapply(1:nrow(grid), function(i) {
-  params <- grid[i, ]
-  sim <- simulate_proteomics(
-    n_proteins = params$n_proteins,
-    n_per_group =  params$n_per_group,
-    k_groups = params$k_groups,
-    sigma_resid = params$sigma_resid,
-    semilla = i, 
-    add_additive_shift = T
-    )
-  return(sim)
-  }, 
-  simplify = F
-)
-
-a <- 0
-for (i in results){
-  a <- a + 1 
-  write.csv(i$rawData, file = paste0(pathToData, "/", a, "_matrix_additive.csv"), row.names = TRUE)
-  write.csv(i$metadata, file = paste0(pathToData, "/", a, "_design_additive.csv"), row.names = FALSE)
-  write.csv(i$metadata, file = paste0(pathToData, "/", a, "_de_info_additive.csv"), row.names = FALSE)
-}
-
-
-# Extended grid 
-# --- nombres de los 8 flags ---
-flags <- c(
-  "add_additive_shift",
-  "add_scale_variance",
-  "add_intensity_bias",
-  "bias_share_shape",
-  "add_shape_mixture",
-  "add_shape_sas",
-  "add_meanvar_lognorm",
-  "add_meanvar_pg"
-)
-
-# --- 9 escenarios: todos FALSE + uno TRUE cada vez ---
-flag_grid <- as.data.frame(matrix(FALSE, nrow = length(flags) + 1, ncol = length(flags)))
-names(flag_grid) <- flags
-for (i in seq_along(flags)) flag_grid[i + 1, flags[i]] <- TRUE
-
-# --- cross join (base R) ---
-grid_final <- merge(grid, flag_grid, by = NULL)
-
-# listo
-dim(grid_final)   # 6 * 9 = 54 filas (habería que ejecutar con diferentes semillas)
-head(grid_final)
-
-
-
-
-#.........................................................................####
-# Assessing normalization ####
-#.........................................................................####
-priority <- c("Log", "Median", "Mean", "GI", "Quantile", "VSN", "cyclicloess", "RLR")
-tictoc::tic()
-results <- sapply(1:nrow(grid_final), function(i) {
-  # Simulate data
-  params <- grid_final[i, ]
-  sim <- simulate_proteomics(
-    n_proteins = params$n_proteins,
-    n_per_group =  params$n_per_group,
-    k_groups = params$k_groups,
-    sigma_resid = params$sigma_resid,
-    semilla = params$seed, 
-    add_additive_shift = params$add_additive_shift, # Log but second median, mean, TI
-    add_scale_variance = params$add_scale_variance,
-    bias_share_shape = params$bias_share_shape, 
-    add_intensity_bias = params$add_intensity_bias, 
-    add_shape_mixture = params$add_shape_mixture,
-    add_shape_sas = params$add_shape_sas,
-    add_meanvar_lognorm = params$add_meanvar_lognorm, 
-    add_meanvar_pg = params$add_meanvar_pg
-  )
+getResultsByItem <- function(lista, item){
+  # just a common object
+  dm <- as.data.frame(lista[[1]][["metadata"]])
   
-  # Retrieving data
-  originalData <- sim$originalMat
-  dfGrupos <- sim$metadata
-  logIntensityMatrix <- sim$logData
-  intensityMatrix <- sim$rawData
-  grupos <- levels(as.factor(dfGrupos$Groups))
-  
-  # Normalization...
-  mydata <- list(Log = logIntensityMatrix,
-                 Mean = meanNorm(rawMatrix = intensityMatrix), 
-                 Median = medianNorm(rawMatrix = intensityMatrix), 
-                 GI = GINorm(rawMatrix = intensityMatrix),
-                 Quantile = quantileNorm(log2Matrix = logIntensityMatrix),
-                 VSN = VSNNorm(rawMatrix = intensityMatrix),
-                 CyclicLoess = cyclicLoessNorm(log2Matrix = logIntensityMatrix),
-                 RLR = RLRNorm(log2Matrix = logIntensityMatrix))
-                 # MAD = MADNormalization(log2Matrix = logIntensityMatrix))
-  mydata <- lapply(mydata, function(i) {
-    rownames(i) =  rownames(intensityMatrix)
-    return(i)
+  # Starting with data extraction and metrics/graphs estimation... 
+  if (item == "item0"){ # only item 0
+    a <<- 0
+    finalPlots <- lapply(lista, function(res){
+      a <<- a+1
+      nome <- paste0("SimDataset_", a)
+      dfRaw <- as.data.frame(res[["rawData"]])
+      Biomics::plotBarTI(data = dfRaw, interact = F)$grafico + ggplot2::xlab(nome)
     })
-  
-  # Assessing normalization
-  finalRank <- sapply(mydata, evaluate_normalization, 
-                      rawData_init = originalData, 
-                      simplify = T, USE.NAMES = F)
-  finalDF <- do.call(rbind, finalRank)
-  finalDF <- finalDF %>% arrange(MAE_mean, Spearman_mean)
-  rownames(finalDF) <- gsub(x = rownames(finalDF), pattern = ".summary", replacement = "")
-  
-  # Score ranking
-  finalRank <- normScore( 
-    designMatrix = dfGrupos, 
-    normMatrixList = mydata, 
-    dfRaw = intensityMatrix, 
-    refGroup = "G2", 
-    altGroup = "G1", 
-    onlyFinalRank = T)$finalRanking
-  
-  # Saving
-  
-  # write.csv(intensityMatrix, file = paste0(pathToData, "/_TRIAL_matrix_additive.csv"), row.names = TRUE)
-  # write.csv(dfGrupos, file = paste0(pathToData, "/_TRIAL_design_additive.csv"), row.names = FALSE)
-  
-  # Returning
-  # return(
-  # list(
-  #   real = finalDF, 
-  #   score = finalRank
-  # )
-  # )
-  
-  # Join info and final decision #
-  common <- intersect(rownames(finalDF), names(finalRank))
-  out <- data.frame(
-    norm = common,
-    MAE  = as.numeric(finalDF[common, "MAE_mean"]),
-    score = as.numeric(finalRank[common]),
-    stringsAsFactors = FALSE
-  )
-  # Score top
-  if (length(min(out$score)) > 1){
-    normByScore <- out %>% 
-      dplyr::mutate(priority = match(norm, priority)) %>%
-      dplyr::arrange(score, priority) %>%
-      dplyr::pull(norm) 
-    normByScore <- normByScore[1]
-  } else {
-    normByScore <- out[out$score == min(out$score), "norm"]
-  }
-  # MAE TOP
-  normByMAE <- out[out$MAE == min(out$MAE), "norm"]
-  
-  # Decision based on MAE top 
-  if (length(normByMAE) > 1){
-    if (normByScore %in% normByMAE){
-      output <- c(
-        real = paste0(normByScore, "_more"), 
-        score = normByScore
-      )
-    } else {
-      output <- c(
-        real = paste0(normByScore, collapse = T, sep = "/"), 
-        score = normByScore
-      )
+    output <- ggpubr::ggarrange(plotlist = finalPlots, 
+                                ncol = 2, nrow = ceiling(length(lista)/2))
+  } else { # other items
+    # First extrating individual data and generating individual plots
+    a <<- 0
+    finalData <- lapply(lista, function(res){
+      a <<- a+1
+      nome <- paste0("SimDataset_", a)
+      datos <- as.data.frame(res[["logData"]])
+      dm <- as.data.frame(res[["metadata"]])
+      if (item == "item6"){
+        Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos),
+                              interact = F, 
+                              tituloX = nome
+        )$grafico
+      } else if (item == "item5"){
+        Biomics::plotRLE(df = datos, normalizacion = nome, interact = F, 
+                         tituloX = nome)$grafico
+      } else if (item == "item4"){
+        Biomics::plotMeanSD(df = datos, interact = F, tituloX = nome)$grafico
+      } else if (item == "item3"){
+        Biomics::plotMA(df = datos, dfGrupos = dm, gControl = "G1", titulo = nome,
+                        gCase = "G2", showR2 = F, interact = F)$grafico
+      } else {
+        as.data.frame(datos)
+      }
+    })
+    
+    names(finalData) <- paste0("SimDataset_",1:length(finalData))
+    # Mix plots into a single image or...
+    if (item %in% c("item3", "item4", "item5", "item6")){ # plot graphs together: MAplot, RLEplot, meanSDplot, TIboxplot
+      output <- ggpubr::ggarrange(plotlist = finalData, 
+                                  ncol = 2, 
+                                  nrow = ceiling(length(lista)/2))
+    } else if (item == "item1"){ # ...or generate other metrics with data for remaining items
+      # names(finalData) <- paste0("SimDataset_",1:length(finalData))
+      output <- Biomics::getPCV( # PVC
+        listData = finalData,
+        grupos = unique(dm[,"Groups"]),
+        dfGrupos = dm,
+        grafico = T,
+        interact = F
+      )$grafico
+    } else if (item =="item2"){ # Correlation
+      allVectorsCorr <- lapply(
+        finalData, 
+        Biomics::getPooledCor, 
+        dfGrupos = dm,
+        metodo = "spearman")
+      dfPlot <- data.frame(sapply(allVectorsCorr, "length<-", max(lengths(allVectorsCorr))))
+      output <- Biomics::plotBoxMulti(
+        base = dfPlot, 
+        varResumen = colnames(dfPlot),
+        tituloX = "Normalizations", interact = F,
+        tituloY = "Spearman correlation")$grafico
     }
-  } else {
-    output <- c(
-      real = normByMAE, 
-      score = normByScore
-      )
-  }
+    
+  } 
   
   return(output)
-}, simplify = T)
+}
+
+
+
+#.............................................................................
+# Main function ####
+#.............................................................................
+
+simulate_proteomics_clean <- function(
+    n_proteins = 10000,
+    n_per_group = 20,
+    
+    # Medias por proteína (log2)
+    mu_mean = 18,
+    mu_sd   = 1.2,
+    mu_clip = c(15, 25),
+    
+    # Correlación (intra > inter) vía factor correlacionado entre muestras
+    rho_within  = 0.85,
+    rho_between = 0.55,
+    loading_sd  = 0.25,
+    
+    # “Cuña” MA: varianza residual depende de abundancia
+    sigma_hi = 0.05,
+    sigma_lo = 0.4,
+    gamma_sigma = 2.5,
+    
+    # DE (simétrica entre grupos)
+    prop_de = 0.35,
+    logFC_sd = 1,
+    logFC_mean = 0,
+    hetero_logFC = TRUE,
+    fc_hi = 0.55,
+    fc_lo = 2.5,
+    gamma_fc = 7,
+    
+    # Item 0 (shift global por muestra, afecta sumas)
+    sample_shift_sd = 0,
+    sample_shift_cap = 0.2,
+    
+    # Item 4 (dependencia media–SD por muestra)
+    sample_sd_strength = 0,   # 0 = independencia
+    sample_sd_rho      = 0.8, # 0..1
+    sample_sd_cap      = 0.35,# cap en log-multiplicador
+    
+    # Missing
+    add_missing = TRUE,
+    target_missing = 0.001,
+    k_mnar = 1.2,
+    missing_by_sample_sd = 0.05,
+    
+    semilla = 9396
+){
+  set.seed(semilla)
+  
+  # --------- grupos y nombres ----------
+  groups <- rep(c("G1","G2"), each = n_per_group)
+  m <- length(groups)
+  
+  # --------- medias por proteína ----------
+  mu <- rnorm(n_proteins, mu_mean, mu_sd)
+  mu <- pmin(pmax(mu, mu_clip[1]), mu_clip[2])
+  w_low <- (mu_clip[2] - mu) / (mu_clip[2] - mu_clip[1])
+  w_low <- pmin(pmax(w_low, 0), 1)
+  
+  # --------- DE simétrica (+/− logFC/2) ----------
+  n_de <- round(n_proteins * prop_de)
+  de_idx <- if (n_de > 0) sample.int(n_proteins, n_de) else integer(0)
+  logFC <- rep(0, n_proteins)
+  if (n_de > 0) {
+    sd_i <- rep(logFC_sd, n_de)
+    if (hetero_logFC) {
+      mult <- fc_hi + (w_low[de_idx]^gamma_fc) * (fc_lo - fc_hi)
+      sd_i <- logFC_sd * mult
+    }
+    logFC[de_idx] <- rnorm(n_de, logFC_mean, sd_i) * sample(c(-1,1), n_de, TRUE)
+  }
+  gvec <- ifelse(groups == "G1", +0.5, -0.5)
+  DE_mat <- outer(logFC, gvec)
+  
+  # --------- factor correlacionado para correlación entre muestras ----------
+  R <- matrix(rho_between, m, m); diag(R) <- 1
+  idx1 <- which(groups=="G1"); idx2 <- which(groups=="G2")
+  R[idx1, idx1] <- rho_within; diag(R[idx1, idx1]) <- 1
+  R[idx2, idx2] <- rho_within; diag(R[idx2, idx2]) <- 1
+  
+  ev <- eigen(R, symmetric=TRUE, only.values=TRUE)$values
+  if (min(ev) <= 1e-8) R <- R + diag(abs(min(ev)) + 1e-6, m)
+  
+  s <- as.numeric(MASS::mvrnorm(1, mu = rep(0, m), Sigma = R))
+  s[idx1] <- s[idx1] - mean(s[idx1])
+  s[idx2] <- s[idx2] - mean(s[idx2])
+  
+  load <- rnorm(n_proteins, 0, loading_sd)
+  FACT_mat <- outer(load, s)
+  
+  # --------- ruido residual heterocedástico (cuña MA) ----------
+  sigma_i <- sigma_hi + (w_low^gamma_sigma) * (sigma_lo - sigma_hi)
+  EPS <- matrix(rnorm(n_proteins*m), nrow=n_proteins, ncol=m) * sigma_i
+  
+  # --------- Item0: shift global por muestra ----------
+  b_shift <- rep(0, m)
+  if (sample_shift_sd > 0) {
+    b_shift <- rnorm(m, mean = 0, sd = sample_shift_sd)
+    b_shift <- b_shift - mean(b_shift)
+    if (!is.null(sample_shift_cap) && is.finite(sample_shift_cap)) {
+      b_shift <- pmin(pmax(b_shift, -sample_shift_cap), sample_shift_cap)
+      b_shift <- b_shift - mean(b_shift)
+    }
+  }
+  
+  # --------- matriz base (log2) ----------
+  X <- matrix(mu, nrow=n_proteins, ncol=m) + FACT_mat + DE_mat + EPS
+  if (any(b_shift != 0)) X <- sweep(X, 2, b_shift, "+")
+  
+  # --------- Item4 (EFECTIVO): SD por muestra dependiente de su media ----------
+  if (sample_sd_strength != 0) {
+    m_mean <- colMeans(X, na.rm = TRUE)
+    z_mean <- as.numeric(scale(rank(m_mean, ties.method = "average")))
+    if (anyNA(z_mean)) z_mean <- rep(0, m)
+    u <- as.numeric(scale(rnorm(m)))
+    if (anyNA(u)) u <- rep(0, m)
+    rho <- max(0, min(1, sample_sd_rho))
+    z_sd <- rho * z_mean + sqrt(1 - rho^2) * u
+    log_mult <- sample_sd_strength * z_sd
+    if (!is.null(sample_sd_cap) && is.finite(sample_sd_cap)) {
+      log_mult <- pmin(pmax(log_mult, -sample_sd_cap), sample_sd_cap)
+    }
+    sd_scale <- exp(log_mult)
+    X_center <- sweep(X, 2, m_mean, "-")
+    X <- sweep(X_center, 2, sd_scale, "*")
+    X <- sweep(X, 2, m_mean, "+")
+  }
+  
+  # --------- Aesthetics ----------
+  rownames(X) <- paste0("P", sprintf("%05d", 1:n_proteins))
+  colnames(X) <- paste0(groups, "_", ave(seq_along(groups), groups, FUN = seq_along))
+  
+  # --------- missing MNAR opcional ----------
+  miss_info <- NULL
+  if (add_missing) {
+    b_miss <- rnorm(m, 0, missing_by_sample_sd)
+    b_miss <- b_miss - mean(b_miss)
+    f <- function(a){
+      p <- plogis(a - k_mnar * X + matrix(b_miss, nrow=n_proteins, ncol=m, byrow=TRUE))
+      mean(p, na.rm=TRUE) - target_missing
+    }
+    a_hat <- uniroot(f, interval=c(-50, 50))$root
+    P <- plogis(a_hat - k_mnar * X + matrix(b_miss, nrow=n_proteins, ncol=m, byrow=TRUE))
+    M <- matrix(runif(n_proteins*m), nrow=n_proteins, ncol=m) < P
+    X[M] <- NA_real_
+    miss_info <- list(P = P, mask = M, b_miss = b_miss)
+  }
+  
+  list(
+    logData  = X,
+    rawData  = 2^X,
+    metadata = data.frame(Samples=colnames(X),
+                          Groups=factor(groups, levels=c("G1","G2"))),
+    item_effects = list(b_shift=b_shift,
+                        sigma_i_summary=summary(sigma_i)),
+    miss_info = miss_info
+  )
+}
+
+
+
+#.............................................................................
+# Executions ####
+#.............................................................................
+
+#...............
+## Standard ####
+results <- simulate_proteomics_clean()
+getResults(results)
+
+
+#......................
+## Item 0, 1, 5, 6 ####
+# Probas iniciales #
+# Opción 1: loading sd
+results <- simulate_proteomics_clean(loading_sd = 0.25)
+getResults(results)
+results <- simulate_proteomics_clean(loading_sd = 1)
+getResults(results)
+# Opción 2: 
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.1, sample_shift_cap = 0.15)
+getResults(results)
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.3, sample_shift_cap = 0.4)
+getResults(results)
+
+
+# Simulación final 
+valores <- c(seq(0, 0.49, 0.1), 0.75, 1, 2)
+tictoc::tic()
+resByItem <- lapply(valores, function(x) simulate_proteomics_clean(
+  semilla = 1000, 
+  n_proteins = 1000,
+  sample_shift_sd = x,
+  sample_shift_cap = x+0.05))
 tictoc::toc()
+getResultsByItem(resByItem, item = "item0")
+getResultsByItem(resByItem, item = "item6")
+getResultsByItem(resByItem, item = "item5")
+getResultsByItem(resByItem, item = "item1") # influyeeee
+# getResultsByItem(resByItem, item = "item3") # algo influye si , pero creo que non vai ser a mellor forma de medilo
+# getResultsByItem(resByItem, item = "item2") # Aumenta lixeiramente a correlación si... moi lixeiramente
 
 
-resFinal <- grid_final
-resFinal$Real <- results["real",]
-resFinal$Score <- results["score",]
+#......................
+## Item 2 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(
+  rho_between = 0.1, 
+  rho_within = 1) # Valores baixos de between e altos de within dan boa correlacion
+getResults(results)
+results <- simulate_proteomics_clean(
+  rho_between = 1, 
+  rho_within = 0.1)
+getResults(results)
+
+# Xa sabemos como funciona, ahora a usar varios valores #
+values_rho_between <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
+tictoc::tic()
+resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  rho_between = values_rho_between[x],
+  rho_within = values_rho_within[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item2")
+getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 respecto a betw>0.5+within<0.5
+getResultsByItem(resByItem, item = "item0")
+# getResultsByItem(resByItem, item = "item3")
+
+# Alternativa #
+sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+tictoc::tic()
+resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  sample_sd_strength = sample_sd_strength[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item2")
+
+
+#......................
+## Item 4 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.1,
+  sample_sd_strength = 1,
+  sample_sd_rho = 1.5, 
+  sample_sd_cap = 0) # Aumentando este valor aumenta a pendiente das rectas
+getResults(results)
+
+
+# Xa sabemos como funciona, ahora a usar varios valores #
+sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+sample_sd_cap <- c(seq(0, 0.5, 0.05), 1.5, 2, 3)
+tictoc::tic()
+resByItem <- lapply(1:length(sample_sd_strength), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  sample_shift_sd = 0.5,  #sample_shift_cap = 0.15,
+  sample_sd_strength = 1,
+  sample_sd_rho = 1.5, 
+  sample_sd_cap = sample_sd_cap[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item4")
+getResultsByItem(resByItem, item = "item3")
+
+# opcion 2 así flipas como cambia e mais aleatorio 
+sample_sd_cap <- seq(1, 3, 1)
+tictoc::tic()
+resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
+  sample_shift_sd = 0.5,
+  sample_sd_strength = 2,
+  sample_sd_rho = 0, 
+  sample_sd_cap = sample_sd_cap[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item4")
+getResultsByItem(resByItem, item = "item3")
+getResultsByItem(resByItem, item = "item0")
+getResultsByItem(resByItem, item = "item1")
+
+
+
+
+
+#......................
+## Item 3 ####
+# Probas iniciales #
+results <- simulate_proteomics_clean(
+  prop_de = 0.1,
+  sigma_lo = 0.6, # poñendo valores crecientes inversos entre este argumento e o seguinte invírtese a forma de cuña
+  sigma_hi = 2,
+  gamma_sigma = 3) 
+getResults(results)
+results <- simulate_proteomics_clean(
+  sample_shift_sd = 0.5,
+  sample_sd_strength = 2,
+  sample_sd_rho = 0, 
+  sample_sd_cap = 1) # Aumentando este valor aumenta a pendiente das rectas (co resto de parámetros tal cual)
+getResults(results)
+
+
+# Xa sabemos como funciona, ahora a usar varios valores #
+# Opcion 1 - cambio forma #
+sigma_lo <- c(seq(0, 1, 0.1), 1.5, 2, 3)
+sigma_hi <- rev(c(seq(0, 1, 0.1), 1.5, 2, 3))
+tictoc::tic()
+resByItem <- lapply(1:length(sigma_lo), function(x) simulate_proteomics_clean(
+  semilla = 10000, 
+  n_proteins = 1000,
+  prop_de = 0.1,
+  sigma_lo = sigma_lo[x],
+  sigma_hi = sigma_hi[x],
+  gamma_sigma = 3))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item3")
+
+# Opcion 2 - cambio pendiente #
+sample_sd_cap <- -1*c(seq(0, 1, 0.25), 1.5, 2, 3) # Cambia o ancho dos puntos (canto más grande mais estreito)
+sample_sd_cap <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+tictoc::tic()
+resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
+  sample_shift_sd = 0.5,
+  sample_sd_strength = 3,
+  sample_sd_rho = 0, 
+  sample_sd_cap = sample_sd_cap[x]))
+tictoc::toc()
+getResultsByItem(resByItem, item = "item3")
+
+
+
+
+
+
+##
+#......................
+# other trials with different arguments
+results <- simulate_proteomics_clean(
+  n_proteins = 5000,
+  enforce_rle = FALSE,
+  add_missing = TRUE,
+  
+  gamma_sigma = 3.5,
+  sigma_hi = 0.04,
+  sigma_lo = 0.70,
+  
+  prop_de = 0.08,
+  logFC_sd = 0.75,
+  hetero_logFC = TRUE,
+  fc_hi = 0.15,
+  fc_lo = 2.5,
+  gamma_fc = 7,
+  
+  loading_sd = 0.25
+)
+a <- 1.5
+results <- simulate_proteomics_clean(
+  n_proteins = 5000,
+  enforce_rle = FALSE,
+  add_missing = TRUE,
+  
+  gamma_sigma = 4.0*a,
+  sigma_hi = 0.03*a,
+  sigma_lo = 0.85*a,
+  
+  prop_de = 0.05*a,
+  logFC_sd = 1.0*a,
+  hetero_logFC = TRUE,
+  fc_hi = 0.10*a,
+  fc_lo = 2.5*a,
+  gamma_fc = 7*a,
+  
+  loading_sd = 0.25*a
+)
+
+
 
 
 
