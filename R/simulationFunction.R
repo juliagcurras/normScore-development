@@ -1,15 +1,15 @@
 
 ##############################################################################- 
 
-#######                         SIMULACIÓNS                         ########## 
+#######                 FUNCIÓN SIMULACIÓNS                         ########## 
 
 ##############################################################################- 
 
 # Julia G Curras - 08/01/2026
 
 # Simulación de datos de proteómica (log2-scale)
-rm(list=ls())
-graphics.off()
+# rm(list=ls())
+# graphics.off()
 setwd("C:/Users/julia/Documents/GitHub/normScore/R")
 
 library(MASS)
@@ -318,222 +318,222 @@ simulate_proteomics_clean <- function(
 }
 
 
-
-#.............................................................................
-# Executions ####
-#.............................................................................
-
-#...............
-## Standard ####
-results <- simulate_proteomics_clean()
-getResults(results)
-
-
-#......................
-## Item 0, 1, 5, 6 ####
-# Probas iniciales #
-# Opción 1: loading sd
-results <- simulate_proteomics_clean(loading_sd = 0.25)
-getResults(results)
-results <- simulate_proteomics_clean(loading_sd = 1)
-getResults(results)
-# Opción 2: 
-results <- simulate_proteomics_clean(
-  sample_shift_sd = 0.1, sample_shift_cap = 0.15)
-getResults(results)
-results <- simulate_proteomics_clean(
-  sample_shift_sd = 0.3, sample_shift_cap = 0.4)
-getResults(results)
-
-
-# Simulación final 
-valores <- c(seq(0, 0.49, 0.1), 0.75, 1, 2)
-tictoc::tic()
-resByItem <- lapply(valores, function(x) simulate_proteomics_clean(
-  semilla = 1000, 
-  n_proteins = 1000,
-  sample_shift_sd = x,
-  sample_shift_cap = x+0.05))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item0")
-getResultsByItem(resByItem, item = "item6")
-getResultsByItem(resByItem, item = "item5")
-getResultsByItem(resByItem, item = "item1") # influyeeee
-# getResultsByItem(resByItem, item = "item3") # algo influye si , pero creo que non vai ser a mellor forma de medilo
-# getResultsByItem(resByItem, item = "item2") # Aumenta lixeiramente a correlación si... moi lixeiramente
-
-
-#......................
-## Item 2 ####
-# Probas iniciales #
-results <- simulate_proteomics_clean(
-  rho_between = 0.1, 
-  rho_within = 1) # Valores baixos de between e altos de within dan boa correlacion
-getResults(results)
-results <- simulate_proteomics_clean(
-  rho_between = 1, 
-  rho_within = 0.1)
-getResults(results)
-
-# Xa sabemos como funciona, ahora a usar varios valores #
-values_rho_between <- c(seq(0, 1, 0.25), 1.5, 2, 3)
-values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
-tictoc::tic()
-resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
-  semilla = 10000, 
-  n_proteins = 1000,
-  rho_between = values_rho_between[x],
-  rho_within = values_rho_within[x]))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item2")
-getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 respecto a betw>0.5+within<0.5
-getResultsByItem(resByItem, item = "item0")
+# 
+# #.............................................................................
+# # Executions ####
+# #.............................................................................
+# 
+# #...............
+# ## Standard ####
+# results <- simulate_proteomics_clean()
+# getResults(results)
+# 
+# 
+# #......................
+# ## Item 0, 1, 5, 6 ####
+# # Probas iniciales #
+# # Opción 1: loading sd
+# results <- simulate_proteomics_clean(loading_sd = 0.25)
+# getResults(results)
+# results <- simulate_proteomics_clean(loading_sd = 1)
+# getResults(results)
+# # Opción 2: 
+# results <- simulate_proteomics_clean(
+#   sample_shift_sd = 0.1, sample_shift_cap = 0.15)
+# getResults(results)
+# results <- simulate_proteomics_clean(
+#   sample_shift_sd = 0.3, sample_shift_cap = 0.4)
+# getResults(results)
+# 
+# 
+# # Simulación final 
+# valores <- c(seq(0, 0.49, 0.1), 0.75, 1, 2)
+# tictoc::tic()
+# resByItem <- lapply(valores, function(x) simulate_proteomics_clean(
+#   semilla = 1000, 
+#   n_proteins = 1000,
+#   sample_shift_sd = x,
+#   sample_shift_cap = x+0.05))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item0")
+# getResultsByItem(resByItem, item = "item6")
+# getResultsByItem(resByItem, item = "item5")
+# getResultsByItem(resByItem, item = "item1") # influyeeee
+# # getResultsByItem(resByItem, item = "item3") # algo influye si , pero creo que non vai ser a mellor forma de medilo
+# # getResultsByItem(resByItem, item = "item2") # Aumenta lixeiramente a correlación si... moi lixeiramente
+# 
+# 
+# #......................
+# ## Item 2 ####
+# # Probas iniciales #
+# results <- simulate_proteomics_clean(
+#   rho_between = 0.1, 
+#   rho_within = 1) # Valores baixos de between e altos de within dan boa correlacion
+# getResults(results)
+# results <- simulate_proteomics_clean(
+#   rho_between = 1, 
+#   rho_within = 0.1)
+# getResults(results)
+# 
+# # Xa sabemos como funciona, ahora a usar varios valores #
+# values_rho_between <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+# values_rho_within <- rev(c(0, 0.05, 0.2, seq(0.5, 1.5, 0.25)))
+# tictoc::tic()
+# resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+#   semilla = 10000, 
+#   n_proteins = 1000,
+#   rho_between = values_rho_between[x],
+#   rho_within = values_rho_within[x]))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item2")
+# getResultsByItem(resByItem, item = "item1") # afecta para betw<0.5+within>0.5 respecto a betw>0.5+within<0.5
+# getResultsByItem(resByItem, item = "item0")
+# # getResultsByItem(resByItem, item = "item3")
+# 
+# # Alternativa #
+# sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+# tictoc::tic()
+# resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
+#   semilla = 10000, 
+#   n_proteins = 1000,
+#   sample_sd_strength = sample_sd_strength[x]))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item2")
+# 
+# 
+# #......................
+# ## Item 4 ####
+# # Probas iniciales #
+# results <- simulate_proteomics_clean(
+#   sample_shift_sd = 0.1,
+#   sample_sd_strength = 1,
+#   sample_sd_rho = 1.5, 
+#   sample_sd_cap = 0) # Aumentando este valor aumenta a pendiente das rectas
+# getResults(results)
+# 
+# 
+# # Xa sabemos como funciona, ahora a usar varios valores #
+# sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+# sample_sd_cap <- c(seq(0, 0.5, 0.05), 1.5, 2, 3)
+# tictoc::tic()
+# resByItem <- lapply(1:length(sample_sd_strength), function(x) simulate_proteomics_clean(
+#   semilla = 10000, 
+#   n_proteins = 1000,
+#   sample_shift_sd = 0.5,  #sample_shift_cap = 0.15,
+#   sample_sd_strength = 1,
+#   sample_sd_rho = 1.5, 
+#   sample_sd_cap = sample_sd_cap[x]))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item4")
 # getResultsByItem(resByItem, item = "item3")
-
-# Alternativa #
-sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
-tictoc::tic()
-resByItem <- lapply(1:length(values_rho_between), function(x) simulate_proteomics_clean(
-  semilla = 10000, 
-  n_proteins = 1000,
-  sample_sd_strength = sample_sd_strength[x]))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item2")
-
-
-#......................
-## Item 4 ####
-# Probas iniciales #
-results <- simulate_proteomics_clean(
-  sample_shift_sd = 0.1,
-  sample_sd_strength = 1,
-  sample_sd_rho = 1.5, 
-  sample_sd_cap = 0) # Aumentando este valor aumenta a pendiente das rectas
-getResults(results)
-
-
-# Xa sabemos como funciona, ahora a usar varios valores #
-sample_sd_strength <- c(seq(0, 1, 0.25), 1.5, 2, 3)
-sample_sd_cap <- c(seq(0, 0.5, 0.05), 1.5, 2, 3)
-tictoc::tic()
-resByItem <- lapply(1:length(sample_sd_strength), function(x) simulate_proteomics_clean(
-  semilla = 10000, 
-  n_proteins = 1000,
-  sample_shift_sd = 0.5,  #sample_shift_cap = 0.15,
-  sample_sd_strength = 1,
-  sample_sd_rho = 1.5, 
-  sample_sd_cap = sample_sd_cap[x]))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item4")
-getResultsByItem(resByItem, item = "item3")
-
-# opcion 2 así flipas como cambia e mais aleatorio 
-sample_sd_cap <- seq(1, 3, 1)
-tictoc::tic()
-resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
-  sample_shift_sd = 0.5,
-  sample_sd_strength = 2,
-  sample_sd_rho = 0, 
-  sample_sd_cap = sample_sd_cap[x]))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item4")
-getResultsByItem(resByItem, item = "item3")
-getResultsByItem(resByItem, item = "item0")
-getResultsByItem(resByItem, item = "item1")
-
-
-
-
-
-#......................
-## Item 3 ####
-# Probas iniciales #
-results <- simulate_proteomics_clean(
-  prop_de = 0.1,
-  sigma_lo = 0.6, # poñendo valores crecientes inversos entre este argumento e o seguinte invírtese a forma de cuña
-  sigma_hi = 2,
-  gamma_sigma = 3) 
-getResults(results)
-results <- simulate_proteomics_clean(
-  sample_shift_sd = 0.5,
-  sample_sd_strength = 2,
-  sample_sd_rho = 0, 
-  sample_sd_cap = 1) # Aumentando este valor aumenta a pendiente das rectas (co resto de parámetros tal cual)
-getResults(results)
-
-
-# Xa sabemos como funciona, ahora a usar varios valores #
-# Opcion 1 - cambio forma #
-sigma_lo <- c(seq(0, 1, 0.1), 1.5, 2, 3)
-sigma_hi <- rev(c(seq(0, 1, 0.1), 1.5, 2, 3))
-tictoc::tic()
-resByItem <- lapply(1:length(sigma_lo), function(x) simulate_proteomics_clean(
-  semilla = 10000, 
-  n_proteins = 1000,
-  prop_de = 0.1,
-  sigma_lo = sigma_lo[x],
-  sigma_hi = sigma_hi[x],
-  gamma_sigma = 3))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item3")
-
-# Opcion 2 - cambio pendiente #
-sample_sd_cap <- -1*c(seq(0, 1, 0.25), 1.5, 2, 3) # Cambia o ancho dos puntos (canto más grande mais estreito)
-sample_sd_cap <- c(seq(0, 1, 0.25), 1.5, 2, 3)
-tictoc::tic()
-resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
-  sample_shift_sd = 0.5,
-  sample_sd_strength = 3,
-  sample_sd_rho = 0, 
-  sample_sd_cap = sample_sd_cap[x]))
-tictoc::toc()
-getResultsByItem(resByItem, item = "item3")
-
-
-
-
-
-
-##
-#......................
-# other trials with different arguments
-results <- simulate_proteomics_clean(
-  n_proteins = 5000,
-  enforce_rle = FALSE,
-  add_missing = TRUE,
-  
-  gamma_sigma = 3.5,
-  sigma_hi = 0.04,
-  sigma_lo = 0.70,
-  
-  prop_de = 0.08,
-  logFC_sd = 0.75,
-  hetero_logFC = TRUE,
-  fc_hi = 0.15,
-  fc_lo = 2.5,
-  gamma_fc = 7,
-  
-  loading_sd = 0.25
-)
-a <- 1.5
-results <- simulate_proteomics_clean(
-  n_proteins = 5000,
-  enforce_rle = FALSE,
-  add_missing = TRUE,
-  
-  gamma_sigma = 4.0*a,
-  sigma_hi = 0.03*a,
-  sigma_lo = 0.85*a,
-  
-  prop_de = 0.05*a,
-  logFC_sd = 1.0*a,
-  hetero_logFC = TRUE,
-  fc_hi = 0.10*a,
-  fc_lo = 2.5*a,
-  gamma_fc = 7*a,
-  
-  loading_sd = 0.25*a
-)
+# 
+# # opcion 2 así flipas como cambia e mais aleatorio 
+# sample_sd_cap <- seq(1, 3, 1)
+# tictoc::tic()
+# resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
+#   sample_shift_sd = 0.5,
+#   sample_sd_strength = 2,
+#   sample_sd_rho = 0, 
+#   sample_sd_cap = sample_sd_cap[x]))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item4")
+# getResultsByItem(resByItem, item = "item3")
+# getResultsByItem(resByItem, item = "item0")
+# getResultsByItem(resByItem, item = "item1")
+# 
+# 
+# 
+# 
+# 
+# #......................
+# ## Item 3 ####
+# # Probas iniciales #
+# results <- simulate_proteomics_clean(
+#   prop_de = 0.1,
+#   sigma_lo = 0.6, # poñendo valores crecientes inversos entre este argumento e o seguinte invírtese a forma de cuña
+#   sigma_hi = 2,
+#   gamma_sigma = 3) 
+# getResults(results)
+# results <- simulate_proteomics_clean(
+#   sample_shift_sd = 0.5,
+#   sample_sd_strength = 2,
+#   sample_sd_rho = 0, 
+#   sample_sd_cap = 1) # Aumentando este valor aumenta a pendiente das rectas (co resto de parámetros tal cual)
+# getResults(results)
+# 
+# 
+# # Xa sabemos como funciona, ahora a usar varios valores #
+# # Opcion 1 - cambio forma #
+# sigma_lo <- c(seq(0, 1, 0.1), 1.5, 2, 3)
+# sigma_hi <- rev(c(seq(0, 1, 0.1), 1.5, 2, 3))
+# tictoc::tic()
+# resByItem <- lapply(1:length(sigma_lo), function(x) simulate_proteomics_clean(
+#   semilla = 10000, 
+#   n_proteins = 1000,
+#   prop_de = 0.1,
+#   sigma_lo = sigma_lo[x],
+#   sigma_hi = sigma_hi[x],
+#   gamma_sigma = 3))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item3")
+# 
+# # Opcion 2 - cambio pendiente #
+# sample_sd_cap <- -1*c(seq(0, 1, 0.25), 1.5, 2, 3) # Cambia o ancho dos puntos (canto más grande mais estreito)
+# sample_sd_cap <- c(seq(0, 1, 0.25), 1.5, 2, 3)
+# tictoc::tic()
+# resByItem <- lapply(1:length(sample_sd_cap), function(x) simulate_proteomics_clean(
+#   sample_shift_sd = 0.5,
+#   sample_sd_strength = 3,
+#   sample_sd_rho = 0, 
+#   sample_sd_cap = sample_sd_cap[x]))
+# tictoc::toc()
+# getResultsByItem(resByItem, item = "item3")
+# 
+# 
+# 
+# 
+# 
+# 
+# ##
+# #......................
+# # other trials with different arguments
+# results <- simulate_proteomics_clean(
+#   n_proteins = 5000,
+#   enforce_rle = FALSE,
+#   add_missing = TRUE,
+#   
+#   gamma_sigma = 3.5,
+#   sigma_hi = 0.04,
+#   sigma_lo = 0.70,
+#   
+#   prop_de = 0.08,
+#   logFC_sd = 0.75,
+#   hetero_logFC = TRUE,
+#   fc_hi = 0.15,
+#   fc_lo = 2.5,
+#   gamma_fc = 7,
+#   
+#   loading_sd = 0.25
+# )
+# a <- 1.5
+# results <- simulate_proteomics_clean(
+#   n_proteins = 5000,
+#   enforce_rle = FALSE,
+#   add_missing = TRUE,
+#   
+#   gamma_sigma = 4.0*a,
+#   sigma_hi = 0.03*a,
+#   sigma_lo = 0.85*a,
+#   
+#   prop_de = 0.05*a,
+#   logFC_sd = 1.0*a,
+#   hetero_logFC = TRUE,
+#   fc_hi = 0.10*a,
+#   fc_lo = 2.5*a,
+#   gamma_fc = 7*a,
+#   
+#   loading_sd = 0.25*a
+# )
 
 
 
