@@ -236,8 +236,13 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 # SCORE: main function #### 
 #.........................................................................####
 
-normScore <- function(normMatrixList, designMatrix, dfRaw, 
-                      refGroup = NULL, altGroup = NULL, onlyFinalRank = T){
+normScore <- function(
+    normMatrixList, 
+    designMatrix, #dfRaw, 
+    refGroup = NULL, 
+    altGroup = NULL, 
+    onlyFinalRank = T
+  ){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
   # 2. Design matrix (designMatrix)
@@ -249,8 +254,8 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreFinal <- list()
   
   # ITEM 0 - correction factor ####
-  totalIntensities <- colSums(dfRaw, na.rm = T)
-  item0 <- cv(totalIntensities, proportion = T, na.rm = T)
+  # totalIntensities <- colSums(dfRaw, na.rm = T)
+  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 
@@ -320,14 +325,14 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   
   # Corrections ####
   rownames(scoreDF_norm) <- rownames(scoreDF)
-  # 1) Small variability: no need for normalization
-  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
-  # 2) CyclicLoess outstands in correlation: small correction
-  scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.5
-  # 3) MAD outstands in PVC: small correction
-  scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
-  # 4) Quantile outstands in TI graphics: small correction
-  scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
+  # # 1) Small variability: no need for normalization
+  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+  # # 2) CyclicLoess outstands in correlation: small correction
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.5
+  # # 3) MAD outstands in PVC: small correction
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
+  # # 4) Quantile outstands in TI graphics: small correction
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
 
   # Rank ####
   scores_matrix <- t(scoreDF_norm)
