@@ -445,7 +445,9 @@ allSim # algunhas simulacións non corresponden coa orde de gold standar (cambia
 #.............................................................................
 # All score ####
 #.............................................................................
-sev <- 0.1 # 0-
+
+## Initial test ####
+sev <- 1.4 # >=2 o MAplot non cambia ainda que o resto si
 results <- simulate_proteomics_clean(
   sample_shift_sd = 0.12 * sev,
   sample_sd_cap = 1*sev,
@@ -464,13 +466,25 @@ results <- simulate_proteomics_clean(
 getResults(results)
 
 
+## Parámetros específicos ####
+sevList <- list(
+  seq(0, 0.1, 0.0125),
+  seq(0, 0.25, 0.03125),
+  seq(0.25, 0.5, 0.03125),
+  seq(0, 0.5, 0.0625),
+  seq(0.25, 1, 0.09375),
+  seq(0, 1, 0.125),
+  seq(0.5, 1.5, 0.125),
+  seq(1, 1.5, 0.0625)
+)
+
 
 ## Ejecución ####
 # plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
 
 # allSim <- future_sapply(1:nrow(grid), function(i) {
+# allSim <- sapply(1:5, function(i){
 allSim <- sapply(1:nrow(grid), function(i){
-  # allSim <- sapply(1:2, function(i){
   tictoc::tic()
   
   #--- Simulations ---
@@ -481,52 +495,58 @@ allSim <- sapply(1:nrow(grid), function(i){
       n_proteins = params$n_proteins,
       n_per_group = params$n_per_group)
     )
-  } else if (!opcion2){ # ejecuciones en sí, de comprobación
-    valores <- length(valores_sigma_lo[[params$especifico]])
-    resByItem <- lapply(1:valores, function(val) simulate_proteomics_clean(
-      semilla = params$semilla, 
-      n_proteins = params$n_proteins,
-      n_per_group = params$n_per_group,
-      prop_de = 0.1,
-      sigma_lo = valores_sigma_lo[[params$especifico]][[val]],
-      sigma_hi = values_sigma_hi[[params$especifico]][[val]])
-    )
-  } else {
-    valores <- length(valores_sigma_lo[[params$especifico]])
-    resByItem <- lapply(1:valores, function(val) simulate_proteomics_clean(
-      semilla = params$semilla, 
-      n_proteins = params$n_proteins,
-      n_per_group = params$n_per_group,
-      sample_sd_strength = 3,
-      sample_sd_rho = 0,
-      sample_sd_cap = valores_sample_sd_cap[[params$especifico]][[val]])
+  } else { # ejecuciones en sí, de comprobación
+    valores <- length(sevList[[params$especifico]])
+    resByItem <- lapply(1:valores, function(val) {
+        sev <- sevList[[params$especifico]][[val]]
+        simulate_proteomics_clean(
+          semilla = params$semilla+val,
+          n_proteins = params$n_proteins,
+          n_per_group = params$n_per_group,
+          sample_shift_sd = 0.12 * sev,
+          sample_sd_cap = 1*sev,
+          sample_sd_strength = 1.2 * sev,
+          sample_sd_rho = 0.3 * sev,
+          rho_within = 0.85 - 0.25 * sev,
+          rho_between = 0.55 - 0.25 * sev,
+          loading_sd = 0.25 + 0.20 * sev,
+          sigma_hi = 0.05 - 0.02 * sev,
+          sigma_lo = 0.40 + 0.40 * sev,
+          gamma_sigma = 2.5 + 1.3 * sev,
+          target_missing = 0.001 + 0.019 * sev,
+          k_mnar = 1.2 + 0.4 * sev,
+          missing_by_sample_sd = 0.05 + 0.15 * sev
+        )
+      }
     )
   }
   names(resByItem) <- names(goldStandard)
   cat("\n\tSimulación ", params$especifico, "\n")
-  print(getResultsByItem(resByItem, "item3"))
   
-  #--- Cheking item 3 ---
+  #--- Cheking score ---
   dm <- as.data.frame(resByItem[[1]][["metadata"]])
   lista <- sapply(resByItem, "[[", 1, simplify = F, USE.NAMES = T)
   refGroup <- "G1"
   altGroup <- "G2"
-  samplesG1 <- dm[dm$Groups == refGroup, "Samples"]
-  samplesG2 <- dm[dm$Groups == altGroup, "Samples"]
   
-  item3All <- sapply(lista, maDiffAreas, samplesG1 = samplesG1, 
-                     samplesG2 = samplesG2)
-  item3 <- sort(item3All) # Ascending
-  item3 <- as.numeric(gsub(pattern = "Simulation_", replacement = "", x = names(item3)))
-  names(item3) <- names(item3All)
-  corResItem3 <- cor(x = goldStandard, y = item3, method = "kendall")
+  finalRank <-normScore(
+    lista, 
+    dm,  
+    refGroup = refGroup, 
+    altGroup = altGroup, 
+    onlyFinalRank = T
+  )$finalRanking
+  
+  outRank <- as.numeric(gsub(pattern = "Simulation_", replacement = "", x = names(finalRank)))
+  names(outRank) <- names(finalRank)
+  corFinal <- cor(x = goldStandard, y = outRank, method = "kendall")
   
   #--- Return ----
   tictoc::toc()
-  return(corResItem3)
+  return(corFinal)
 }, simplify = T, USE.NAMES = T)
 # }, future.seed=TRUE)
 
-
+allSim
 
 
