@@ -28,35 +28,39 @@ cv <- function(x, proportion = T, na.rm = TRUE) {
 diffAreas <- function(intPred, coefPred, minRange, maxRange, intExpected = 0){
   
   # # Moving regression lines to reach B=0, a=0
-  # intPred <- intPred - intExpected
-  # 
-  # if (coefPred < 0){
-  #   a = 1
-  #   b = -1
-  # } else if (coefPred > 0){
-  #   a = -1
-  #   b = 1
-  # }
-  # 
-  # # Cutpoint regression line with expected line
-  # cpX <- (-intPred)/coefPred
-  # cpY <- 0
-  # 
-  # # Is cutpoint located inside the range?
-  # if (all(cpX >= minRange, cpX <= maxRange)){
-  #   area1 <- coefPred*a*(((minRange + (intPred/coefPred))^2)/2 - ((cpX + (intPred/coefPred))^2)/2)
-  #   area2 <- coefPred*b*(((cpX + (intPred/coefPred))^2)/2 - ((maxRange + (intPred/coefPred))^2)/2)
-  #   areaMetric <- abs(area1+area2)
-  # } else if (any(cpX < minRange, cpX > maxRange)){
-  #   areaMetric <- abs(coefPred*(((maxRange + (intPred/coefPred))^2)/2 - ((minRange + (intPred/coefPred))^2)/2))
-  # }
-  # 
-  # areaMetric <- areaMetric/(maxRange-minRange)
-  # return(areaMetric)
+  intPred <- intPred - intExpected
+
+  if (coefPred < 0){
+    a = 1
+    b = -1
+  } else if (coefPred > 0){
+    a = -1
+    b = 1
+  } else if (coefPred == 0){
+    return(0)
+  }
+
+  # Cutpoint regression line with expected line
+  cpX <- (-intPred)/coefPred
+  cpY <- 0
+
+  # Is cutpoint located inside the range?
+  if (all(cpX >= minRange, cpX <= maxRange)){
+    area1 <- coefPred*a*(((minRange + (intPred/coefPred))^2)/2 - ((cpX + (intPred/coefPred))^2)/2)
+    area2 <- coefPred*b*(((cpX + (intPred/coefPred))^2)/2 - ((maxRange + (intPred/coefPred))^2)/2)
+    areaMetric <- abs(area1+area2)
+  } else if (any(cpX < minRange, cpX > maxRange)){
+    areaMetric <- abs(coefPred*(((maxRange + (intPred/coefPred))^2)/2 - ((minRange + (intPred/coefPred))^2)/2))
+  }
+
+  areaMetric <- areaMetric/(maxRange-minRange)
+  return(areaMetric)
   
-  # outra forma de calculalo que non da error cando coefPred == 0
-  recta <- function(x){coefPred*x+intPred}
-  return(integrate(recta, minRange, maxRange)$value)
+  # outra forma de calculalo que non da error cando coefPred == 0 PERO non devolve as áreas relativas e 
+  # cando a pendiente é negativa devolve valores negativos...
+  # recta <- function(x){coefPred*x+intPred}
+  # areaMetric <- (integrate(recta, minRange, maxRange)$value)/abs(maxRange - minRange)
+  # return(areaMetric)
 }
 
 
