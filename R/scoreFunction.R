@@ -7,10 +7,11 @@ library(tidyr)
 library(stats)
 library(MASS)
 
-options(repos = BiocManager::repositories())
+# options(repos = BiocManager::repositories())
 # library(MSnSet.utils)
 library(vsn)
 library(preprocessCore)
+library(boot)
 
 
 #...........................................................................####
@@ -26,21 +27,23 @@ cv <- function(x, proportion = T, na.rm = TRUE) {
 
 diffAreas <- function(intPred, coefPred, minRange, maxRange, intExpected = 0){
   
-  # Moving regression lines to reach B=0, a=0
+  # # Moving regression lines to reach B=0, a=0
   intPred <- intPred - intExpected
-  
+
   if (coefPred < 0){
     a = 1
     b = -1
   } else if (coefPred > 0){
     a = -1
     b = 1
+  } else if (coefPred == 0){
+    return(0)
   }
-  
+
   # Cutpoint regression line with expected line
   cpX <- (-intPred)/coefPred
   cpY <- 0
-  
+
   # Is cutpoint located inside the range?
   if (all(cpX >= minRange, cpX <= maxRange)){
     area1 <- coefPred*a*(((minRange + (intPred/coefPred))^2)/2 - ((cpX + (intPred/coefPred))^2)/2)
@@ -49,13 +52,15 @@ diffAreas <- function(intPred, coefPred, minRange, maxRange, intExpected = 0){
   } else if (any(cpX < minRange, cpX > maxRange)){
     areaMetric <- abs(coefPred*(((maxRange + (intPred/coefPred))^2)/2 - ((minRange + (intPred/coefPred))^2)/2))
   }
-  
+
   areaMetric <- areaMetric/(maxRange-minRange)
   return(areaMetric)
   
-  # outra forma de calculalo
+  # outra forma de calculalo que non da error cando coefPred == 0 PERO non devolve as áreas relativas e 
+  # cando a pendiente é negativa devolve valores negativos...
   # recta <- function(x){coefPred*x+intPred}
-  # integrate(recta, minRange, maxRange)
+  # areaMetric <- (integrate(recta, minRange, maxRange)$value)/abs(maxRange - minRange)
+  # return(areaMetric)
 }
 
 
@@ -229,9 +234,15 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 
 #...........................................................................####
 # SCORE: main function #### 
+#.........................................................................####
 
-normScore <- function(normMatrixList, designMatrix, dfRaw, 
-                      refGroup = NULL, altGroup = NULL){
+normScore <- function(
+    normMatrixList, 
+    designMatrix, #dfRaw, 
+    refGroup = NULL, 
+    altGroup = NULL, 
+    onlyFinalRank = T
+  ){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
   # 2. Design matrix (designMatrix)
@@ -243,8 +254,8 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreFinal <- list()
   
   # ITEM 0 - correction factor ####
-  totalIntensities <- colSums(dfRaw, na.rm = T)
-  item0 <- cv(totalIntensities, proportion = T, na.rm = T)
+  # totalIntensities <- colSums(dfRaw, na.rm = T)
+  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 
@@ -270,8 +281,8 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
     # menor número, mellor é a métrica, para que está tamén sexa así. 
     1-(median(i, na.rm = T)-IQR(i, na.rm = T)/3) 
   }, simplify = T, USE.NAMES = T)
-  
-  scoreFinal[["Correlation"]] <- item2
+  # item2["CyclicLoess"] <- item2["CyclicLoess"]*1.2
+  scoreFinal[["Correlation"]] <- item2*0.5
   
   
   # ITEM 3 - MAplot regression line 0 ####
@@ -307,19 +318,80 @@ normScore <- function(normMatrixList, designMatrix, dfRaw,
   scoreDF <- dplyr::bind_cols(scoreFinal)
   scoreDF <- as.data.frame(scoreDF)
   rownames(scoreDF) <- names(scoreFinal[[1]])
-  ## Rank ####
-  rankingDF <- as.data.frame(apply(scoreDF, 2, dplyr::dense_rank, simplify = T))
-  rownames(rankingDF) <- rownames(scoreDF)
-  rankingDF$Total <- rowSums(rankingDF)
-  rankingDF[which(rownames(rankingDF) == "Log"), "Total"] <- rankingDF[which(rownames(rankingDF) == "Log"), "Total"]*item0
+  
+  # Scale ####
+  scoreDF_norm <- apply(scoreDF, 2, function(col) (col - min(col)) / (max(col) - min(col)))
+  scoreDF_norm <- as.data.frame(scoreDF_norm)
+  
+  # Corrections ####
+  rownames(scoreDF_norm) <- rownames(scoreDF)
+  # # 1) Small variability: no need for normalization
+  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+  # # 2) CyclicLoess outstands in correlation: small correction
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.5
+  # # 3) MAD outstands in PVC: small correction
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
+  # # 4) Quantile outstands in TI graphics: small correction
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
+
+  # Rank ####
+  scores_matrix <- t(scoreDF_norm)
+  scoreDF_norm$Total <- rowSums(scoreDF_norm)
+  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
   
   ## Sort ####
-  rankingDF <- rankingDF %>% dplyr::arrange(Total)
-  finalRank <- stats::setNames(rankingDF$Total, rownames(rankingDF))
+  scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
+  finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
   
+  if (onlyFinalRank){
+    return(list(finalRanking = finalRank))
+  } else {
+    # CI bootstrap ####
   
-  return(list(finalRanking = finalRank, 
-              detailRaking = rankingDF, 
-              detailScore = scoreDF))
+    # Computing total score for each normalization after resampling proteins (rows)
+    bootstrap_score_rows <- function(data, indices) {
+      resampled_matrix <- data[indices, , drop = FALSE]
+      total_scores <- colSums(resampled_matrix)
+      return(total_scores)  # One score per normalization
+    }
+    
+    # Bootstrap
+    # n_boot <- 1000
+    boot_results <- boot(data = scores_matrix,              # data
+                         statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
+                         R = 1000)                        # number of resamples  
+    
+    # Output mean scores and confidence intervals
+    bootstrap_means <- colMeans(boot_results$t)
+    
+    score_bootstrap <- as.data.frame(t(sapply(1:ncol(scores_matrix), function(i){
+      ci <- boot.ci(boot_results, type = "perc", index = i)
+      return(c(colnames(scores_matrix)[i], bootstrap_means[i], 
+               ci$percent[4], ci$percent[5]))
+    }, simplify = T)))
+    
+    colnames(score_bootstrap) <- c("Normalization", "Mean Total Score", "LL95%", "UL95%")
+    score_bootstrap <- score_bootstrap %>%
+      dplyr::arrange(`Mean Total Score`)
+    
+    
+    
+    # Gráfico ####
+    
+    p1 <- Biostatech::plotForest(etiquetas = score_bootstrap$Normalization, 
+                           estPunt = score_bootstrap$`Mean Total Score`, 
+                            LI = score_bootstrap$`LL95%`, 
+                            LS = score_bootstrap$`UL95%`, 
+                           tituloX = "normScore with bootstrap interval")$grafico
+    
+    
+    # Return ####
+    return(list(finalRanking = finalRank, 
+                detailRanking = scoreDF_norm, 
+                detailScore = scoreDF, 
+                bootstrapScore = score_bootstrap, 
+                graphic = p1))
+  }
+  
 }
 
