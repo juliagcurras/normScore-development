@@ -47,6 +47,8 @@ grid <- expand.grid(
 dim(grid)
 grid$semilla <- 1:nrow(grid)
 
+saveRDS(object = grid, file = "../Simulations/grid.rds")
+
 
 #.............................................................................
 # Items 0, 1, 5, 6 ####
@@ -65,7 +67,6 @@ valores_sample_shift_sd <- list(
 names(valores_sample_shift_sd) <- paste0("Sim", 1:length(valores_sample_shift_sd))
 
 offset <- c(0.05, 0.05, rep(c(0.05, -0.05), (length(valores_sample_shift_sd)/2)-1))
-# offset <- rep(c(0.05, -0.05), (length(valores_sample_shift_sd)/2))
 valores_sample_shift_cap <- sapply(1:length(valores_sample_shift_sd), function(x){
   valores_sample_shift_sd[[x]] + offset[x]
 }, simplify = F, USE.NAMES = T)
@@ -75,8 +76,8 @@ names(valores_sample_shift_cap) <- paste0("Sim", 1:length(valores_sample_shift_c
 ## Ejecución ####
 # plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
 
-# allSim <- future_sapply(1:nrow(grid), function(i) {
-allSim <- sapply(1:nrow(grid), function(i){
+allSim <- future_sapply(1:nrow(grid), function(i) {
+# allSim <- sapply(1:nrow(grid), function(i){
     tictoc::tic()
   
   #--- Simulations ---
@@ -149,11 +150,13 @@ allSim <- sapply(1:nrow(grid), function(i){
   names(kendallAll) <- c("Item0", "Item1", "Item5", "Item6")
   tictoc::toc()
   return(kendallAll)
-}, simplify = T, USE.NAMES = T)
-# }, future.seed=TRUE)
+# }, simplify = T, USE.NAMES = T)
+}, future.seed=TRUE)
 
 allSim # traspoñer e adxuntar á grid
-# grid <- cbind(grid, as.data.frame(t(allSim)))
+
+grid <- cbind(grid, as.data.frame(t(allSim)))
+saveRDS(object = grid, file = "../Simulations/grid_items0156.rds")
 
 
 
@@ -191,8 +194,8 @@ names(valores_values_rho_within) <- paste0("Sim", 1:length(valores_values_rho_wi
 ## Ejecución ####
 # plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
 
-# allSim <- future_sapply(1:nrow(grid), function(i) {
-allSim <- sapply(1:nrow(grid), function(i){
+allSim <- future_sapply(1:nrow(grid), function(i) {
+# allSim <- sapply(1:nrow(grid), function(i){
 # allSim <- sapply(1:4, function(i){
   tictoc::tic()
   
@@ -216,7 +219,7 @@ allSim <- sapply(1:nrow(grid), function(i){
     )
   }
   names(resByItem) <- names(goldStandard)
-  print(getResultsByItem(resByItem, "item2"))
+  # print(getResultsByItem(resByItem, "item2"))
   
   
   #--- Cheking item 6 ---
@@ -247,10 +250,12 @@ allSim <- sapply(1:nrow(grid), function(i){
   names(corResItem2) <- c("Item2")
   tictoc::toc()
   return(corResItem2)
-}, simplify = T, USE.NAMES = T)
-# }, future.seed=TRUE)
+# }, simplify = T, USE.NAMES = T)
+}, future.seed=TRUE)
 
 allSim #
+grid$item2 <- allSim
+saveRDS(object = grid, file = "../Simulations/grid_items01256.rds")
 
 
 
@@ -268,10 +273,6 @@ valores_sample_sd_cap <- list(
   rep(1, 9),
   rep(1, 9),
   rep(1, 9)
-  # seq(0.5, 1.5, 0.125), # problemas ->
-  # seq(1, 2, 0.125), 
-  # seq(1, 3, 0.25), 
-  # seq(1.5, 3, 0.1875)
   )
 names(valores_sample_sd_cap) <- paste0("Sim", 1:length(valores_sample_sd_cap))
 
@@ -290,8 +291,8 @@ values_sample_sd_rho <- rep(c(1.5, 0.9), each = 4) #0
 ## Ejecución ####
 # plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
 
-# allSim <- future_sapply(1:nrow(grid), function(i) {
-allSim <- sapply(1:nrow(grid), function(i){
+allSim <- future_sapply(1:nrow(grid), function(i) {
+# allSim <- sapply(1:nrow(grid), function(i){
 # allSim <- sapply(1, function(i){
   tictoc::tic()
   
@@ -317,8 +318,8 @@ allSim <- sapply(1:nrow(grid), function(i){
     )
   }
   names(resByItem) <- names(goldStandard)
-  cat("\n\tSimulación ", params$especifico, "\n")
-  print(getResultsByItem(resByItem, "item4"))
+  # cat("\n\tSimulación ", params$especifico, "\n")
+  # print(getResultsByItem(resByItem, "item4"))
   
   
   #--- Cheking item 4 ---
@@ -331,11 +332,15 @@ allSim <- sapply(1:nrow(grid), function(i){
   
   #--- Return ----
   tictoc::toc()
-  return(c(item4All, " - ", corResItem4))
-}, simplify = F, USE.NAMES = T)
-# }, future.seed=TRUE)
+  # return(c(item4All, " - ", corResItem4))
+  return(corResItem4)
+# }, simplify = T, USE.NAMES = T)
+}, future.seed=TRUE)
 
 allSim #
+grid$item4 <- allSim
+saveRDS(object = grid, file = "../Simulations/grid_items012456.rds")
+
 
 
 
@@ -367,12 +372,78 @@ valores_sample_sd_cap <- list(
   seq(0, 0.5, 0.0625),
   seq(0, 1, 0.125),
   seq(0, 1.5, 0.1875),
+  seq(0, 1.5, 0.1875),
   seq(0.5, 2, 0.1875),
   seq(0.5, 1.5, 0.125),
   seq(1, 2, 0.125), 
   seq(1, 2.5, 0.1875) 
 )
 names(valores_sample_sd_cap) <- paste0("Sim", 1:length(valores_sample_sd_cap))
+
+### Opcion 3 ####
+
+valores_sigma_lo <- list(
+  rep(0.4, 9), # Control (-1)
+  rep(0.4, 9), 
+  rep(0.4, 9)*1.5, 
+  rep(0.4, 9), 
+  rep(0.4, 9), 
+  rev(seq(0, 1.5, 0.1875)), 
+  rev(seq(0.4, 2, 0.2)), 
+  # c(0.4, 0.4, 0.4, 0.4, 1.5, 0.6, 2.9, 3.2, 0.8),
+  c(3, 2, 1, 0.5, 0.3, 0.3, 0.3, 0.3, 0.1) # solo forma
+)
+
+values_sigma_hi <- list(
+  rep(0.05, 9), # Control
+  rep(0.05, 9), 
+  rep(0.05, 9)*1.5, 
+  rep(0.05, 9), 
+  rep(0.05, 9), 
+  seq(0, 1.5, 0.1875)*(1.5),
+  seq(0.4, 2, 0.2)*(1.5),
+  # c(0.05, 0.1, 0.1, 0.4, 0.8, 1.2, 2, 2.5, 4),
+  c(0.05, 0.1, 0.2, 0.4, 1.2, 1.2, 1.2, 1.9, 2.5)
+)
+
+valores_sample_sd_cap <- list(
+  seq(2.5, 1, -0.1875), # Control - orden inverso, ten que dar 0 
+  seq(1, 2.5, 0.1875), # Control - orden inverso, ten que dar 0 
+  seq(1, 2.5, 0.1875),  
+  seq(0.5, 2, 0.1875),
+  seq(0, 1, 0.125),
+  seq(0, 1.5, 0.1875), 
+  seq(0, 1.5, 0.1875), 
+  # c(0.5, 1, 1.25, 2, 0.35, 1, 1.5, 1.9, 1, 1),
+  rep(0.2, 9)
+  # 8 
+)
+
+values_sample_sd_strength = list(
+  rep(3, 9), 
+  rep(3, 9), 
+  rep(3, 9), 
+  rep(3, 9), 
+  rep(3, 9), 
+  rep(3, 9), 
+  rep(2.5, 9), 
+  # c(3, 3, 3, 3, 0, rep(1, 3), 0.8), 
+  rep(0.8, 9)
+  )
+
+values_sample_sd_rho = list(
+  rep(0, 9), 
+  rep(0, 9), 
+  rep(0, 9), 
+  rep(0, 9), 
+  rep(0, 9), 
+  rep(0, 9), 
+  rep(0.2, 9), 
+  # c(0, 0, 0, 0, 0.8, 0.8, 0.8, 0.8, 0.7), 
+  rep(0.35, 9)
+  )
+
+
 
 ## Ejecución ####
 # plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
@@ -390,27 +461,31 @@ allSim <- sapply(1:nrow(grid), function(i){
       n_proteins = params$n_proteins,
       n_per_group = params$n_per_group)
     )
-  } else if (!opcion2){ # ejecuciones en sí, de comprobación
+  } else { #if (!opcion2){ # ejecuciones en sí, de comprobación
     valores <- length(valores_sigma_lo[[params$especifico]])
     resByItem <- lapply(1:valores, function(val) simulate_proteomics_clean(
       semilla = params$semilla, 
-      n_proteins = params$n_proteins,
+      n_proteins = 1000,#params$n_proteins,
       n_per_group = params$n_per_group,
       prop_de = 0.1,
       sigma_lo = valores_sigma_lo[[params$especifico]][[val]],
-      sigma_hi = values_sigma_hi[[params$especifico]][[val]])
-    )
-  } else {
-    valores <- length(valores_sigma_lo[[params$especifico]])
-    resByItem <- lapply(1:valores, function(val) simulate_proteomics_clean(
-      semilla = params$semilla, 
-      n_proteins = params$n_proteins,
-      n_per_group = params$n_per_group,
-      sample_sd_strength = 3,
-      sample_sd_rho = 0,
+      sigma_hi = values_sigma_hi[[params$especifico]][[val]], 
+      sample_sd_strength = values_sample_sd_strength[[params$especifico]][[val]],
+      sample_sd_rho = values_sample_sd_rho[[params$especifico]][[val]],
       sample_sd_cap = valores_sample_sd_cap[[params$especifico]][[val]])
     )
-  }
+  } 
+  # else {
+  #   valores <- length(valores_sample_sd_cap[[params$especifico]])
+  #   resByItem <- lapply(1:valores, function(val) simulate_proteomics_clean(
+  #     semilla = params$semilla, 
+  #     n_proteins = params$n_proteins,
+  #     n_per_group = params$n_per_group,
+  #     sample_sd_strength = 3,
+  #     sample_sd_rho = 0,
+  #     sample_sd_cap = valores_sample_sd_cap[[params$especifico]][[val]])
+  #   )
+  # }
   names(resByItem) <- names(goldStandard)
   cat("\n\tSimulación ", params$especifico, "\n")
   print(getResultsByItem(resByItem, "item3"))
@@ -429,6 +504,7 @@ allSim <- sapply(1:nrow(grid), function(i){
   item3 <- as.numeric(gsub(pattern = "Simulation_", replacement = "", x = names(item3)))
   names(item3) <- names(item3All)
   corResItem3 <- cor(x = goldStandard, y = item3, method = "kendall")
+  cat("Correlation: ", corResItem3, "\n")
   
   #--- Return ----
   tictoc::toc()
