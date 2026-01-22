@@ -175,6 +175,7 @@ getPCV <- function(dfDatos, grupos, dfGrupos){
 }
 
 
+
 maDiffAreas <- function(data, samplesG1, samplesG2){
   data <- as.data.frame(data)
   df <- data[, c(samplesG1, samplesG2)]
@@ -189,6 +190,23 @@ maDiffAreas <- function(data, samplesG1, samplesG2){
     (mean(x[samplesG2], na.rm =T) + mean(x[samplesG1], na.rm = T))/2
   }
   )
+  
+  # Shape - IQR
+  # ordenar AveExp, dividir en 10 partes y estimar IQR en logFC para cada una 
+  # de esas partes
+  quant10 <- quantile(df$AveExpr, probs = seq(0, 1, 0.1))
+  iqrList <- sapply(1:(length(quant10)-1), function(i){
+    df %>% 
+      dplyr::filter(AveExpr>quant10[i] & AveExpr<=quant10[i+1]) %>%
+      dplyr::pull(logFC) %>% 
+      stats::IQR()
+  })
+  # comprobar orden esperada con correlación de spearman
+  rho <- cor(iqrList, 10:1, method = "spearman")
+  rho <- (1 - rho) / 2 # escalado de 1 a 0, siendo 1 el peor y 0 el mejor
+  CF <- 0.1 + (1 - 0.1) * rho # escalado a 0.1-1 para que no tenga tanto efecto cuando la forma se cumple
+  
+  # Slope - diff areas
   df <- df[, c("logFC", "AveExpr")]
   
   res <- lm(logFC~AveExpr, data = df)
@@ -203,9 +221,10 @@ maDiffAreas <- function(data, samplesG1, samplesG2){
     intExpected = 0
   )
   # names(resultArea) <- i
-  return(unname(resultArea))
+  
+  i3Corrected <- unname(resultArea)*CF
+  return(i3Corrected)
 }
-
 
 
 getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
