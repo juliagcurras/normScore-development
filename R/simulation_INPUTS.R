@@ -22,8 +22,8 @@ names(goldStandard) <- paste0("Simulation_", 1:9)
 especificos <- 0:8
 n_proteins <- c(100, 1000, 5000, 10000)
 n_per_group <- c(5, 10, 20, 50)
-semilla <- c(2012, 265, 301, 9396, 107, 11792, 2511, 242, 1165, 301) # X10
-             # 149, 182, 702, 261, 233, 211, 814, 662, 126, 888)
+semilla <- c(2012, 265, 301, 9396, 107, 11792, 2511, 242, 1165, 301) #X10
+             # 149, 182, 702, 261, 233, 211, 814, 662, 126, 888) # x20
 
 ## All combinations of settings ####
 grid <- expand.grid(
@@ -37,7 +37,7 @@ dim(grid)
 # ordenar
 vars_grupo <- setdiff(names(grid), "especificos")  
 grid <- grid %>% dplyr::arrange(across(all_of(vars_grupo)), especificos)
-grid <- grid[1:36,]
+grid <- grid[361:721,]
 
 # saveRDS(object = grid, file = "../Simulations/grid.rds")
 

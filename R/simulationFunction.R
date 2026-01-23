@@ -12,12 +12,12 @@
 # graphics.off()
 setwd("C:/Users/julia/Documents/GitHub/normScore/R")
 
-library(MASS)
-library(future.apply)
-library(progressr)
+# library(MASS)
+# library(future.apply)
+# library(progressr)
 library(dplyr)
-library(ggplot2)
-library(tictoc)
+# library(ggplot2)
+# library(tictoc)
 # source(file = "supportFunctions.R", encoding = "UTF-8")
 # source(file = "scoreFunction.R", encoding = "UTF-8")
 
@@ -169,12 +169,12 @@ simulate_proteomics_clean <- function(
     mu_sd   = 1.2,
     mu_clip = c(15, 25),
     
-    # Correlación (intra > inter) vía factor correlacionado entre muestras
+    # Correlación (intra > inter) vía factor correlacionado entre muestras (ITEM2)
     rho_within  = 0.85,
     rho_between = 0.55,
     loading_sd  = 0.25,
     
-    # “Cuña” MA: varianza residual depende de abundancia
+    # “Cuña” MA: varianza residual depende de abundancia (ITEM3)
     sigma_hi = 0.05,
     sigma_lo = 0.4,
     gamma_sigma = 2.5,
@@ -188,7 +188,7 @@ simulate_proteomics_clean <- function(
     fc_lo = 2.5,
     gamma_fc = 7,
     
-    # Item 0 (shift global por muestra, afecta sumas)
+    # Item 0/1/2/3/5/6 (shift global por muestra, afecta sumas)
     sample_shift_sd = 0,
     sample_shift_cap = 0.2,
     
@@ -233,6 +233,7 @@ simulate_proteomics_clean <- function(
   DE_mat <- outer(logFC, gvec)
   
   # --------- factor correlacionado para correlación entre muestras ----------
+  # (change to modify item 2)
   R <- matrix(rho_between, m, m); diag(R) <- 1
   idx1 <- which(groups=="G1"); idx2 <- which(groups=="G2")
   R[idx1, idx1] <- rho_within; diag(R[idx1, idx1]) <- 1
@@ -252,7 +253,7 @@ simulate_proteomics_clean <- function(
   sigma_i <- sigma_hi + (w_low^gamma_sigma) * (sigma_lo - sigma_hi)
   EPS <- matrix(rnorm(n_proteins*m), nrow=n_proteins, ncol=m) * sigma_i
   
-  # --------- Item0: shift global por muestra ----------
+  # --------- Item0/1/5/6: shift global por muestra ----------
   b_shift <- rep(0, m)
   if (sample_shift_sd > 0) {
     b_shift <- rnorm(m, mean = 0, sd = sample_shift_sd)
@@ -310,10 +311,10 @@ simulate_proteomics_clean <- function(
     logData  = X,
     rawData  = 2^X,
     metadata = data.frame(Samples=colnames(X),
-                          Groups=factor(groups, levels=c("G1","G2"))),
-    item_effects = list(b_shift=b_shift,
-                        sigma_i_summary=summary(sigma_i)),
-    miss_info = miss_info
+                          Groups=factor(groups, levels=c("G1","G2")))
+    # item_effects = list(b_shift=b_shift,
+    #                     sigma_i_summary=summary(sigma_i)),
+    # miss_info = miss_info
   )
 }
 

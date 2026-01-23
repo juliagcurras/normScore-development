@@ -3,14 +3,14 @@
 # Julia G Curras - 22/01/2026
 library(MASS)
 library(future)
-library(future.apply)
-library(progressr)
+# library(future.apply)
+# library(progressr)
 library(dplyr)
 library(tictoc)
 source(file = "scoreFunction.R", encoding = "UTF-8")
 source(file = "simulation_INPUTS.R")
 source(file = "simulationFunction.R", encoding = "UTF-8")
-plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
+# plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
 
 
 
@@ -18,8 +18,8 @@ plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
 # Items 0, 1, 5, 6  ####
 #.............................................................................
 
-allSim <- future_sapply(1:nrow(grid), function(i) {
-  tictoc::tic()
+tictoc::tic()
+allSim <- future.apply::future_sapply(1:nrow(grid), function(i) {
   
   #--- Simulations ---
   params <- grid[i, ]
@@ -89,13 +89,13 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
   #--- Return ----
   kendallAll <- c(corResItem0, corResItem1, corResItem5, corResItem6)
   names(kendallAll) <- c("Item0", "Item1", "Item5", "Item6")
-  tictoc::toc()
   return(kendallAll)
 }, future.seed=TRUE)
+tictoc::toc()
 
 # Traspoñer e adxuntar á grid
 grid <- cbind(grid, as.data.frame(t(allSim)))
-saveRDS(object = grid, file = "../Simulations/grid_items0156.rds")
+saveRDS(object = grid, file = "../Simulations/grid_items0156_1000prots.rds")
 
 
 
@@ -104,8 +104,8 @@ saveRDS(object = grid, file = "../Simulations/grid_items0156.rds")
 #.............................................................................
 
 
+tictoc::tic()
 allSim <- future_sapply(1:nrow(grid), function(i) {
-  tictoc::tic()
   
   #--- Simulations ---
   params <- grid[i, ]
@@ -152,10 +152,9 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
   
   #--- Return ----
   names(corResItem2) <- c("Item2")
-  tictoc::toc()
   return(corResItem2)
 }, future.seed=TRUE)
-
+tictoc::toc()
 grid$item2 <- allSim
 # saveRDS(object = grid, file = "../Simulations/grid_items2.rds")
 
@@ -166,8 +165,8 @@ grid$item2 <- allSim
 # Item 3  ####
 #.............................................................................
 
+tictoc::tic()
 allSim <- future_sapply(1:nrow(grid), function(i) {
-  tictoc::tic()
   
   #--- Simulations ---
   params <- grid[i, ]
@@ -212,9 +211,9 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
   cat("Correlation: ", corResItem3, "\n")
   
   #--- Return ----
-  tictoc::toc()
   return(corResItem3)
 }, future.seed=TRUE)
+tictoc::toc()
 
 grid$item3 <- allSim
 # saveRDS(object = grid, file = "../Simulations/grid_items3.rds")
@@ -228,8 +227,8 @@ grid$item3 <- allSim
 # Item 4  ####
 #.............................................................................
 
+tictoc::tic()
 allSim <- future_sapply(1:nrow(grid), function(i) {
-  tictoc::tic()
   
   #--- Simulations ---
   params <- grid[i, ]
@@ -265,10 +264,10 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
   corResItem4 <- cor(x = goldStandard, y = item4, method = "kendall")
   
   #--- Return ----
-  tictoc::toc()
   # return(c(item4All, " - ", corResItem4))
   return(corResItem4)
 }, future.seed=TRUE)
+tictoc::toc()
 
 grid$item4 <- allSim
 saveRDS(object = grid, file = "../Simulations/grid_ALLITEMS.rds")

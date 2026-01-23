@@ -4,14 +4,14 @@
 # library(shiny)
 library(dplyr)
 library(tidyr)
-library(stats)
-library(MASS)
+# library(stats)
+# library(MASS)
 
 # options(repos = BiocManager::repositories())
 # library(MSnSet.utils)
-library(vsn)
-library(preprocessCore)
-library(boot)
+# library(vsn)
+# library(preprocessCore)
+# library(boot)
 
 
 #...........................................................................####
