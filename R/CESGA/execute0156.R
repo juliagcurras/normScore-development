@@ -6,10 +6,11 @@ library(MASS)
 library(future.apply)
 library(future)
 library(dplyr)
-source(file = "scoreFunction.R", encoding = "UTF-8")
-source(file = "simulationFunction.R", encoding = "UTF-8")
-source(file = "inputs.R")
+source(file = "/home/ulc/es/jgc/Simulacions/scoreFunction.R", encoding = "UTF-8")
+source(file = "/home/ulc/es/jgc/Simulacions/simulationFunction.R", encoding = "UTF-8")
+source(file = "/home/ulc/es/jgc/Simulacions/inputs.R", encoding = "UTF-8")
 # plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
+dirOut <- "/mnt/lustre/scratch/nlsas/home/ulc/es/jgc/Simulations/"
 plan(multisession)
 
 
@@ -92,5 +93,4 @@ allSim <- future.apply::future_sapply(1:nrow(grid), function(i) {
 
 # Traspoñer e adxuntar á grid
 grid <- cbind(grid, as.data.frame(t(allSim)))
-saveRDS(object = grid, file = "LUSTRE/normScore/Simulations/item0156_result.rds")
-
+saveRDS(object = grid, file = paste0(dirOut, "item0156_result_n32.rds"))

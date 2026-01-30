@@ -1,16 +1,14 @@
 
 # Executions 
 # Julia G Curras - 22/01/2026
-
 library(MASS)
 library(future.apply)
 library(future)
 library(dplyr)
-source(file = "scoreFunction.R", encoding = "UTF-8")
-source(file = "simulationFunction.R", encoding = "UTF-8")
-source(file = "inputs.R")
-# plan(multicore, workers = as.numeric(Sys.getenv("SLURM_CPUS_PER_TASK", 8)))
-dirOut <- "/mnt/lustre/scratch/nlsas/home/ulc/es/jgc"
+source(file = "/home/ulc/es/jgc/Simulacions/scoreFunction.R", encoding = "UTF-8")
+source(file = "/home/ulc/es/jgc/Simulacions/simulationFunction.R", encoding = "UTF-8")
+source(file = "/home/ulc/es/jgc/Simulacions/inputs.R", encoding = "UTF-8")
+dirOut <- "/mnt/lustre/scratch/nlsas/home/ulc/es/jgc/Simulations/"
 plan(multisession)
 
 #.............................................................................
@@ -58,10 +56,4 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
 }, future.seed=TRUE)
 
 grid$item4 <- allSim
-saveRDS(object = grid, file = "LUSTRE/normScore/Simulations/item4_result.rds")
-
-
-
-
-
-
+saveRDS(object = grid, file = paste0(dirOut, "item4_result_n32.rds"))

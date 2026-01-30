@@ -11,8 +11,8 @@ names(goldStandard) <- paste0("Simulation_", 1:9)
 especificos <- 0:8
 n_proteins <- c(100, 1000, 5000)
 n_per_group <- c(5, 10, 20, 50)
-semilla <- c(2012, 265, 301, 9396, 107, 11792, 2511, 242, 1165, 301) #X10
-             # 149, 182, 702, 261, 233, 211, 814, 662, 126, 888) # x20
+semilla <- c(2012, 265, 301, 9396, 107, 11792, 2511, 242, 1165, 684, #X10
+             149, 182, 702, 261, 233, 211, 814, 662, 126, 888) # x20
 
 ## All combinations of settings ####
 grid <- expand.grid(
@@ -26,7 +26,7 @@ dim(grid)
 # ordenar
 vars_grupo <- setdiff(names(grid), "especificos")  
 grid <- grid %>% dplyr::arrange(across(all_of(vars_grupo)), especificos)
-grid <- grid[361:719,]
+# grid <- grid[361:719,]
 
 
 
@@ -195,7 +195,18 @@ item4_sample_sd_rho <- rep(c(1.5, 0.9), each = 4) #0
 
 
 
+# ALL SCORE ####
 
+sevList <- list(
+  seq(0, 0.1, 0.0125),
+  seq(0, 0.25, 0.03125),
+  seq(0.25, 0.5, 0.03125),
+  seq(0, 0.5, 0.0625),
+  seq(0.25, 1, 0.09375),
+  seq(0, 1, 0.125),
+  seq(0.5, 1.5, 0.125),
+  seq(1, 1.5, 0.0625)
+)
 
 
 

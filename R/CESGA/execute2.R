@@ -69,6 +69,6 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
 }, future.seed=TRUE)
 
 grid$item2 <- allSim
-saveRDS(object = grid, file = paste0(dirOut, "item2_result.rds"))
+saveRDS(object = grid, file = paste0(dirOut, "item2_result_n16.rds"))
 
 

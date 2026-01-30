@@ -6,18 +6,16 @@ library(MASS)
 library(future.apply)
 library(future)
 library(dplyr)
-source(file = "scoreFunction.R", encoding = "UTF-8")
-source(file = "simulationFunction.R", encoding = "UTF-8")
-source(file = "inputs.R")
-
+source(file = "/home/ulc/es/jgc/Simulacions/scoreFunction.R", encoding = "UTF-8")
+source(file = "/home/ulc/es/jgc/Simulacions/simulationFunction.R", encoding = "UTF-8")
+source(file = "/home/ulc/es/jgc/Simulacions/inputs.R", encoding = "UTF-8")
+dirOut <- "/mnt/lustre/scratch/nlsas/home/ulc/es/jgc/Simulations/"
 plan(multisession)
-
 
 #.............................................................................
 # Item 3  ####
 #.............................................................................
 
-tictoc::tic()
 allSim <- future_sapply(1:nrow(grid), function(i) {
   
   #--- Simulations ---
@@ -65,9 +63,6 @@ allSim <- future_sapply(1:nrow(grid), function(i) {
   #--- Return ----
   return(corResItem3)
 }, future.seed=TRUE)
-tictoc::toc()
 
 grid$item3 <- allSim
-saveRDS(object = grid, file = "LUSTRE/normScore/Simulations/item3_result.rds")
-# saveRDS(object = grid, file = "../Simulations/grid_items3.rds")
-
+saveRDS(object = grid, file = paste0(dirOut, "item3_result_n32.rds"))
