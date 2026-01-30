@@ -1,0 +1,258 @@
+---
+title: "Gold Standard - Normalization Assessment"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   self_contained: yes
+  rmdformats::readthedown:
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggpubr)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+
+```{r}
+# Functions
+getResults <- function(dfRaw, datos, dm){
+  # Extract data
+  grupos <- unique(dm$Groups)
+  
+  # Plot graphics
+  p0 <- Biomics::plotBarTI(data = dfRaw, interact = F)$grafico
+  p1 <- Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos),
+                              interact = F, tituloX = "TI distribution")$grafico
+  p2 <- Biomics::plotRLE(df = datos, normalizacion = "log", interact = F)$grafico
+  p3 <- Biomics::plotMeanSD(df = datos, interact = F)$grafico
+  limY = c(min(datos, na.rm = T), max(datos, na.rm = T))*1.1
+  p4 <- Biomics::plotMA(df = datos, dfGrupos = dm, gControl = grupos[1],
+                        gCase = grupos[2], showR2 = F, interact = F, 
+                         limY = c(-3, 3))$grafico
+  
+  # Get metrics and plot graphics
+  # PVC #
+  dfPCV <- Biomics::getPCVSimple(dfDatos = datos, grupos = grupos, dfGrupos = dm)
+  dfPCV <-  as.data.frame(dfPCV)
+  if (length(grupos) < 5) {
+    p5 <- Biostatech::plotForest(
+      etiquetas = rep(colnames(dfPCV), length(grupos)), 
+      estPunt = as.vector(t(as.matrix(dfPCV[seq(1, nrow(dfPCV), 3), ]))), 
+      LI = as.vector(t(as.matrix(dfPCV[seq(2, nrow(dfPCV), 3), ]))), 
+      LS = as.vector(t(as.matrix(dfPCV[seq(3, nrow(dfPCV), 3), ]))), 
+      grupos = rep(grupos, each = ncol(dfPCV)), 
+      vertical = T, 
+      tituloX = "Mean of the pooled variation coefficient - PVC (%)", 
+      referenceLine = F, interact = F)$grafico
+  }
+  else {
+    p5 <- Biomics::plotBoxMulti(base = dfPCV[seq(1, nrow(dfPCV), 3), ], 
+                                varResumen = colnames(dfPCV), 
+                                tituloX = "Normalizations", tituloY = "PVC (%)", 
+                                interact = F)$grafico
+  }
+  # Correlations #
+  correlations <- data.frame(Biomics::getPooledCor(df = datos, dfGrupos = dm, metodo = "spearman"))
+  colnames(correlations) <- "cor"
+  p6 <- Biostatech::plotBox(base = correlations, tituloX = "Correlation (Spearman)",
+                            varResumen = "cor", interact = F)$grafico
+  
+  # Patch together
+  return(ggpubr::ggarrange(p0, p1, p2, p3, p4, p5, p6, ncol = 2, nrow = 4))
+}
+
+
+getResultsByItem <- function(dfRaw, listaNorm, dm, item){
+  # just a common object
+  # dm <- as.data.frame(lista[[1]][["metadata"]])
+  grupos <- unique(dm$Groups)
+  numRows <- ceiling(length(listaNorm)/2)
+  empties <- replicate(numRows-3, ggplot() + theme_void(), simplify = FALSE)
+  
+  # Starting with data extraction and metrics/graphs estimation... 
+  if (item == "item0"){ # only item 0
+    empties <- c(Biomics::plotBarTI(data = dfRaw, interact = F)$grafico, empties)
+    output <-  ggpubr::ggarrange(plotlist = empties, ncol = 1, nrow = numRows-2)
+  } else { # other items
+    # First extrating individual data and generating individual plots
+    a <<- 0
+    finalData <- lapply(listaNorm, function(datos){
+      a <<- a+1
+      nome <- names(listaNorm)[a]
+      if (item == "item6"){
+        Biomics::plotBoxMulti(
+          base = datos, varResumen = colnames(datos),
+          interact = F, tituloX = nome
+        )$grafico
+      } else if (item == "item5"){
+        Biomics::plotRLE(df = datos, normalizacion = nome, interact = F, 
+                         tituloX = nome)$grafico
+      } else if (item == "item4"){
+        Biomics::plotMeanSD(df = datos, interact = F, tituloX = nome)$grafico
+      } else if (item == "item3"){
+        Biomics::plotMA(df = datos, dfGrupos = dm, gControl = grupos[1], titulo = nome,
+                        gCase = grupos[2], showR2 = F, interact = F)$grafico
+      }
+    })
+    names(finalData) <- paste0("SimDataset_",1:length(finalData))
+    # Mix plots into a single image or...
+    if (item %in% c("item3", "item4", "item5", "item6")){ # plot graphs together: MAplot, RLEplot, meanSDplot, TIboxplot
+      output <- ggpubr::ggarrange(plotlist = finalData, 
+                                  ncol = 2, nrow = numRows)
+    } else if (item == "item1"){ # ...or generate other metrics with data for remaining items
+      empties <- c(Biomics::getPCV( # PVC
+        listData = listaNorm,
+        grupos = grupos,
+        dfGrupos = dm,
+        grafico = T,
+        interact = F
+      )$grafico, empties)
+       output <-  ggpubr::ggarrange(plotlist = empties, ncol = 1, nrow = numRows-2)
+    } else if (item =="item2"){ # Correlation
+      allVectorsCorr <- lapply(
+        listaNorm, 
+        Biomics::getPooledCor, 
+        dfGrupos = dm,
+        metodo = "spearman")
+      dfPlot <- data.frame(sapply(allVectorsCorr, "length<-", max(lengths(allVectorsCorr))))
+      empties <- c(Biomics::plotBoxMulti(
+        base = dfPlot, 
+        varResumen = colnames(dfPlot),
+        tituloX = "Normalizations", interact = F,
+        tituloY = "Spearman correlation")$grafico, empties)
+      output <- ggpubr::ggarrange(plotlist = empties, ncol = 1, nrow = numRows-2)
+    }
+    
+  } 
+  res <- list(output)
+  names(res) <- item
+  return(res)
+}
+```
+
+
+# Datasets
+
+General characteristics of each dataset are depicted in the following table:
+
+```{r}
+df <- readxl::read_xlsx(path = "_Index.xlsx", sheet = 1, col_names = T)
+# df$`Publication (DOI)` <- gsub(pattern = "DOI: ", replacement = "", 
+#                                x = df$`Publication (DOI)`, fixed = T)
+urlDOI <- paste0("https://doi.org/", substr(x = df$`Publication (DOI)`, start = 6, stop = 50))
+df$`Publication (DOI)` <- paste0(
+    "<a href='", urlDOI, "' target='_blank'>", df$`Publication (DOI)`,"</a>"
+  )
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F, filter = "top",
+              options = list(ordering = T, dom = "Bfrt", scrollY = '500px',
+                            scrollX = T, pageLength = nrow(df),
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")))) #%>% 
+  # DT::formatStyle(1, font = 'bold')
+```
+
+<br><br>
+
+# Assessment {.tabset}
+
+```{r}
+allFiles <- list.files(path = "ProcessedDatasets/")
+items <- paste0("item", 0:6)
+listGraphs <- sapply(allFiles, function(i){
+  output <- readRDS(file = paste0(outDir, i))
+  # getResults(dfRaw = output$data, datos = output$dataLog, dm = output$dm)
+  resultado <- sapply(items, 
+    getResultsByItem,
+    dfRaw = output$data, 
+    listaNorm = output$listaNorm, 
+    dm =  output$dm, 
+    simplify = F, 
+    USE.NAMES = T
+    )
+  return(resultado)
+},simplify = F, USE.NAMES = T)
+```
+
+
+
+```{r fig.align='center', fig.height=18, fig.width=10}
+invisible(sapply(allFiles, function(i){
+  idDataset <- substr(i, start = 1, stop = nchar(i)-4)
+  cat("\n\n## ", idDataset, " {- .tabset .tabset-dropdown}\n\n")
+  
+  sapply(items, function(item){
+    cat("\n\n### ", item, " {-}\n\n")
+    print(listGraphs[[i]][[item]])
+  })
+  
+  # print(listGraphs[[i]])
+  cat("\n\n")
+}))
+
+```
+
+
+
+
+
