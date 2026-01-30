@@ -1,0 +1,363 @@
+---
+title: "Evaluation of MaxQuant performance in a HPC enviroment"
+subtitle: "Executions in Finis Terrae III (CESGA)"
+author:
+- name: "Julia García Currás"
+  affiliation: "julia.gcurras@biostatech.com"
+date: "`r Sys.setlocale('LC_TIME', 'English'); format(Sys.Date(), '%d  %B  %Y')`"
+
+output: 
+
+  bookdown::html_document2:
+    toc: true    # tabla de contenidos
+    toc_depth: 4 # depth of headers (4 --> todos los niveles incluidos)
+    toc_float: true
+    number_sections: true
+    self_contained: yes
+    css: ./Complementos/Biostatech_long_tittle.css
+    theme: flatly
+    highlight: pygments
+    fig_caption: true
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+<img src="./Complementos/logolong.svg" style="position:absolute;top:0.5px;right:0px;width:250px;height:130px;" />
+
+<style>
+.tabset-dropdown > .nav-tabs {
+    display: inline-block;
+    max-height: 400px;
+    min-height: 50px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+</style>
+
+
+```{r chunk_setup, include=FALSE}
+
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis', 
+  fig.align='center', 
+  fig.height=5, 
+  # fig.width=8
+)
+
+```
+
+```{r librerias y otros, include=FALSE, warning=FALSE}
+
+#--- Clear existing data and graphics
+rm(list=ls())
+graphics.off()
+#--- Set CRAN Repo
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+#--- Loading required libraries
+library(lubripack)
+list.of.packages <- c("dplyr","arsenal", "ggplot2", "knitr", 'DT', 
+                      "plotly", "ggpubr", "httr", "glue",
+                      "usethis", "glossary", "yaml")
+suppressMessages(suppressPackageStartupMessages(lubripack(list.of.packages, silent = TRUE)))
+
+library(Biostatech)
+#--- Mensaje de status
+if(all(sapply(list.of.packages, require, character.only = TRUE))) message("Librerías cargadas correctamente.") else message("(!) Hay algún problema con las librerías necesarias.")
+#--- Session information
+writeLines(capture.output(sessionInfo()), "sessionInfo.txt")
+options(qwraps2_markup = "markdown")
+
+
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+# 
+# DT::datatable(dfFinal, extensions = "Buttons", 
+#     rownames = T, escape = F, class = c("hover", "row-border"), 
+#     options = list(ordering = T, dom = "Brt", scrollY ='500px', 
+#                    rowCallback = DT::JS(js), full_width = T, 
+#                    scrollX = TRUE, pageLength = nrow(dfFinal),
+#                    buttons = c("copy", "csv", "excel"))) %>%
+#   DT::formatRound(1:ncol(dfFinal), digits = 3)
+
+```
+
+```{r}
+
+plotlyScatter <- function(df, xVar = "TotalThreads", yVar = "Time (s)",
+                          groupVar = NULL, 
+                          tituloX = NULL, tituloY = NULL, 
+                          tituloLeyenda = "Total threads",
+                          colores = "#005B9A", yLim = NULL){
+  
+  if (is.null(tituloX)) tituloX <- xVar
+  if (is.null(tituloY)) tituloY <- yVar
+  if (is.null(yLim)) yLim <- max(df[, yVar], na.rm = TRUE) * 1.05
+  
+  if (is.null(groupVar)){
+    df <- df[,c(xVar, yVar)]
+    colnames(df) <- c("varX", "varY")
+    
+    plot_ly(
+      df,
+      x = ~varX,
+      y = ~varY,
+      type = "scatter",
+      mode = "lines+markers",
+      line = list(width = 2, color = colores),
+      marker = list(size = 7, color = colores), 
+      text = paste0(
+                tituloX, ": ", df$varX,
+                "<br>", tituloY, ": ", df$varY
+              ),
+      hoverinfo = 'text'
+      ) %>%
+      layout(
+        xaxis = list(title = tituloX),
+        yaxis = list(title = tituloY, range = c(0, yLim))
+      ) %>%
+      plotly::config(
+              modeBarButtonsToRemove = c(
+                "autoScale2d", "lasso2d", "pan2d",
+                "select2d"),
+              displaylogo = FALSE
+    )
+    
+    
+  } else {
+    d <- df[, c(xVar, yVar, groupVar)]
+    colnames(d) <- c("varX", "varY", "grupo")
+  
+    # Asegurar 2 grupos
+    d$grupo <- as.factor(d$grupo)
+    lev <- levels(d$grupo)
+    
+    if (length(colores)!=length(lev)) colores <- Biostatech::colorPalette(n = length(lev))
+    col_map <- setNames(rep(colores, length.out = 2), lev)
+  
+    # Orden: para que las líneas no salten, ordenamos por grupo y X
+    d <- d[order(d$grupo, d$varX), ]
+  
+    # Colores por nivel (en orden de levels)
+  
+    plotly::plot_ly(
+      data = d,
+      x = ~varX,
+      y = ~varY,
+      type = "scatter",
+      mode = "lines+markers",
+      color = ~grupo,
+      colors = col_map,
+      split = ~grupo,  # una traza por grupo
+      line = list(width = 2),
+      marker = list(size = 7),
+      text = ~paste0(
+        "Group: ", grupo,
+        "<br>", tituloX, ": ", varX,
+        "<br>", tituloY, ": ", varY
+      ),
+      hoverinfo = "text"
+    ) %>%
+      plotly::layout(
+        xaxis = list(title = tituloX, range = c(0, 9)),
+        yaxis = list(title = tituloY, range = c(0, yLim)),
+        legend = list(title = list(text = tituloLeyenda))
+      ) %>%
+      plotly::config(
+        modeBarButtonsToRemove = c("autoScale2d", "lasso2d", "pan2d", "select2d"),
+        displaylogo = FALSE
+      )
+    }
+}
+
+
+
+```
+
+
+
+
+# Main objective
+
+Determine the best parameters of execution for normScore simulations in a High Performance Computing (HPC) enviroment in terms of memory and threads. 
+
+
+# Methods
+
+## Computational parameters
+
+Execution was performed in the Finis Terrae III (FTIII) supercomputer from the [Centro de Supercomputación de Galicia (CESGA)](https://www.cesga.es/gl/inicio-gl/). The FTIII was accessed remotely using a ssh client and a VPN connection through Check point mobile app. Data transfer was done both using the command line (through scp client) and the [WINscp transfer file tool](https://winscp.net/eng/download.php).
+
+## Data
+
+The following data was collected for each dataset execution with an specific number of threads:
+
+* Time of execution
+
+* Total memory used
+
+Using the previous information, the following parameters were estimated:
+
+* $\text{Memory per thread} = \frac{\text{total memory (GB)}}{\text{nº threads}}$
+
+* $\text{Speed up} = \frac{\text{sequential time}}{\text{parallel time}}$
+
+* $\text{Efficiency}= \frac{\text{Speed up}}{\text{nº of threads}}$
+
+Some definitions:
+
+* Sequential time: time without parallelization (1 thread). 
+
+* Parallel time: time of execution using a given number of threads.
+
+* Speed up: comparison of sequential time with parallel time, measures the real reduction in time achieved with the parallelization. 
+
+* Efficiency: time fraction of useful work for each nuclei. 
+
+# Results
+
+## Main results {.tabset}
+
+Increasing number of threads.
+
+```{r}
+data <- readRDS(file = "../OutputFiles/data.rds")
+dfPrin <- data[[1]]
+dfSec <- data[[2]]
+```
+
+```{r}
+df <- dfPrin %>% dplyr::select(TotalThreads, Cores:Nodes, `Memory Utilized (GB)`, `Memory By Thread (GB)`, `Time (s)`, `Time (min)`, SpeedUp, Efficiency)
+DT::datatable(df, extensions = "Buttons",
+    rownames = F, escape = F, class = c("hover", "row-border"),
+    options = list(ordering = T, dom = "Brt", scrollY =F,
+                   rowCallback = DT::JS(js), full_width = T,
+                   scrollX = TRUE, pageLength = nrow(df),
+                   buttons = c("copy", "csv", "excel"))) %>%
+  DT::formatRound(5:ncol(df), digits = 2) %>%
+  DT::formatStyle(1, fontWeight = 'bold')
+
+```
+
+### Execution time (seconds) {-}
+
+```{r fig.align='center', fig.height=5, fig.width=8}
+plotlyScatter(df = dfPrin, colores = Biostatech::colorPalette(n=3)[1])
+```
+
+### Speed up {-}
+
+```{r}
+plotlyScatter(df = dfPrin, yVar = "SpeedUp", 
+              tituloX = "Total threads",
+              colores = Biostatech::colorPalette(n=3)[2])
+```
+
+
+### Efficiency {-}
+
+```{r}
+plotlyScatter(df = dfPrin, yVar = "Efficiency", 
+              tituloX = "Total threads",
+              colores = Biostatech::colorPalette(n=3)[3])
+```
+
+
+### Total memory {-}
+
+```{r}
+plotlyScatter(df = dfPrin, yVar = "Memory Utilized (GB)", 
+              tituloX = "Total threads",
+              colores = "#C67DD8")
+```
+
+### Memory/thread {-}
+
+```{r}
+plotlyScatter(df = dfPrin, yVar = "Memory By Thread (GB)", 
+              tituloX = "Total threads",
+              colores = "#9389C7")
+```
+
+
+## Secondary results {.tabset}
+
+Increasing cores and threads. 
+
+
+```{r}
+df <- dfSec %>% dplyr::select( ThreadGroup, TotalThreads, Cores:Nodes, `Memory Utilized (GB)`, `Memory By Thread (GB)`, `Time (s)`, `Time (min)`, SpeedUp, Efficiency)
+DT::datatable(df, extensions = "Buttons",
+    rownames = F, escape = F, class = c("hover", "row-border"),
+    options = list(ordering = T, dom = "Brt", scrollY =F,
+                   rowCallback = DT::JS(js), full_width = T,
+                   scrollX = TRUE, pageLength = nrow(df),
+                   buttons = c("copy", "csv", "excel"))) %>%
+  DT::formatRound(5:ncol(df), digits = 2) %>%
+  DT::formatStyle(1, fontWeight = 'bold')
+
+```
+
+
+### Execution time (seconds) {-}
+
+```{r fig.align='center', fig.height=5, fig.width=8}
+plotlyScatter(df = dfSec, groupVar = "ThreadGroup", xVar = "Cores")
+```
+
+### Speed up {-}
+
+```{r}
+plotlyScatter(df = dfSec, groupVar = "ThreadGroup", 
+              xVar = "Cores", yVar = "SpeedUp")
+```
+
+
+### Efficiency {-}
+
+```{r}
+plotlyScatter(df = dfSec, groupVar = "ThreadGroup", 
+              xVar = "Cores", yVar = "Efficiency")
+```
+
+### Total memory {-}
+
+```{r}
+plotlyScatter(df = dfSec, groupVar = "ThreadGroup", 
+              xVar = "Cores",  yVar = "Memory Utilized (GB)")
+```
+
+### Memory/thread {-}
+
+```{r}
+plotlyScatter(df = dfSec, groupVar = "ThreadGroup", 
+              xVar = "Cores", yVar = "Memory By Thread (GB)")
+```

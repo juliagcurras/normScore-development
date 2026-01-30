@@ -1,0 +1,58 @@
+﻿.subtitle {
+  margin-right: 200px; /* Se elimina la justificación */
+}
+
+body {
+  font-family: Calibri, helvetica, sans-serif;
+  font-size: 16px;
+  text-align: justify;
+}
+
+h1 {
+  color: rgb(0,62,119);
+  font-size: 147%;
+  font-weight: bold;
+}
+
+.title {
+  margin-right: 200px; /* Se elimina la justificación */
+}
+
+h2 {
+  color: rgb(0,62,119);
+  font-size: 137%;
+  font-weight: bold;
+}
+
+h3 {
+  color: rgb(0,111,182);
+  font-size: 119%;
+  font-weight: bold;
+}
+
+h4 {
+ color: rgb(0,111,182);
+  font-size: 110%;
+  font-weight: bold;
+  font-style: italic;
+}
+
+.watermark {
+  opacity: 0.2;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  font-size: 500%;
+  color: #00407d;
+}
+
+.math {font-size: small;} /* Disminuye tamaño de ecuaciones */
+
+code.r{
+  font-size: 10px; /* Disminuye tamaño del código */
+}
+pre {
+  font-size: 10px; /* Disminuye tamaño de los resultados del chunk y el color */
+  color: #00407d;
+
+}
