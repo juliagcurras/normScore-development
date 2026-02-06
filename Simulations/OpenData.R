@@ -5,7 +5,7 @@
 # Julia G Curras - 2026/01/28
 rm(list=ls())
 graphics.off()
-setwd("C:/Users/julia/Documents/GitHub/normScore/Simulations/CESGA")
+setwd("C:/Users/julia/Documents/GitHub/normScore/Simulations")
 library(dplyr)
 
 
@@ -33,7 +33,17 @@ table(resComp) # equal elements by row => OKKKKK
 # porque me olvidei de añadir 10000 nos argumentos 
 data1 <- readRDS(file = "FinalDatasets/normScore_result_n32_20Rep_.rds")
 data2 <- readRDS(file = "FinalDatasets/normScore_result_n32_20Rep_10000.rds")
-data <- rbind(data1, data2)
+data3 <- rbind(data1, data2)
+# saveRDS(data, file = "FinalDatasets/normScore_result_n32_20Rep.rds")
+
+# porque me olvidei de cambiar a seed 211 que daba problemas en item3 por seed 379
+# dataItem <- readRDS(file = "FinalDatasets/item0156_result_n32_20Rep.rds")
+# unique(dataItem$semilla)[!(unique(dataItem$semilla) %in% unique(data4$semilla))]
+# unique(data4$semilla)[!(unique(data4$semilla) %in% unique(dataItem$semilla))]
+data3 <- data3 %>% filter(semilla != 211)
+data4 <- readRDS(file = "FinalDatasets/normScore_result_n32_seed379.rds")
+data4 <- data4 %>% filter(semilla == 379)
+data <- rbind(data3, data4)
 saveRDS(data, file = "FinalDatasets/normScore_result_n32_20Rep.rds")
 
 
