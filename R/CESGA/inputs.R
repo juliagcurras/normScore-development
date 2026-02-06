@@ -9,7 +9,7 @@
 goldStandard <- 1:9
 names(goldStandard) <- paste0("Simulation_", 1:9)
 especificos <- 0:8
-n_proteins <- c(100, 1000, 5000)
+n_proteins <- c(100, 1000, 5000, 10000)
 n_per_group <- c(5, 10, 20, 50)
 semilla <- c(2012, 265, 301, 9396, 107, 11792, 2511, 242, 1165, 684, #X10
              149, 182, 702, 261, 233, 211, 814, 662, 126, 888) # x20
