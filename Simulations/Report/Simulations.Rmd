@@ -1,0 +1,311 @@
+---
+title: "NormScore assessment - Simulation results"
+subtitle: "Executions in Finis Terrae III (CESGA)"
+author:
+- name: "Julia García Currás"
+  affiliation: "julia.gcurras@biostatech.com"
+date: "`r Sys.setlocale('LC_TIME', 'English'); format(Sys.Date(), '%d  %B  %Y')`"
+
+output: 
+
+  bookdown::html_document2:
+    toc: true    # tabla de contenidos
+    toc_depth: 4 # depth of headers (4 --> todos los niveles incluidos)
+    toc_float: true
+    number_sections: true
+    self_contained: yes
+    css: ./Complementos/Biostatech_long_tittle.css
+    theme: flatly
+    highlight: pygments
+    fig_caption: true
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+<img src="./Complementos/logolong.svg" style="position:absolute;top:0.5px;right:0px;width:250px;height:130px;" />
+
+<style>
+.tabset-dropdown > .nav-tabs {
+    display: inline-block;
+    max-height: 400px;
+    min-height: 50px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+</style>
+
+
+```{r chunk_setup, include=FALSE}
+
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis', 
+  fig.align='center', 
+  fig.height=5
+  # fig.width=8
+)
+
+```
+
+```{r librerias y otros, include=FALSE, warning=FALSE}
+
+#--- Clear existing data and graphics
+rm(list=ls())
+graphics.off()
+#--- Set CRAN Repo
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+#--- Loading required libraries
+library(lubripack)
+list.of.packages <- c("dplyr","arsenal", "ggplot2", "knitr", 'DT', 
+                      "plotly", "ggpubr", "Biostatech")
+suppressMessages(suppressPackageStartupMessages(lubripack(list.of.packages, silent = TRUE)))
+
+library(Biostatech)
+#--- Mensaje de status
+if(all(sapply(list.of.packages, require, character.only = TRUE))) message("Librerías cargadas correctamente.") else message("(!) Hay algún problema con las librerías necesarias.")
+#--- Session information
+writeLines(capture.output(sessionInfo()), "sessionInfo.txt")
+options(qwraps2_markup = "markdown")
+
+
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+
+df <- readRDS(file = "../allSimulations.rds")
+df <- df %>% filter(!(especificos %in% c(1,8)))
+
+# df <- df %>% filter(especificos %in% c(0, 4, 5, 6, 7))
+```
+
+# Simulations
+
+A first evaluation of the normScore was performed using simulation datasets. 
+
+Description:
+
+* Nine different datasets were simulated with an increasing error for each item or group of items.
+
+* The previous combination of 9 datasets was repeated several times changing the following parameters: 
+  
+  * Magnitude of error: 0 (no error), 1-8 (increased error). 
+  * Number of proteins: 100, 1000, 5000, 10000.
+  * Number of samples per group: 5, 10, 20, 50.
+
+* These simulations were also repeated 20 times using different seeds. 
+
+A total number of `r nrow(df)` combinations of the previous parameters were used to simulate each time 9 different datasets, which means a total number of `r (2880*9)` simulated datasets. 
+
+In addtition, five different errors were necessary to assess all items:
+
+* Item 0, 1, 5 and 6: shift error
+* Item 2: correlation between/within magnitude
+* Item 3: shift+residual variance
+* Item 4: mean-SD dependence
+* normScore: a general combination of shift error, correlation magnitude, residual variance magnitude and dependence of mean-SD
+
+For each of the previous items `r (2880*9)` simulated datasets were generated, different combinations for the error. Therefore, the final number of simulations was `r (2880*9*5)`.
+
+For each combination of parameters (magnitude of error, no. proteins, no. samples/group, repetition), the item/normScore was used to assess the 9 simulated datasets. The resulting order was compared with the expected one (datasets 0 to 8 sorted from higher to lower quality) using the Kendall correlation coefficient. A total number of `r (2880*5)` Kendall correlation coefficients was obtained and used in this report to assess the performance of each item and the global score. 
+
+
+# Results
+
+## By item
+
+```{r}
+df2 <- df %>%
+  tidyr::pivot_longer(
+    cols = c(starts_with("Item"), "normScore"),
+    names_to = "Items",
+    values_to = "corr"
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = especificos,
+    values_from = corr
+  )
+dfAux <- df2 %>% dplyr::select(Items, `0`:`7`)
+colnames(dfAux)[-1] <- paste0("Type of error (", colnames(dfAux)[-1], ")")
+Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
+```
+
+
+```{r}
+colores <- Biostatech::colorPalette(n = length(unique(df$especificos)))
+names(colores) <- unique(df$especificos)
+graficos <- sapply(unique(df$especificos), function(i){
+  dfAux <- df %>% filter(especificos == i) %>% dplyr::select(Item0:normScore)
+  Biomics::plotBoxMulti(
+    base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Error ", i), 
+    interact = F, 
+    color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+})
+```
+
+```{r  fig.height=12, fig.align='center', fig.width=10}
+ggpubr::ggarrange(plotlist = graficos, nrow = 3, ncol = 3) 
+```
+
+
+
+## By nº. proteins
+
+```{r}
+df2 <- df %>%
+  tidyr::pivot_longer(
+    cols = c(starts_with("Item"), "normScore"),
+    names_to = "Items",
+    values_to = "corr"
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = n_proteins,
+    values_from = corr
+  )
+dfAux <- df2 %>% dplyr::select(Items, `100`:`10000`)
+colnames(dfAux)[-1] <- paste0("Nº proteins:", colnames(dfAux)[-1])
+Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
+```
+
+
+```{r}
+colores <- Biostatech::colorPalette(n = 4)
+names(colores) <- unique(df$n_proteins)
+graficos <- sapply(unique(df$n_proteins), function(i){
+  dfAux <- df %>% 
+    filter(n_proteins == i) %>% 
+    filter(especificos != 0) %>% # control negativo
+    mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    dplyr::select(Item0:normScore)
+  Biomics::plotBoxMulti(
+    base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº proteins:  ", i), 
+    interact = F, color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+})
+```
+
+```{r  fig.height=8, fig.align='center', fig.width=10}
+ggpubr::ggarrange(plotlist = graficos, nrow = 2, ncol = 2)
+```
+
+
+
+## By nº. samples/group
+
+
+```{r}
+df2 <- df %>%
+  tidyr::pivot_longer(
+    cols = c(starts_with("Item"), "normScore"),
+    names_to = "Items",
+    values_to = "corr"
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = n_per_group,
+    values_from = corr
+  )
+dfAux <- df2 %>% dplyr::select(Items, `5`:`50`)
+colnames(dfAux)[-1] <- paste0("Nº samples/group: ", colnames(dfAux)[-1])
+Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
+```
+
+```{r}
+colores <- Biostatech::colorPalette(n = 4)
+names(colores) <- unique(df$n_per_group)
+graficos <- sapply(unique(df$n_per_group), function(i){
+  dfAux <- df %>% 
+    filter(n_per_group == i) %>% 
+    filter(especificos != 0) %>% # control negativo
+    mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    dplyr::select(Item0:normScore)
+  Biomics::plotBoxMulti(
+    base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº samples:  ", i), 
+    interact = F, 
+    color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+})
+```
+
+```{r fig.height=8, fig.align='center', fig.width=10}
+ggpubr::ggarrange(plotlist = graficos, nrow = 2, ncol = 2)
+```
+
+
+
+
+## By nº. samples/group
+
+```{r}
+df2 <- df %>%
+  tidyr::pivot_longer(
+    cols = c(starts_with("Item"), "normScore"),
+    names_to = "Items",
+    values_to = "corr"
+  ) %>%
+  tidyr::pivot_wider(
+    names_from = semilla,
+    values_from = corr
+  )
+dfAux <- df2 %>% dplyr::select(Items, `107`:`11792`)
+colnames(dfAux)[-1] <- paste0("Nº samples/group: ", colnames(dfAux)[-1])
+Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
+```
+
+
+```{r}
+colores <- Biostatech::colorPalette(n = 20, removeWhite = T)
+names(colores) <- unique(df$semilla)
+graficos <- sapply(unique(df$semilla), function(i){
+  dfAux <- df %>% 
+    filter(semilla == i) %>% 
+    filter(especificos != 0) %>% # control negativo
+    mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    dplyr::select(Item0:normScore)
+  Biomics::plotBoxMulti(
+    base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Repetición (semilla):  ", i), 
+    interact = F, color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+})
+```
+
+```{r fig.height=20, fig.align='center', fig.width=10}
+ggpubr::ggarrange(plotlist = graficos, nrow = 10, ncol = 2)
+```
+
+
+
+# Summary
+
+Even though we can see outliers in some items, specially at item3 and item5, median and Q1-Q3 values are higher than 0.9 in general. 
+
+Items and normScore are invaried to the number of proteins and numbre of samples by group. No extrem seed was stablish, data behaviour ir similar across the 20 seeds used. 
+
+General performance of normScore is slightly lower in terms of median, but with almost no extreme or outlier correlation values and thin IQR values. 
+
+_Especificos_ 1 and 8 combinations correspond to extrem conditions and were be removed for reporting the final results. 
+
+
+
