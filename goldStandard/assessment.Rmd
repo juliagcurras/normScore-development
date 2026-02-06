@@ -46,6 +46,7 @@ library(ggpubr)
 # variables
 inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
 outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+items <- paste0("item", 0:6)
 js <- c(
 "function(row, data, num, index){",
 "  var $row = $(row);",
@@ -73,56 +74,12 @@ js <- c(
 
 ```{r}
 # Functions
-getResults <- function(dfRaw, datos, dm){
-  # Extract data
-  grupos <- unique(dm$Groups)
-  
-  # Plot graphics
-  p0 <- Biomics::plotBarTI(data = dfRaw, interact = F)$grafico
-  p1 <- Biomics::plotBoxMulti(base = datos, varResumen = colnames(datos),
-                              interact = F, tituloX = "TI distribution")$grafico
-  p2 <- Biomics::plotRLE(df = datos, normalizacion = "log", interact = F)$grafico
-  p3 <- Biomics::plotMeanSD(df = datos, interact = F)$grafico
-  limY = c(min(datos, na.rm = T), max(datos, na.rm = T))*1.1
-  p4 <- Biomics::plotMA(df = datos, dfGrupos = dm, gControl = grupos[1],
-                        gCase = grupos[2], showR2 = F, interact = F, 
-                         limY = c(-3, 3))$grafico
-  
-  # Get metrics and plot graphics
-  # PVC #
-  dfPCV <- Biomics::getPCVSimple(dfDatos = datos, grupos = grupos, dfGrupos = dm)
-  dfPCV <-  as.data.frame(dfPCV)
-  if (length(grupos) < 5) {
-    p5 <- Biostatech::plotForest(
-      etiquetas = rep(colnames(dfPCV), length(grupos)), 
-      estPunt = as.vector(t(as.matrix(dfPCV[seq(1, nrow(dfPCV), 3), ]))), 
-      LI = as.vector(t(as.matrix(dfPCV[seq(2, nrow(dfPCV), 3), ]))), 
-      LS = as.vector(t(as.matrix(dfPCV[seq(3, nrow(dfPCV), 3), ]))), 
-      grupos = rep(grupos, each = ncol(dfPCV)), 
-      vertical = T, 
-      tituloX = "Mean of the pooled variation coefficient - PVC (%)", 
-      referenceLine = F, interact = F)$grafico
-  }
-  else {
-    p5 <- Biomics::plotBoxMulti(base = dfPCV[seq(1, nrow(dfPCV), 3), ], 
-                                varResumen = colnames(dfPCV), 
-                                tituloX = "Normalizations", tituloY = "PVC (%)", 
-                                interact = F)$grafico
-  }
-  # Correlations #
-  correlations <- data.frame(Biomics::getPooledCor(df = datos, dfGrupos = dm, metodo = "spearman"))
-  colnames(correlations) <- "cor"
-  p6 <- Biostatech::plotBox(base = correlations, tituloX = "Correlation (Spearman)",
-                            varResumen = "cor", interact = F)$grafico
-  
-  # Patch together
-  return(ggpubr::ggarrange(p0, p1, p2, p3, p4, p5, p6, ncol = 2, nrow = 4))
-}
-
 
 getResultsByItem <- function(dfRaw, listaNorm, dm, item){
   # just a common object
   # dm <- as.data.frame(lista[[1]][["metadata"]])
+  # cat(item, "\n")
+  colnames(dm) <- c("Samples", "Groups")
   grupos <- unique(dm$Groups)
   numRows <- ceiling(length(listaNorm)/2)
   empties <- replicate(numRows-3, ggplot() + theme_void(), simplify = FALSE)
@@ -136,6 +93,7 @@ getResultsByItem <- function(dfRaw, listaNorm, dm, item){
     a <<- 0
     finalData <- lapply(listaNorm, function(datos){
       a <<- a+1
+      # cat(a, "\n")
       nome <- names(listaNorm)[a]
       if (item == "item6"){
         Biomics::plotBoxMulti(
@@ -214,12 +172,13 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F, filter = "to
 
 <br><br>
 
-# Assessment {.tabset}
+# Assessment
 
-```{r}
-allFiles <- list.files(path = "ProcessedDatasets/")
-items <- paste0("item", 0:6)
-listGraphs <- sapply(allFiles, function(i){
+```{r include = F}
+# allFiles <- list.files(path = "ProcessedDatasets/")
+allFilesDDA <- df %>% filter(Acquisition == "DDA") %>% pull(ID) %>% paste0(., ".rds")
+listGraphs <- sapply(allFilesDDA, function(i){
+  # cat("\n", i)
   output <- readRDS(file = paste0(outDir, i))
   # getResults(dfRaw = output$data, datos = output$dataLog, dm = output$dm)
   resultado <- sapply(items, 
@@ -234,15 +193,15 @@ listGraphs <- sapply(allFiles, function(i){
 },simplify = F, USE.NAMES = T)
 ```
 
-
+## DDA datasets {.tabset}
 
 ```{r fig.align='center', fig.height=18, fig.width=10}
-invisible(sapply(allFiles, function(i){
+invisible(sapply(allFilesDDA, function(i){
   idDataset <- substr(i, start = 1, stop = nchar(i)-4)
-  cat("\n\n## ", idDataset, " {- .tabset .tabset-dropdown}\n\n")
+  cat("\n\n### ", idDataset, " {- .tabset .tabset-dropdown}\n\n")
   
   sapply(items, function(item){
-    cat("\n\n### ", item, " {-}\n\n")
+    cat("\n\n#### ", item, " {-}\n\n")
     print(listGraphs[[i]][[item]])
   })
   
@@ -254,5 +213,38 @@ invisible(sapply(allFiles, function(i){
 
 
 
+## DIA datasets {.tabset}
 
+```{r include = F}
+allFilesDIA <- df %>% filter(Acquisition == "DIA") %>% pull(ID) %>% paste0(., ".rds")
+listGraphs <- sapply(allFilesDIA, function(i){
+  # cat("\n", i)
+  output <- readRDS(file = paste0(outDir, i))
+  # getResults(dfRaw = output$data, datos = output$dataLog, dm = output$dm)
+  resultado <- sapply(items, 
+    getResultsByItem,
+    dfRaw = output$data, 
+    listaNorm = output$listaNorm, 
+    dm =  output$dm, 
+    simplify = F, 
+    USE.NAMES = T
+    )
+  return(resultado)
+},simplify = F, USE.NAMES = T)
+```
+
+```{r fig.align='center', fig.height=18, fig.width=10}
+invisible(sapply(allFilesDIA, function(i){
+  idDataset <- substr(i, start = 1, stop = nchar(i)-4)
+  cat("\n\n### ", idDataset, " {- .tabset .tabset-dropdown}\n\n")
+  
+  sapply(items, function(item){
+    cat("\n\n#### ", item, " {-}\n\n")
+    print(listGraphs[[i]][[item]])
+  })
+  
+  # print(listGraphs[[i]])
+  cat("\n\n")
+}))
+```
 
