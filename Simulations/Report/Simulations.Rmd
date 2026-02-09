@@ -161,7 +161,11 @@ Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
 colores <- Biostatech::colorPalette(n = length(unique(df$especificos)))
 names(colores) <- unique(df$especificos)
 graficos <- sapply(unique(df$especificos), function(i){
-  dfAux <- df %>% filter(especificos == i) %>% dplyr::select(Item0:normScore)
+  dfAux <- df %>% 
+    filter(especificos == i) %>% 
+    filter(n_proteins != 100) %>% 
+    filter(n_per_group != 5) %>% 
+    dplyr::select(Item0:normScore)
   Biomics::plotBoxMulti(
     base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Error ", i), 
     interact = F, 
@@ -175,7 +179,7 @@ ggpubr::ggarrange(plotlist = graficos, nrow = 3, ncol = 3)
 
 
 
-## By nº. proteins
+## By nº. proteins {.tabset}
 
 ```{r}
 df2 <- df %>%
@@ -207,15 +211,40 @@ graficos <- sapply(unique(df$n_proteins), function(i){
     base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº proteins:  ", i), 
     interact = F, color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
 })
+
+graficosByError <- lapply(unique(df$especificos)[-1], function(j){
+  sapply(unique(df$n_proteins), function(i){
+  dfAux <- df %>% 
+    filter(n_proteins == i) %>% 
+    filter(especificos == j) %>% # control negativo
+    # mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    dplyr::select(Item0:normScore)
+  Biomics::plotBoxMulti(
+    base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº proteins:  ", i), 
+    interact = F, color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+  }, simplify = F, USE.NAMES = T)
+})
+names(graficosByError) <- paste0("Error ", unique(df$especificos)[-1])
 ```
+
+
+### All {-}
 
 ```{r  fig.height=8, fig.align='center', fig.width=10}
 ggpubr::ggarrange(plotlist = graficos, nrow = 2, ncol = 2)
 ```
 
+```{r  fig.height=8, fig.align='center', fig.width=10}
+for (tipo in names(graficosByError)){
+  cat("\n### ", tipo, " {-} \n")
+  print(ggpubr::ggarrange(plotlist = graficosByError[[tipo]], nrow = 2, ncol = 2))
+  cat("\n\n")
+}
+```
 
 
-## By nº. samples/group
+
+## By nº. samples/group {.tabset}
 
 
 ```{r}
@@ -248,10 +277,35 @@ graficos <- sapply(unique(df$n_per_group), function(i){
     interact = F, 
     color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
 })
+
+graficosByError <- lapply(unique(df$especificos)[-1], function(j){
+  sapply(unique(df$n_per_group), function(i){
+  dfAux <- df %>% 
+    filter(n_per_group == i) %>% 
+    filter(especificos == j) %>% # control negativo
+    # mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    dplyr::select(Item0:normScore)
+  Biomics::plotBoxMulti(
+    base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº samples:  ", i), 
+    interact = F, 
+    color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+  }, simplify = F, USE.NAMES = T)
+})
+names(graficosByError) <- paste0("Error ", unique(df$especificos)[-1])
 ```
+
+### All {-}
 
 ```{r fig.height=8, fig.align='center', fig.width=10}
 ggpubr::ggarrange(plotlist = graficos, nrow = 2, ncol = 2)
+```
+
+```{r  fig.height=8, fig.align='center', fig.width=10}
+for (tipo in names(graficosByError)){
+  cat("\n### ", tipo, " {-} \n")
+  print(ggpubr::ggarrange(plotlist = graficosByError[[tipo]], nrow = 2, ncol = 2))
+  cat("\n\n")
+}
 ```
 
 
@@ -305,7 +359,10 @@ Items and normScore are invaried to the number of proteins and numbre of samples
 
 General performance of normScore is slightly lower in terms of median, but with almost no extreme or outlier correlation values and thin IQR values. 
 
-_Especificos_ 1 and 8 combinations correspond to extrem conditions and were be removed for reporting the final results. 
+_Especificos_ 1 and 8 combinations correspond to extrem conditions and were be removed for reporting the final results.
 
+*Notas:*
+
+Os erros 2-4 mal, os 5-7 os mellores. O item 5 de RLE funciona mal con 100 proteínas, a partir de 1000 xa mais, porque a mediana ten mais influencia entendo. O item 3 de MAplot funciona
 
 
