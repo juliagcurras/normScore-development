@@ -52,6 +52,9 @@ colnames(df) <- gsub(
   replacement = "")
 colnames(df) 
 
+dfRaw <- df
+df <- log(df,  base = 2)
+
   ## Design matrix ###
 dataDM <- read.table(file = "Datasets/PXD046983.sdrf.tsv", 
                  header = T, sep = "\t") # Just to check groups: Os_ctl is normal, OD_lim is miopy
@@ -76,8 +79,6 @@ dm <- dfReplicates %>%
   rename(Samples = Replicates)
 dm <- dm[duplicated(dm),]
 
-
-
 ## Processing ####
 ## Filtering ###
 # Empty rows?
@@ -89,20 +90,15 @@ table(rowSums(is.na(data)) == (ncol(data)))
 # Checking NA by sample and protein
 res <- Biomics::plotBarNA(data = data, interact = F)
 res$graficoMuestra
-res$graficoProteina # proteinas con moitos valores faltantes
 
 # Applying different thresholds for filtering
 resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
 resFilt$tablaFormato
 
-# Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
-
 ## Log and visualization ###
-pheatmap::pheatmap(data, show_rownames = F)
-dataLog <- log(data, base =2)
-min(data, na.rm = "always")
-pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
+Biostatech::plotBoxMultivar(base = dataLog, varResumen = colnames(data), interact = F)$grafico
 
 
 ## Normalization ###
@@ -1800,6 +1796,9 @@ colnames(df) <- gsub(
 colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
 colnames(df)
 
+dfRaw <- df
+df <- log(df,  base = 2)
+
 ## Replicates ###
 dmReplicates <- data.frame(
   Samples = sapply(strsplit(colnames(df), "_"), "[[", 1), 
@@ -1844,11 +1843,8 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = .7)$tabla
-
-# Imputation & log-transformation
-dataLog <- as.matrix(log(data, base =2))
-
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
 
 ## Normalization ###
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
@@ -1896,6 +1892,9 @@ colnames(df) <- gsub(
 colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
 colnames(df)
 
+dfRaw <- df
+df <- log(df,  base = 2)
+
 ## Replicates ###
 dmReplicates <- data.frame(
   Samples = sapply(strsplit(colnames(df), "_"), "[[", 1), 
@@ -1940,11 +1939,8 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
-
-# Imputation & log-transformation
-dataLog <- as.matrix(log(data, base =2))
-
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
 
 ## Normalization ###
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
@@ -2074,8 +2070,10 @@ colnames(df) <- gsub(
 colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
 colnames(df)
 
-## Replicate matrix ###
+dfRaw <- df
+df <- log(df,  base = 2)
 
+## Replicate matrix ###
 dfReplicates <- data.frame(
   Samples = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1),
   Replicates = colnames(df)
@@ -2116,7 +2114,8 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
 
 # Imputation & log-transformation
 dataLog <- as.matrix(log(data, base =2))
@@ -2339,6 +2338,9 @@ colnames(df) <- gsub(
 colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
 colnames(df)
 
+dfRaw <- df
+df <- log(df,  base = 2)
+
 ## Replicates matrix ###
 dmReplicates <- data.frame(
   Samples = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1), 
@@ -2384,10 +2386,8 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
-
-# Imputation & log-transformation
-dataLog <- as.matrix(log(data, base =2))
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
 pheatmap::pheatmap(dataLog)
 
 ## Normalization ###
@@ -2523,6 +2523,9 @@ colnames(df) <- gsub(
 colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
 colnames(df)
 
+dfRaw <- df
+df <- log(df,  base = 2)
+
 ## Replicates matrix ####
 dmReplicates <- data.frame(
   Samples = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1), 
@@ -2565,11 +2568,10 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
-
-# Imputation & log-transformation
-dataLog <- as.matrix(log(data, base =2))
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
 pheatmap::pheatmap(dataLog, scale = "row")
+
 
 ## Normalization ###
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
@@ -2592,8 +2594,206 @@ saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
 
 
 #.........................................................................####
-# PXD047024 ####
-idDataset <- "PXD047024"
+# PXD071192 ####
+idDataset <- "PXD071192"
+dfRaw <- read.table(file = "Datasets/PXD071192_quant_data.csv",
+                    # dfRaw <- read.table(file = "Datasets/report.pg_matrix.tsv",
+                    header = T, sep = ",")
+colnames(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(ProteinID, starts_with("raw_"))
+df <- as.data.frame(df)
+
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Adjusting rownames #
+rownames(df) <- df$ProteinID
+df$ProteinID <- NULL
+colnames(df) <- gsub(
+  x = colnames(df), 
+  pattern = "raw_", 
+  replacement = ""
+)
+colnames(df)
+
+dfRaw <- df
+df <- log(df, base = 2)
+
+## Replicates matrix ####
+dmReplicates <- data.frame(
+  Samples = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 3), 
+  Replicate = colnames(df)
+)
+dmReplicates
+df <- Biomics::doJoinReplicates(dfQ = df, dm = dmReplicates, )
+colnames(df) <- paste0("TO_", colnames(df))
+
+## Design matrix ###
+dm <- read.csv(file = "Datasets/PXD071192_metadata.csv", header = T)
+dm <- as.data.frame(dm)
+dm <- dm %>% 
+  select(File.Name.3.replicates..X...1..2..or.3, Group) %>%
+  rename(
+    Samples = File.Name.3.replicates..X...1..2..or.3, 
+    Groups = Group) 
+dm$Samples <- sapply(strsplit(x = dm$Samples, split = "_", fixed = T), "[[", 3)
+dm$Samples <- paste0("TO_", dm$Samples)
+
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+dm$Groups <- factor(dm$Groups)
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, 
+                                  threshold = c(0, 0.1, 0.2))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
+
+# Imputation & log-transformation
+pheatmap::pheatmap(dataLog, scale = "row")
+pheatmap::pheatmap(data, scale = "none")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+#.........................................................................####
+# PXD070232 ####
+idDataset <- "PXD070232"
+dfRaw <- read.csv(file = "Datasets/PXD070232_CombsC_20250305_04_DIA_Protein_Report.csv",
+                    header = T)
+colnames(dfRaw)
+dfRaw <- dfRaw[,1:47]
+
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.UniProtIds))
+rownames(dfRaw) <- dfRaw$PG.UniProtIds
+# Selecting interesting cols #
+df <- dfRaw %>%
+  filter(PG.Qvalue < 0.01) %>%
+  select(X.1..CombsC_20250305_04_DIA_01.raw.PG.Quantity:X.32..CombsC_20250305_04_DIA_32.raw.PG.Quantity)
+df <- as.data.frame(df)
+
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Adjusting rownames #
+colnames(df) <- gsub(x = colnames(df), pattern = ".raw.PG.Quantity", replacement = "")
+colnames(df) <- paste0("S", sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 5))
+
+## Design matrix ###
+dm <- read.csv(file = "Datasets/PXD070232_CombsC_20250305_04_DIA_SampleList.csv", header= T, skip = 1)
+dm <- as.data.frame(dm[1:32,])
+dm <- dm %>% 
+  select(sample.identifier, sample.group) %>%
+  rename(Samples = sample.identifier, 
+         Groups = sample.group)
+dm$Samples <- sapply(strsplit(x = dm$Samples, split = "_", fixed = T), "[[", 5)
+dm$Samples <- paste0("S", dm$Samples)
+
+
+colnames(df) %in% dm$Samples
+dm$Samples %in% colnames(df)
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD070887 ####
+idDataset <- "PXD070887"
 dfRaw <- read.table(file = paste0("Datasets/", idDataset, "_report.pg_matrix.tsv"),
                     # dfRaw <- read.table(file = "Datasets/report.pg_matrix.tsv",
                     header = T, sep = "\t")
@@ -2613,34 +2813,27 @@ rownames(df) <- df$Protein.Group
 df$Protein.Group <- NULL
 colnames(df) <- gsub(
   x = colnames(df), 
-  pattern = "Y..HF_X_2023.Verginis_40485_CAFs.", 
+  pattern = "Y..2023.2023.Projects.3632.3632_Liver.151.165..E3_ColID_656_3632_", 
   replacement = ""
 )
 colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
 colnames(df)
 
-## Replicates matrix ####
-dmReplicates <- data.frame(
-  Samples = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1), 
-  Replicate = colnames(df)
-)
-dmReplicates
-df <- Biomics::doJoinReplicates(dfQ = df, dm = dmReplicates, )
-
-
 ## Design matrix ###
-dm <- readxl::read_excel(path = "Datasets/PXD047024_40485_KEY.xlsx", sheet = 1, col_names = F)
+dm <- readxl::read_excel(path = "Datasets/PXD070887_DM.xlsx", sheet = 1, col_names = T)
 dm <- as.data.frame(dm)
-dm <- dm %>% rename(Samples = ...1, Groups = ...2) 
-dm$Groups <- sapply(strsplit(x = dm$Groups, split = "_"), "[", 1)
+dm$Samples <- sapply(strsplit(x = dm$Samples, split = "_"), "[[", 6)
+dm$Samples <- paste0("LI_", dm$Samples)
 
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
 colnames(df) %in% dm$Samples
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
 dm$Samples %in% colnames(df)
 nrow(dm) == ncol(df)
 table(dm$Groups)
 
-colnames(df) <- paste0("S", colnames(df))
-dm$Samples <- paste0("S", dm$Samples)
 
 
 ## Processing ####
@@ -2681,3 +2874,1021 @@ output <- list(
 )
 
 saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+
+#.........................................................................####
+# PXD036609 ####
+idDataset <- "PXD036609_protein_identification"
+dfRaw <- readxl::read_excel(path = "Datasets/PXD036609_protein_identification.xlsx", 
+                            sheet = 1, col_names = T)
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.ProteinAccessions))
+rownames(dfRaw) <- dfRaw$PG.ProteinAccessions
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(`[1] HFX4_FPEP20P03300001.raw.PG.Quantity`:`[27] HFX4_FPEP20P03300030.raw.PG.Quantity`)
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+
+# Adjusting rownames #
+colnames(df)
+colnames(df) <- gsub(x = colnames(df), pattern = "HFX4_FPEP", replacement = "")
+colnames(df) <- gsub(x = colnames(df), pattern = ".raw.PG.Quantity", replacement = "")
+colnames(df) <- sapply(strsplit(x = colnames(df), split = " ", fixed = T), "[[", 2)
+
+## Design matrix ###
+dmHC <- readxl::read_excel(path = "Datasets/PXD036609_metadata_for_HCs.xlsx", 
+                            sheet = 1, col_names = T)
+dmLTPP <- readxl::read_excel(path = "Datasets/PXD036609_metadata_for_LTPPs.xlsx", 
+                            sheet = 1, col_names = T)
+colnames(dmLTPP)[1] <- "ID"
+dm <- rbind(dmHC[, c(1,4)], dmLTPP[, c(1,4)])
+dm <- dm %>% select(`DIA-ID`, ID) %>% rename(Samples = `DIA-ID`, Groups = ID) %>% as.data.frame()
+dm$Groups <- substr(x = dm$Groups, start = 1, stop = nchar(dm$Groups)-2)
+
+# Checking
+colnames(df) %in% dm$Samples
+dm$Samples %in% colnames(df)
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.15, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD035942 ####
+idDataset <- "PXD035942"
+dfRaw <- readxl::read_excel(path = "Datasets/PXD035942_Total_quantified_proteins.xlsx", 
+                            sheet = 1, col_names = T)
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$`Protein Accessions`))
+rownames(dfRaw) <- dfRaw$`Protein Accessions`
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(starts_with("pca"), starts_with("bph"))
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+
+# Adjusting rownames #
+colnames(df)
+# colnames(df) <- gsub(x = colnames(df), pattern = "-umg", replacement = "")
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = gsub("[^A-Za-z]", "", colnames(df))
+)
+dm$Groups <- gsub(pattern = "umg", replacement = "", x = dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.15, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD031992 ####
+idDataset <- "PXD031992"
+dfRaw <- readxl::read_excel(path = "Datasets/PXD031992_HUDEP_Proteomes_MAEA_KOs_differentiation_Report.xlsx", 
+                            sheet = 1, col_names = T)
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.ProteinAccessions))
+rownames(dfRaw) <- dfRaw$PG.ProteinAccessions
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(contains("raw.PG.Quantity")) %>%
+  select(-contains("Cl11")) # Only Cl31 in raw data and in pulication (Cl3.1)
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+
+# Adjusting rownames #
+colnames(df)
+colnames(df) <- gsub(x = colnames(df), pattern = "20191226_QX6_OzKa_SA_HUDEP2_", replacement = "")
+colnames(df) <- gsub(x = colnames(df), pattern = ".raw.PG.Quantity", replacement = "")
+colnames(df) <- gsub(x = colnames(df), pattern = "MAEA_", replacement = "")
+colnames(df) <- sapply(strsplit(x = colnames(df), split = " ", fixed = T), "[[", 2)
+
+## Loooog ###
+dfRaw <- df
+df <- log(df, base = 2)
+
+## Design replicates ###
+dmReplicates <- data.frame(
+  Replicates = colnames(df), 
+  Samples = substr(x= colnames(df), start = 1, stop = nchar(colnames(df))-3)
+)
+
+dmReplicates
+
+df <- Biomics::doJoinReplicates(dfQ = df, dm = dmReplicates, 
+                          sample_col = "Samples", rep_col = "Replicates")
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1)
+)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+
+# Imputation & log-transformation
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+data <- 2^dataLog
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD028772 ####
+idDataset <- "PXD028772"
+dfRaw <- readxl::read_xlsx(path = "Datasets/PXD028772_20210119_063120_BS20082_all_lib_Report_PG.xlsx", 
+                            sheet = 1, col_names = T)
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.ProteinAccessions))
+rownames(dfRaw) <- dfRaw$PG.ProteinAccessions
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(contains("raw.PG.Quantity"))
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+
+# Adjusting rownames #
+colnames(df)
+colnames(df) <- gsub(x = colnames(df), pattern = "201219_fwDIA_90min_400ng_BS20082_", replacement = "")
+colnames(df) <- gsub(x = colnames(df), pattern = ".raw.PG.Quantity", replacement = "")
+colnames(df) <- sapply(strsplit(x = colnames(df), split = " ", fixed = T), "[[", 2)
+colnames(df) <- paste0("S", colnames(df))
+
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = rep(c("siNC", "siPRDX6"), c(3,4))
+)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD027817 ####
+idDataset <- "PXD027817"
+dfRaw <- readxl::read_xlsx(path = "Datasets/PXD027817_W-blood-dia (1).xlsx", 
+                            sheet = 1, col_names = T)
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.ProteinAccessions))
+rownames(dfRaw) <- dfRaw$PG.ProteinAccessions
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  filter(PG.Qvalue<0.01) %>%
+  select(starts_with("A"), starts_with("D"))
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+
+# Adjusting rownames #
+colnames(df)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = substr(x = colnames(df), start = 1, stop = 1)
+)
+table(dm$Groups) # Table 1 publication confirm 24 samples by group, 48 total samples
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD015422 ####
+idDataset <- "PXD015422"
+
+dfRaw <- read.csv(file = "Datasets/PXD015422_LCC_qvalue.csv", header = T)
+
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+dfRaw[dfRaw == 0] <- NA
+dfRaw[dfRaw == 1] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.ProteinAccessions))
+rownames(dfRaw) <- dfRaw$PG.ProteinAccessions
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(contains(".raw.PG.Quantity"))
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+
+# Adjusting rownames #
+colnames(df)
+colnames(df) <- gsub(pattern = "20181223_QX2_SeVW_SA_LCC_exploratory_urine_", 
+                     replacement = "", x = colnames(df))
+colnames(df) <- gsub(pattern = ".raw.PG.Quantity", 
+                     replacement = "", x = colnames(df))
+colnames(df) <- sapply(strsplit(x = colnames(df), split = "..", fixed = T), "[[", 2)
+colnames(df) <- gsub(pattern = "sample", 
+                     replacement = "S", x = colnames(df))
+colnames(df)
+
+
+## Design matrix ###
+dm <- readxl::read_excel(path = "Datasets/PXD015422_44321_2021_BFEMMM202013257_MOESM2_ESM.xlsx", 
+                   sheet = "LCC")# Supplementary doc 1 from publication
+dm <- dm %>% 
+  filter(`Excluded from the analysis` != "Excluded") %>%
+  mutate(Groups = paste0(`PD status`, "/", `LRRK2 status`)) %>%
+  select(`Sample ID`, Groups) %>%
+  rename(Samples = `Sample ID`) %>%
+  mutate(Samples = paste0("S", Samples)) %>%
+  as.data.frame()
+table(dm$Groups)
+head(dm)
+
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+# # With raw values equal to 1
+# df %>% 
+#   select(S10, S101, S109, S109, S154, S156, S19, S21, S35, S53, S61, S63, S91) %>%
+#   View
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+min(dataLog, na.rm = T)
+Biostatech::plotBoxMultivar(base = as.data.frame(dataLog),
+                            varResumen = colnames(dataLog), interact = F)$grafico
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#.........................................................................####
+# PXD015422.2 ####
+idDataset <- "PXD015422.2"
+
+dfRaw <- read.csv(file = "Datasets/PXD015422.2_Columbia_qvalue.csv", header = T)
+
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+# dfRaw[dfRaw == 0] <- NA
+# dfRaw[dfRaw < 5] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$PG.ProteinAccessions))
+rownames(dfRaw) <- dfRaw$PG.ProteinAccessions
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(contains(".raw.PG.Quantity")) %>%
+  select(-contains("_QC_"))
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df[df < 5] <- NA
+
+# Adjusting rownames #
+colnames(df)
+colnames(df) <- gsub(pattern = "20190603_QX2_SeVW_SA_Columbia_Urine_", 
+                     replacement = "", x = colnames(df))
+colnames(df) <- gsub(pattern = ".raw.PG.Quantity", 
+                     replacement = "", x = colnames(df))
+colnames(df) <- sapply(strsplit(x = colnames(df), split = "..", fixed = T), "[[", 2)
+colnames(df) <- paste0("S", colnames(df))
+colnames(df)[91] <- "S91"
+colnames(df)
+
+
+## Design matrix ###
+dm <- readxl::read_excel(path = "Datasets/PXD015422_44321_2021_BFEMMM202013257_MOESM2_ESM.xlsx", 
+                         sheet = "Columbia")# Supplementary doc 1 from publication
+dm[dm$`LRRK2 status` == "unknown (later confirmed to be LRRK2-)", "LRRK2 status"] <- "LRRK2-"
+dm <- dm %>% 
+  filter(`Excluded from the analysis` != "Excluded") %>%
+  mutate(Groups = paste0(`PD status`, "/", `LRRK2 status`)) %>%
+  select(`Sample ID`, Groups) %>%
+  rename(Samples = `Sample ID`) %>%
+  mutate(Samples = paste0("S", Samples)) %>%
+  as.data.frame()
+table(dm$Groups)
+head(dm)
+
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+# # With raw values equal to 1
+# df %>% 
+#   select(S10, S101, S109, S109, S154, S156, S19, S21, S35, S53, S61, S63, S91) %>%
+#   View
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+# dm <- dm %>% filter(Samples != "S37") # quality problem: >80% missing values
+# data <- data %>% select(-S37)
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+min(dataLog, na.rm = T)
+Biostatech::plotBoxMultivar(base = as.data.frame(dataLog),
+                            varResumen = colnames(dataLog), interact = F)$grafico
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#.........................................................................####
+# PXD041168 ####
+idDataset <- "PXD041168"
+dfRaw <- readxl::read_excel(path = "Datasets/PXD041168_Circadian_Report.xlsx", 
+                            sheet = 1)
+# Set Filtered to NA #
+dfRaw[dfRaw == "Filtered"] <- NA
+# dfRaw[dfRaw == 0] <- NA
+# dfRaw[dfRaw < 5] <- NA
+dfRaw <- as.data.frame(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$ProteinGroups))
+rownames(dfRaw) <- dfRaw$ProteinGroups
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(LG01:LG36)
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+# df[df < 5] <- NA
+
+# Adjusting rownames #
+colnames(df)
+
+## Design matrix ###
+dm <- read.table(file = "Datasets/PXD041168_experimental_design_.txt", header = F)
+dm <- dm %>% 
+  mutate(V5 = paste0("Z", V5)) %>%
+  mutate(Groups = paste0(V2, "_", V3, "_", V5)) %>%
+  select(V1, Groups) %>%
+  rename(Samples = V1) %>%
+  as.data.frame()
+table(dm$Groups)
+head(dm)
+
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+# # With raw values equal to 1
+# df %>% 
+#   select(S10, S101, S109, S109, S154, S156, S19, S21, S35, S53, S61, S63, S91) %>%
+#   View
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+min(dataLog, na.rm = T)
+Biostatech::plotBoxMultivar(base = as.data.frame(dataLog),
+                            varResumen = colnames(dataLog), interact = F)$grafico
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#.........................................................................####
+# PXD054895 ####
+idDataset <- "PXD054895"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset, "_report.pg_matrix.tsv"),
+                    # dfRaw <- read.table(file = "Datasets/report.pg_matrix.tsv",
+                    header = T, sep = "\t")
+colnames(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw[,c(1, 6:ncol(dfRaw))]
+df <- as.data.frame(df)
+
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Adjusting rownames #
+rownames(df) <- df$Protein.Group
+df$Protein.Group <- NULL
+colnames(df) <- gsub(
+  x= colnames(df), 
+  pattern = "R..Carsten.Phosphoproteomics.612.liver.20240611_Liver_612_Total.20240605_EP_Liver612_CSP_",
+  replacement = "", fixed = T)
+colnames(df) <- gsub(x = colnames(df), pattern = ".raw", replacement = "")
+colnames(df) <- sapply(sapply(strsplit(x = colnames(df), split = "_"), "[", 2, simplify = F), paste0, collapse = "_")
+colnames(df) <- paste0("S", colnames(df))
+
+
+## Design matrix ###
+dm <- read.csv(file = paste0("Datasets/PXD054895_metadata.csv"),
+                    header = T, sep = ",")
+colnames(dm)
+dm <- dm %>%
+  mutate(Groups = paste0(Diet, "_", Treatment, "_", Stimulation)) %>%
+  mutate(Mouse_ID = paste0("S", Mouse_ID)) %>%
+  select(Mouse_ID, Groups) %>% 
+  rename(Samples = Mouse_ID)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+min(dataLog, na.rm = T)
+Biostatech::plotBoxMultivar(base = as.data.frame(dataLog),
+                            varResumen = colnames(dataLog), interact = F)$grafico
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+
+#.........................................................................####
+# PXD070490 ####
+idDataset <- "PXD070490"
+dfRaw <- readxl::read_xlsx(path = paste0("Datasets/PXD070490_matrix.xlsx"),
+                    sheet = 1)
+colnames(dfRaw)
+
+## Datasets ####
+## Quantification matrix ###
+sum(is.na(dfRaw$Accession_id))
+rownames(dfRaw) <- dfRaw$Accession_id
+
+# Selecting interesting cols #
+df <- dfRaw %>% 
+  select(ctrl1:FCV6)
+df <- as.data.frame(df)
+
+# Numeric columns
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df[df == 0] <- NA
+
+# Adjusting rownames #
+colnames(df)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df),
+  Groups = c(rep("ctrl", 3), rep(c("FCV_BJDX", "FCV_BJ616"), e))
+)
+dm
+table(dm$Groups)
+head(dm)
+
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(
+  df = data, 
+  dfGrupos = dm, 
+  threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+
+# Imputation & log-transformation
+dataLog <- as.matrix(log(data, base =2))
+pheatmap::pheatmap(dataLog, scale = "row")
+min(dataLog, na.rm = T)
+Biostatech::plotBoxMultivar(base = as.data.frame(dataLog),
+                            varResumen = colnames(dataLog), interact = F)$grafico
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
