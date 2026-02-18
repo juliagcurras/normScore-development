@@ -3101,3 +3101,1752 @@ output <- list(
 )
 
 saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#...........................................................................####
+# PXD042498 ####
+idDataset <- "PXD042498"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = substr(x = colnames(df), start = 1, stop = nchar(colnames(df))-3)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+
+#...........................................................................####
+# PXD038019 ####
+idDataset <- "PXD038019"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = substr(x = colnames(df), start = 1, stop = nchar(colnames(df))-3)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD069093 ####
+idDataset <- "PXD069093"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- readxl::read_excel(path = "Datasets/PXD069093_KinomeMetadata.xlsx", sheet = 1)
+dm <- dm %>% 
+  as.data.frame() %>%
+  select(File, Treatment) %>% 
+  rename(Samples = File, 
+         Groups = Treatment) %>%
+  mutate(Samples = gsub(x = Samples, pattern = "200928-Pollok-", replacement = "")) %>%
+  mutate(Samples = gsub(x = Samples, pattern = ".raw", replacement = "")) %>%
+  mutate(Samples = gsub(x = Samples, pattern = "-", replacement = ".")) %>% 
+  mutate(Groups = gsub(x = Groups, pattern = " + ", replacement = "_", fixed = T))
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD068908 ####
+idDataset <- "PXD068908"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = substr(x = colnames(df), start = 1, stop = nchar(colnames(df))-1)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5, 0.7, 0.9))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+dataLog <- log(data, base =2)
+dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
+data <- 2^dataLog
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD005025 ####
+idDataset <- "PXD005025"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = F, sep = "\t")
+dfRaw <- data.table::fread(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"))
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(`Protein IDs`,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, `Only identified by site`,
+                              `Potential contaminant`, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(`Only identified by site` != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(`Potential contaminant` != "+") %>%
+  dplyr::select(-Reverse, -`Potential contaminant`, -`Only identified by site`) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$`Protein IDs`
+df$`Protein IDs` <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.table::fread(file = "Datasets/PXD005025_experimentalDesignTemplate.txt")
+dm <- dm %>%
+  select(Experiment) %>%
+  mutate(Samples = Experiment, 
+         Groups = gsub(x = Experiment, pattern = "'", replacement = "", fixed = T)) %>%
+  select(Samples, Groups)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+dataLog <- log(data, base =2)
+dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
+data <- 2^dataLog
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD010785 ####
+idDataset <- "PXD010785"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = F, sep = "\t")
+dfRaw <- data.table::fread(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"))
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(`Protein IDs`,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, `Only identified by site`,
+                              `Potential contaminant`, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(`Only identified by site` != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(`Potential contaminant` != "+") %>%
+  dplyr::select(-Reverse, -`Potential contaminant`, -`Only identified by site`) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$`Protein IDs`
+df$`Protein IDs` <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- readxl::read_excel(path = "Datasets/PXD010785_samples.xlsx")
+dm <- dm %>%
+  select(`MaxQuant search label`, treatment) %>%
+  rename(Samples = `MaxQuant search label`, 
+         Groups = treatment) %>% 
+  arrange(Groups) %>%
+  as.data.frame()
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD022701 ####
+idDataset <- "PXD022701"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = rep(c("C", "E"), each = 3)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#...........................................................................####
+# PXD030132 ####
+idDataset <- "PXD030132"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#...........................................................................####
+# PXD028841 ####
+idDataset <- "PXD028841"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              Potential.contaminant, -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::filter(Potential.contaminant != "+") %>%
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+df <- df %>% select(-library)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = gsub("[^[:alpha:]]", "", colnames(df))
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+dataLog <- log(data, base =2)
+dataLog <- Biomics::doImputation(as.matrix(dataLog))
+data <- 2^dataLog
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+#...........................................................................####
+# PXD015470 ####
+idDataset <- "PXD015470"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse,Only.identified.by.site,
+                              -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::select(-Reverse, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD020238 ####
+idDataset <- "PXD020238"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, 
+                              Potential.contaminant,
+                              -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Potential.contaminant != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::select(-Reverse, -Potential.contaminant) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+colnames(df) <- paste0("S", colnames(df))
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.table::fread(file = "Datasets/PXD020238_metadata_NaBut.txt")
+dm
+dm <- dm %>%
+  select(MQ_ID, Treatment) %>%
+  rename(Samples = MQ_ID, 
+         Groups = Treatment) %>% 
+  mutate(Samples = paste0("S", Samples)) %>% as.data.frame
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+#...........................................................................####
+# PXD020245 ####
+idDataset <- "PXD020245"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, Only.identified.by.site,
+                              Potential.contaminant,
+                              -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Potential.contaminant != "+") %>% 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+colnames(df) <- paste0("S", colnames(df))
+table(table(colnames(df))>1)
+
+## Design matrix ###
+dm <- data.table::fread(file = "Datasets/PXD020245_metadata_Mouse.txt")
+dm <- dm %>%
+  mutate(Groups = paste0(Treatment, "_", Tissue_type), 
+         Samples = paste0("S", MQ_ID)) %>%
+  as.data.frame %>%
+  select(Samples, Groups) 
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+
+
+
+#...........................................................................####
+# PXD062946 ####
+idDataset <- "PXD062946"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, Only.identified.by.site,
+                              Potential.contaminant,
+                              -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Potential.contaminant != "+") %>% 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+# dm <- data.table::fread(file = "Datasets/PXD062946_experimentalDesignTemplate.txt")
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = sapply(sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[", 1:2, simplify = F), paste0, collapse = "_")
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+
+
+
+#...........................................................................####
+# PXD011804 ####
+idDataset <- "PXD011804"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, Only.identified.by.site,
+                              Potential.contaminant,
+                              -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Potential.contaminant != "+") %>% 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+## Design matrix ###
+# dm <- data.table::fread(file = "Datasets/PXD062946_experimentalDesignTemplate.txt")
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = gsub("[^[:alpha:]]", "", colnames(df))
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+dataLog <- log(data, base =2)
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+
+
+
+
+#...........................................................................####
+# PXD005847 ####
+idDataset <- "PXD005847"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.IDs,
+                              starts_with("Intensity"), #"LFQ.Intensity
+                              Reverse, Only.identified.by.site,
+                              Potential.contaminant,
+                              -Intensity)
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Potential.contaminant != "+") %>% 
+  dplyr::filter(Only.identified.by.site != "+") %>% 
+  dplyr::filter(Reverse != "+") %>% 
+  dplyr::select(-Reverse, -Potential.contaminant, -Only.identified.by.site) # Keep´only interesting proteins
+
+# Adjusting rownames #
+df <- as.data.frame(df)
+rownames(df) <- df$Protein.IDs
+df$Protein.IDs <- NULL
+colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
+colnames(df)
+table(table(colnames(df))>1)
+
+
+## Replicate matrix ####
+df <- log(df, base =2)
+dfReplicate <- data.frame(
+  Replicates = colnames(df), 
+  Samples = substr(x = colnames(df), start = 1, stop = nchar(colnames(df))-2)
+)
+
+df <- Biomics::doJoinReplicates(dfQ = df, dm = dfReplicate, 
+                          sample_col = "Samples", rep_col = "Replicates")
+
+
+## Design matrix ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 1)
+)
+dm
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df[,1:ncol(df)] <- sapply(colnames(df), function(x) as.numeric(df[,x]))
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+data <- as.data.frame(data)
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+data <- 2^dataLog
+
+## Log and visualization ###
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+#...........................................................................####
+# PXD030595 ####
+idDataset <- "PXD030595"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_combined_protein.tsv"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.ID,
+                              Protein.Probability, 
+                              Indistinguishable.Proteins,
+                              ends_with("Total.Intensity"), 
+                              -ends_with("Razor.Intensity"), 
+                              -ends_with("Unique.Intensity"),
+                              -ends_with("MaxLFQ.Intensity") 
+)
+colnames(df)
+
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 1. Only  identified by site: Remove protein groups in which all peptides have a modified cysteine 
+  dplyr::filter(Indistinguishable.Proteins == "") %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Protein.Probability >0.99) %>% 
+  dplyr::select(-Protein.Probability, -Indistinguishable.Proteins) # Keep´only interesting proteins
+
+# Adjusting rownames #
+rownames(df) <- df$Protein.ID
+df$Protein.ID <- NULL
+nrow(df)
+colnames(df)
+colnames(df) <- gsub(x= colnames(df), pattern = ".Total.Intensity", replacement = "")
+colnames(df) <- gsub(x= colnames(df), pattern = "X2021.5.", replacement = "")
+colnames(df) <- substr(x = colnames(df), start = 4, stop = nchar(colnames(df)))
+
+## Design matriz ###
+dm <- readxl::read_excel(path = "Datasets/PXD030595_Table_S1.xlsx")
+dm <- dm %>%
+  select(`Experimental ID...2`, `Class (verbose)`) %>%
+  rename(Samples = `Experimental ID...2`, 
+         Groups = `Class (verbose)`)
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.2, 0.5, 0.7, 0.8))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.7)$tabla
+
+## Log and visualization ###
+pheatmap::pheatmap(data, show_rownames = F)
+dataLog <- log(data, base =2)
+# dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
+
+
+#...........................................................................####
+# PXD056771 ####
+idDataset <- "PXD056771"
+dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_combined_protein.tsv"), 
+                    header = T, sep = "\t")
+
+## Datasets ####
+## Quantification matrix ###
+# Selecting interesting cols #
+df <- dfRaw %>% dplyr::select(Protein.ID,
+                              Protein.Probability, 
+                              Indistinguishable.Proteins,
+                              ends_with(".Intensity"), 
+                              -ends_with("Total.Intensity"), 
+                              -ends_with("Unique.Intensity"),
+                              -ends_with("MaxLFQ.Intensity") 
+)
+colnames(df)
+table(table(df$Protein.ID)>1)
+df <- df[!duplicated(df$Protein.ID),]
+
+# Set 0 to NA #
+df[df == 0] <- NA
+
+# Filters #
+df <- df %>% 
+  # 1. Only  identified by site: Remove protein groups in which all peptides have a modified cysteine 
+  dplyr::filter(Indistinguishable.Proteins == "") %>% 
+  # 2. Reverse: remove protein groups in which some peptide had been found on the reverse library 
+  dplyr::filter(Protein.Probability >0.99) %>% 
+  dplyr::select(-Protein.Probability, -Indistinguishable.Proteins) # Keep´only interesting proteins
+
+# Adjusting rownames #
+rownames(df) <- df$Protein.ID
+df$Protein.ID <- NULL
+nrow(df)
+colnames(df)
+colnames(df) <- gsub(x= colnames(df), pattern = ".Intensity", replacement = "")
+colnames(df) <- gsub(x= colnames(df), pattern = "X", replacement = "G")
+colnames(df)
+
+
+## Design matriz ###
+dm <- data.frame(
+  Samples = colnames(df), 
+  Groups = substr(x = colnames(df), start = 1, stop = 2)
+)
+table(dm$Groups)
+
+# Checking
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
+dm <- dm %>% filter(Samples %in% colnames(df))
+df <- df[, dm$Samples]
+colnames(df)[which(!(colnames(df) %in% dm$Samples))]
+dm$Samples[which(!(dm$Samples %in% colnames(df)))]
+nrow(dm) == ncol(df)
+table(dm$Groups)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+## Processing ####
+## Filtering ###
+
+# Empty rows?
+df$Miss <- rowSums(is.na(df))
+table(df$Miss == (ncol(df)-1)) # hay filas vacias, fuera
+data <- df[which(df$Miss < (ncol(df)-1)), -ncol(df)]
+table(rowSums(is.na(data)) == (ncol(data)))
+
+# Checking NA by sample and protein
+res <- Biomics::plotBarNA(data = data, interact = F)
+res$graficoMuestra
+res$graficoProteina # proteinas con moitos valores faltantes
+
+# Applying different thresholds for filtering
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.2, 0.5, 0.7, 0.8))
+resFilt$tablaFormato
+
+# Finally: permitimos hasta un 30% de valores faltantes por grupo
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
+
+## Log and visualization ###
+pheatmap::pheatmap(data, show_rownames = F)
+dataLog <- log(data, base =2)
+# dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
+min(dataLog, na.rm = "always")
+pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
+
+
+## Normalization ###
+listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
+                                      listaNorm = c("Mean", "Median", "TI", "VSN", 
+                                                    "Quantile", "CyclicLoess", "RLR"))
+## Ouput ###
+output <- list(
+  data = data, 
+  dataLog = dataLog, 
+  listaNorm = listaNorm,
+  dm = dm
+)
+
+saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
+
+
+
