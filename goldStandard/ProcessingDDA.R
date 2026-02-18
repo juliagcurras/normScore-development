@@ -815,15 +815,17 @@ data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.7)$tabla
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
 dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
-
 
 ## Normalization ###
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+## Imputation ###
+set.seed(9396)
+listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
 ## Ouput ###
 output <- list(
   data = data, 
@@ -1388,7 +1390,6 @@ data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
 dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -1397,6 +1398,10 @@ pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+# ## Imputation ###
+# set.seed(9396)
+# listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
 ## Ouput ###
 output <- list(
   data = data, 
@@ -2111,13 +2116,11 @@ res$graficoMuestra
 resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5, 0.7))
 resFilt$tablaFormato
 
-# Finally: permitimos hasta un 30% de valores faltantes por grupo
+# Finally: permitimos hasta un X% de valores faltantes por grupo
 data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.7)$tabla
-dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
-data <- 2^dataLog
 
 ## Log and visualization ###
+dataLog <- log(data, base =2)
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -2126,6 +2129,10 @@ pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+## Imputation ###
+set.seed(9396)
+listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
 ## Ouput ###
 output <- list(
   data = data, 
@@ -2981,11 +2988,9 @@ resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
 data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.7)$tabla
-dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(df=as.matrix(dataLog))
-data <- 2^dataLog
 
 ## Log and visualization ###
+dataLog <- log(data, base =2)
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -2994,6 +2999,11 @@ pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+## Imputation ###
+set.seed(9396)
+listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
+
 ## Ouput ###
 output <- list(
   data = data, 
@@ -3485,11 +3495,9 @@ resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
 data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
-dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
-data <- 2^dataLog
 
 ## Log and visualization ###
+dataLog <- log(data, base =2)
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -3498,6 +3506,10 @@ pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+## Imputation ###
+set.seed(9396)
+listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
 ## Ouput ###
 output <- list(
   data = data, 
@@ -3515,8 +3527,6 @@ saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
 #...........................................................................####
 # PXD005025 ####
 idDataset <- "PXD005025"
-dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
-                    header = F, sep = "\t")
 dfRaw <- data.table::fread(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"))
 
 ## Datasets ####
@@ -3589,11 +3599,9 @@ resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
 data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
-dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
-data <- 2^dataLog
 
 ## Log and visualization ###
+dataLog <- log(data, base =2)
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -3602,6 +3610,10 @@ pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+## Imputation ###
+set.seed(9396)
+listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
 ## Ouput ###
 output <- list(
   data = data, 
@@ -3968,8 +3980,6 @@ table(dm$Groups)
 paste0(unique(dm$Groups), collapse = ";")
 
 
-
-
 ## Processing ####
 ## Filtering ###
 
@@ -3991,11 +4001,9 @@ resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
 data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
-dataLog <- log(data, base =2)
-dataLog <- Biomics::doImputation(as.matrix(dataLog))
-data <- 2^dataLog
 
 ## Log and visualization ###
+dataLog <- log(data, base =2)
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -4004,6 +4012,10 @@ pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
+## Imputation ###
+set.seed(9396)
+listaNorm <- lapply(listaNorm, Biomics::doImputation)
+
 ## Ouput ###
 output <- list(
   data = data, 
