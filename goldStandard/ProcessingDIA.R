@@ -1575,11 +1575,11 @@ res$graficoMuestra
 res$graficoProteina # proteinas con moitos valores faltantes
 
 # Applying different thresholds for filtering
-resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5, 0.7))
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3, 0.5, 0.6, 0.7))
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.7)$tabla
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
 
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
@@ -1590,6 +1590,7 @@ listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
 ## Imputation ###
+set.seed(9396)
 listaNorm <- lapply(listaNorm, Biomics::doImputation)
 
 
@@ -1851,6 +1852,7 @@ listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
                                       listaNorm = c("Mean", "Median", "TI", "VSN", 
                                                     "Quantile", "CyclicLoess", "RLR"))
 ## Imputation ###
+set.seed(9396)
 listaNorm <- lapply(listaNorm, Biomics::doImputation)
 
 ## Ouput ###
