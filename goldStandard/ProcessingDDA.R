@@ -870,6 +870,9 @@ colnames(df)
 colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
 # allElements <- strsplit(x = colnames(df), split = "_", fixed = T)
 
+## Log transforation 
+df0 <- df
+df <- log(df,  base = 2)
 
 ## Design matrix ###
 dfReplicates <- data.frame(
@@ -906,12 +909,11 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.2
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+data <- 2^dataLog
 
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
-dataLog <- log(data, base =2)
-# dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -975,6 +977,10 @@ colnames(df)
 colnames(df) <- gsub(x= colnames(df), pattern = ".Intensity", replacement = "")
 # allElements <- strsplit(x = colnames(df), split = "_", fixed = T)
 
+df0 <- df
+df <- log(df, base = 2)
+
+
 ## Replicates ###
 dfReplicates <- data.frame(
   Samples = paste0("S", sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 2)),
@@ -1015,12 +1021,11 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.2
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.5)$tabla
+data <- 2^dataLog
 
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
-dataLog <- log(data, base =2)
-# dataLog <- Biomics::doImputation(df = as.matrix(dataLog))
 min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
@@ -4626,7 +4631,7 @@ resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.3
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
+dataLog <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
 data <- 2^dataLog
 
 ## Log and visualization ###
