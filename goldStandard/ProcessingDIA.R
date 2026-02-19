@@ -178,7 +178,7 @@ data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.3)$tabla
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
 dataLog <- log(data, base =2)
-min(data, na.rm = "always")
+min(dataLog, na.rm = "always")
 pheatmap::pheatmap(dataLog, show_rownames = F, scale = "row")
 
 
@@ -2885,7 +2885,7 @@ saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
 
 #.........................................................................####
 # PXD036609 ####
-idDataset <- "PXD036609_protein_identification"
+idDataset <- "PXD036609"
 dfRaw <- readxl::read_excel(path = "Datasets/PXD036609_protein_identification.xlsx", 
                             sheet = 1, col_names = T)
 # Set Filtered to NA #

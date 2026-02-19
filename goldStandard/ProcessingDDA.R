@@ -4699,7 +4699,8 @@ dm <- readxl::read_excel(path = "Datasets/PXD030595_Table_S1.xlsx")
 dm <- dm %>%
   select(`Experimental ID...2`, `Class (verbose)`) %>%
   rename(Samples = `Experimental ID...2`, 
-         Groups = `Class (verbose)`)
+         Groups = `Class (verbose)`) %>% 
+  as.data.frame
 table(dm$Groups)
 
 # Checking
