@@ -257,10 +257,12 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 
 normScore <- function(
     normMatrixList, 
-    designMatrix, #dfRaw, 
+    designMatrix, 
+    dfRaw, 
     refGroup = NULL, 
     altGroup = NULL, 
-    onlyFinalRank = T
+    onlyFinalRank = F, 
+    onlyDetailRanking = T
   ){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
@@ -273,8 +275,8 @@ normScore <- function(
   scoreFinal <- list()
   
   # ITEM 0 - correction factor ####
-  # totalIntensities <- colSums(dfRaw, na.rm = T)
-  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)
+  totalIntensities <- colSums(dfRaw, na.rm = T)
+  item0 <- cv(totalIntensities, proportion = T, na.rm = T)*2
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 
@@ -345,9 +347,9 @@ normScore <- function(
   # Corrections ####
   rownames(scoreDF_norm) <- rownames(scoreDF)
   # # 1) Small variability: no need for normalization
-  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
   # # 2) CyclicLoess outstands in correlation: small correction
-  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.5
+  scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.3
   # # 3) MAD outstands in PVC: small correction
   # scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
   # # 4) Quantile outstands in TI graphics: small correction
@@ -364,6 +366,9 @@ normScore <- function(
   
   if (onlyFinalRank){
     return(list(finalRanking = finalRank))
+  } else if (onlyDetailRanking) {
+    names(scoreDF_norm) <- c(paste0("Item", 1:6), "Total")
+    return(list(detailRanking = scoreDF_norm))
   } else {
     # CI bootstrap ####
   
@@ -376,7 +381,7 @@ normScore <- function(
     
     # Bootstrap
     # n_boot <- 1000
-    boot_results <- boot(data = scores_matrix,              # data
+    boot_results <- boot::boot(data = scores_matrix,              # data
                          statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
                          R = 1000)                        # number of resamples  
     
@@ -384,7 +389,7 @@ normScore <- function(
     bootstrap_means <- colMeans(boot_results$t)
     
     score_bootstrap <- as.data.frame(t(sapply(1:ncol(scores_matrix), function(i){
-      ci <- boot.ci(boot_results, type = "perc", index = i)
+      ci <- boot::boot.ci(boot_results, type = "perc", index = i)
       return(c(colnames(scores_matrix)[i], bootstrap_means[i], 
                ci$percent[4], ci$percent[5]))
     }, simplify = T)))
