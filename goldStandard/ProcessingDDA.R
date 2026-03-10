@@ -3559,6 +3559,10 @@ df$`Protein IDs` <- NULL
 colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
 colnames(df)
 table(table(colnames(df))>1)
+colnames(df) <- paste0(colnames(df), "_1")
+colnames(df) <- gsub(pattern = "''_1", replacement = "_3", x = colnames(df), fixed = T)
+colnames(df) <- gsub(pattern = "'_1", replacement = "_2", x = colnames(df), fixed = T)
+colnames(df)
 
 ## Design matrix ###
 dm <- data.table::fread(file = "Datasets/PXD005025_experimentalDesignTemplate.txt")
@@ -3566,6 +3570,9 @@ dm <- dm %>%
   select(Experiment) %>%
   mutate(Samples = Experiment, 
          Groups = gsub(x = Experiment, pattern = "'", replacement = "", fixed = T)) %>%
+  mutate(Samples = paste0(Samples, "_1")) %>%
+  mutate(Samples = gsub(pattern = "''_1", replacement = "_3", x = Samples, fixed = T)) %>%
+  mutate(Samples = gsub(pattern = "'_1", replacement = "_2", x = Samples, fixed = T)) %>%
   select(Samples, Groups)
 dm
 table(dm$Groups)
