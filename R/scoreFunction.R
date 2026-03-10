@@ -223,6 +223,7 @@ maDiffAreas <- function(data, samplesG1, samplesG2){
   # names(resultArea) <- i
   
   i3Corrected <- unname(resultArea)*CF
+  # i3Corrected <- unname(resultArea)
   return(i3Corrected)
 }
 
@@ -261,6 +262,7 @@ normScore <- function(
     dfRaw, 
     refGroup = NULL, 
     altGroup = NULL, 
+    corrected = F, 
     onlyFinalRank = F, 
     onlyDetailRanking = T
   ){
@@ -270,6 +272,10 @@ normScore <- function(
   # 3. Raw intensities (for item 0)
   # 4. Ref group and alternative group (optional). If they are not provided, 
   # the first group will be used as alternative and the last one, as control.
+  
+  # Initial checks:
+  designMatrix <- as.data.frame(designMatrix)
+  colnames(designMatrix) <- c("Samples", "Groups")
   
   totalGroups <- levels(as.factor(designMatrix$Groups))
   scoreFinal <- list()
@@ -346,29 +352,39 @@ normScore <- function(
   
   # Corrections ####
   rownames(scoreDF_norm) <- rownames(scoreDF)
+  # scoreDF_norm_raw <- scoreDF_norm
   # # 1) Small variability: no need for normalization
-  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
+  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
   # # 2) CyclicLoess outstands in correlation: small correction
-  scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.3
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.3
   # # 3) MAD outstands in PVC: small correction
   # scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
   # # 4) Quantile outstands in TI graphics: small correction
   # scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
-
+  if (corrected){
+    itemWeights <- readRDS(file = "AssessmentFiles/weigths_All.rds")
+    scoreDF_norm <- sweep(scoreDF_norm, 2, itemWeights, `*`)
+  }
+  
   # Rank ####
   scores_matrix <- t(scoreDF_norm)
   scoreDF_norm$Total <- rowSums(scoreDF_norm)
+  scoreDF_norm$TotalCorrected <- scoreDF_norm$Total
+  scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "TotalCorrected"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"),  "TotalCorrected"]*item0
   # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
   
   ## Sort ####
-  scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(Total)
-  finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
+  scoreDF_norm <- scoreDF_norm %>% dplyr::arrange(TotalCorrected)
+  finalRank <- stats::setNames(scoreDF_norm$TotalCorrected, rownames(scoreDF_norm))
   
   if (onlyFinalRank){
     return(list(finalRanking = finalRank))
   } else if (onlyDetailRanking) {
-    names(scoreDF_norm) <- c(paste0("Item", 1:6), "Total")
-    return(list(detailRanking = scoreDF_norm))
+    # names(scoreDF_norm_raw) <- paste0("Item", 1:6)
+    names(scoreDF_norm) <- c(paste0("Item", 1:6), "Total", "TotalCorrected")
+    return(list(
+      # resByItem = scoreDF_norm_raw, 
+      detailRanking = scoreDF_norm))
   } else {
     # CI bootstrap ####
   
