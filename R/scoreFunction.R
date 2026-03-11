@@ -264,7 +264,8 @@ normScore <- function(
     altGroup = NULL, 
     corrected = F, 
     onlyFinalRank = F, 
-    onlyDetailRanking = T
+    onlyDetailRanking = T, 
+    detailRankItem0 = F
   ){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
@@ -383,8 +384,15 @@ normScore <- function(
     # names(scoreDF_norm_raw) <- paste0("Item", 1:6)
     names(scoreDF_norm) <- c(paste0("Item", 1:6), "Total", "TotalCorrected")
     return(list(
-      # resByItem = scoreDF_norm_raw, 
       detailRanking = scoreDF_norm))
+  } else if (detailRankItem0) {
+    scoreDF_norm <- scoreDF_norm[,1:6]
+    names(scoreDF_norm) <- paste0("Item", 1:6)
+    orden <- c("Log", "Mean", "TI", "Median", "Quantile", "CyclicLoess", "RLR", "VSN")
+    scoreDF_norm <- scoreDF_norm[orden,]
+    return(list(
+      item0 = item0, 
+      matriz = scoreDF_norm))
   } else {
     # CI bootstrap ####
   
