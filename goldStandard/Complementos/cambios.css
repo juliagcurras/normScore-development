@@ -102,3 +102,10 @@ pre {
   color: #00407d;
 
 }
+
+<style>
+.main-container,
+body {
+  max-width: 5000px;
+}
+</style>
