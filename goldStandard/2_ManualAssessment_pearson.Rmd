@@ -1,0 +1,268 @@
+---
+title: "Gold Standard - Normalization Assessment"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   self_contained: yes
+  rmdformats::readthedown:
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggpubr)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+items <- paste0("item", 0:6)
+itemsDesc <- c("Sum total intensity", "PCV", "Correlation (Spearman)", 
+               "MAplot", "MeanSD plot", "RLE plot", "Total intensity distribution")
+names(itemsDesc) <- items
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+
+```{r}
+# Functions
+
+getResultsByItem <- function(dfRaw, listaNorm, dm, item){
+  # just a common object
+  # dm <- as.data.frame(lista[[1]][["metadata"]])
+  # cat(item, "\n")
+  colnames(dm) <- c("Samples", "Groups")
+  grupos <- unique(dm$Groups)
+  numRows <- ceiling(length(listaNorm)/2)
+  empties <- replicate(numRows-3, ggplot() + theme_void(), simplify = FALSE)
+  
+  # Starting with data extraction and metrics/graphs estimation... 
+  if (item == "item0"){ # only item 0
+    empties <- c(Biomics::plotBarTI(data = dfRaw, interact = F)$grafico + 
+                   theme(axis.text.x = element_text(vjust = 0.5)), empties) 
+    output <-  ggpubr::ggarrange(plotlist = empties, ncol = 1, nrow = numRows-2)
+  } else { # other items
+    # First extrating individual data and generating individual plots
+    a <<- 0
+    finalData <- lapply(listaNorm, function(datos){
+      a <<- a+1
+      # cat(a, "\n")
+      # cat(names(listaNorm)[a], "\n")
+      nome <- names(listaNorm)[a]
+      if (item == "item6"){
+        Biomics::plotBoxMulti(
+          base = datos, varResumen = colnames(datos),
+          interact = F, tituloX = nome, tituloY = "Intensity distribution"
+        )$grafico + theme(axis.text.x = element_text(angle = 65, vjust = 0.5))
+      } else if (item == "item5"){
+        Biomics::plotRLE(df = datos, normalizacion = nome, interact = F, 
+                         tituloX = nome)$grafico + 
+          theme(axis.text.x = element_text(angle = 65, vjust = 0.5))
+      } else if (item == "item4"){
+        Biomics::plotMeanSD(df = datos, interact = F, tituloX = nome)$grafico
+      } else if (item == "item3"){
+        Biomics::plotMA(df = datos, dfGrupos = dm, gControl = grupos[1], titulo = nome,
+                        gCase = grupos[2], showR2 = F, interact = F)$grafico
+      }
+    })
+    names(finalData) <- paste0("SimDataset_",1:length(finalData))
+    # Mix plots into a single image or...
+    if (item %in% c("item3", "item4", "item5", "item6")){ # plot graphs together: MAplot, RLEplot, meanSDplot, TIboxplot
+      output <- ggpubr::ggarrange(plotlist = finalData, 
+                                  ncol = 2, nrow = numRows)
+    } else if (item == "item1"){ # ...or generate other metrics with data for remaining items
+      empties <- c(Biomics::getPCV( # PVC
+        listData = listaNorm,
+        grupos = grupos,
+        dfGrupos = dm,
+        grafico = T,
+        interact = F
+      )$grafico, empties)
+       output <-  ggpubr::ggarrange(plotlist = empties, ncol = 1, nrow = numRows-2)
+    } else if (item =="item2"){ # Correlation
+      allVectorsCorr <- lapply(
+        listaNorm, 
+        Biomics::getPooledCor, 
+        dfGrupos = dm,
+        metodo = "pearson")
+      dfPlot <- data.frame(sapply(allVectorsCorr, "length<-", max(lengths(allVectorsCorr))))
+      empties <- c(Biomics::plotBoxMulti(
+        base = dfPlot, 
+        varResumen = colnames(dfPlot),
+        tituloX = "Normalizations", interact = F,
+        tituloY = "Spearman correlation")$grafico, empties)
+      output <- ggpubr::ggarrange(plotlist = empties, ncol = 1, nrow = numRows-2)
+    }
+    
+  } 
+  res <- list(output)
+  names(res) <- item
+  return(res)
+}
+```
+
+
+# Datasets
+
+General characteristics of each dataset are depicted in the following table:
+
+```{r}
+df <- readxl::read_xlsx(path = "_Index.xlsx", sheet = 1, col_names = T)
+# df$`Publication (DOI)` <- gsub(pattern = "DOI: ", replacement = "", 
+#                                x = df$`Publication (DOI)`, fixed = T)
+urlDOI <- paste0("https://doi.org/", substr(x = df$`Publication (DOI)`, start = 6, stop = 50))
+df$`Publication (DOI)` <- paste0(
+    "<a href='", urlDOI, "' target='_blank'>", df$`Publication (DOI)`,"</a>"
+  )
+df <- df %>% arrange(Acquisition, `MS instrument`) %>% mutate(Number = 1:100)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F, filter = "top",
+              options = list(ordering = T, dom = "Bfrt", scrollY = '500px',
+                            scrollX = T, pageLength = nrow(df),
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")))) #%>% 
+  # DT::formatStyle(1, font = 'bold')
+```
+
+<br><br>
+
+# Assessment
+
+```{r include = F}
+# allFiles <- list.files(path = "ProcessedDatasets/")
+allFilesDDA <- df %>% filter(Acquisition == "DDA") %>% pull(ID) %>% paste0(., ".rds")
+listGraphs <- sapply(allFilesDDA, function(i){
+  # cat("\n", i)
+  output <- readRDS(file = paste0(outDir, i))
+  # getResults(dfRaw = output$data, datos = output$dataLog, dm = output$dm)
+  resultado <- sapply(items, 
+    getResultsByItem,
+    dfRaw = output$data, 
+    listaNorm = output$listaNorm, 
+    dm =  output$dm, 
+    simplify = F, 
+    USE.NAMES = T
+    )
+  return(resultado)
+},simplify = F, USE.NAMES = T)
+
+# Saving just to save time in report compilation
+# saveRDS(listGraphs, file = "ProcessedDatasets/DDA_graphs.rds", compress = "gzip")
+# listGraphs <- readRDS(file = "ProcessedDatasets/DDA_graphs.rds")
+```
+
+## DDA datasets {.tabset}
+
+```{r fig.align='center', fig.height=18, fig.width=10}
+invisible(sapply(allFilesDDA, function(i){
+  idDataset <- substr(i, start = 1, stop = nchar(i)-4)
+  cat("\n\n### ", idDataset, " {- .tabset .tabset-dropdown}\n\n")
+  
+  sapply(items, function(item){
+    cat("\n\n#### ", item, " - ", itemsDesc[item], " {-}\n\n")
+    # cat("\n> ", itemsDesc[item], "\n")
+    # cat("\n")
+    print(listGraphs[[i]][[item]][[1]])
+  })
+  
+  # print(listGraphs[[i]])
+  cat("\n\n")
+}))
+
+```
+
+
+
+## DIA datasets {.tabset}
+
+```{r include = F}
+allFilesDIA <- df %>% filter(Acquisition == "DIA") %>% pull(ID) %>% paste0(., ".rds")
+# allFilesDIA <- allFilesDIA[1:2]
+listGraphs <- sapply(allFilesDIA, function(i){
+  # cat("\n", numero)
+  output <- readRDS(file = paste0(outDir, i))
+  # getResults(dfRaw = output$data, datos = output$dataLog, dm = output$dm)
+  resultado <- sapply(items, 
+    getResultsByItem,
+    dfRaw = output$data, 
+    listaNorm = output$listaNorm, 
+    dm =  output$dm, 
+    simplify = F, 
+    USE.NAMES = T
+    )
+  return(resultado)
+},simplify = F, USE.NAMES = T)
+
+# Saving just to save time in report compilation
+# saveRDS(listGraphs, file = "ProcessedDatasets/DIA_graphs.rds", compress = "gzip")
+# listGraphs <- readRDS(file = "ProcessedDatasets/DIA_graphs.rds")
+```
+
+```{r fig.align='center', fig.height=18, fig.width=10}
+invisible(sapply(allFilesDIA, function(i){
+  idDataset <- substr(i, start = 1, stop = nchar(i)-4)
+  cat("\n\n### ", idDataset, " {- .tabset .tabset-dropdown}\n\n")
+  
+  sapply(items, function(item){
+    cat("\n\n#### ", item, " - ", itemsDesc[item], " {-}\n\n")
+    print(listGraphs[[i]][[item]][[1]])
+  })
+  
+  # print(listGraphs[[i]])
+  cat("\n\n")
+}))
+```
+

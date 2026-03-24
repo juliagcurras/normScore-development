@@ -283,7 +283,9 @@ normScore <- function(
   
   # ITEM 0 - correction factor ####
   totalIntensities <- colSums(dfRaw, na.rm = T)
-  item0 <- cv(totalIntensities, proportion = T, na.rm = T)*2
+  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)*2
+  item0 <- cv(totalIntensities, proportion = T, na.rm = T)
+  item0 <- 0.5 * (item0 - 1) # suavizado
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 

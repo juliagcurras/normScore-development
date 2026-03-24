@@ -1,0 +1,613 @@
+---
+title: "Refinement strategies for normScore - item weigths"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  prettydoc::html_pretty:
+    theme: cayman
+    self_contained: yes
+  # rmdformats::readthedown:
+  #   css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggpubr)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+
+
+# Random selection
+
+Esta estrategia consiste en generar un número elevado y diferente de vectores con diferentes combinaciones de números decimales con valores entre 0 y 1 y que sumen 1 en total, probar estos vectores como pesos, evaluar el fitness del normScore al incorporar cada peso, y quedarse con el mejor. 
+
+
+## Consideraciones 
+
+Estamos ante una estrategia de búsqueda directa, con una optimización sin gradiente. Es la opción más natural para empezar. Métodos posibles:
+
+* _Grid search_ para algo simple
+* _Random search_ con más complejidad
+
+Con solo 6 pesos, el espacio no es enorme. Una estrategia inicial sería hacer una **búsqueda aleatoria grande** de vectores de pesos en $[0,1]^6$.
+
+Por ejemplo:
+
+* generar 10.000 o 50.000 vectores de pesos aleatorios
+* calcular $F(w)$ para cada uno
+* quedarte con los mejores
+
+Esto muchas veces ya funciona sorprendentemente bien. La siguiente opción sería probar los [algoritmos genéticos](#GA).
+
+### Potencial problema: sobreajuste
+
+Como estamos optimizando directamente para acertar sobre tus 100 matrices, podemos acabar encontrándonos pesos que funcionan muy bien **solo en esas 100**. Por eso, es recomendable separar el total de datasets en dos sets: **train** y **test**. Por ejemplo:
+
+* 80 matrices para optimizar pesos
+* 20 matrices para evaluar rendimiento real
+
+Y mejor aún si aplicamos estrategis de **validación cruzada repetida**. Así sabremos si los pesos son estables o si dependen demasiado del subconjunto usado.
+
+Esto sería aplicable también a los [algoritmos genéticos](#GA).
+
+
+
+
+# Genetic Algorithm {#GA}
+
+## Resumen
+
+Tenemos 100 datasets evaluados manualmente (Gold Standard) para los cuales hay asignada una normalización óptima. Además, se ha usado el normScore sobre estos 100 datasets (sin pesos) y se ha obtenido la mejor normalización indicada por este método. Al comparar la normalización óptima manual y la indicada por el normScore, se calcula el número de coincidencias. 
+
+La idea es añadir un vector de pesos a cada uno de los items del score que permita maximizar el número de coincidencias. Para encontrar los pesos óptimos, se utilizará un algortimo genético.
+
+El algoritmo genético consistirá en: 
+
+1. Población inicial: 200 vectores de pesos aleatorio inicial (sus items suman 1).
+
+2. Fitness: evaluar para cada vector el número de coincidencias. 
+
+3. Selección: seleccionar los vectores de la población inicial con mejor fitness (top 10%, por ejemplo). 
+
+4. Crossover: por pares, intercambiar la información de los vectores, ajustando o renormalizando para obtener 1. 
+
+5. Mutación: en posiciones aleatorias, añadir un pequeño error o mutación que cambie ligeramente los valores del vector. Normalizar de nuevo para obtener pesos del 0 al 1. 
+
+6. Los vectores resultantes son la nueva generación. No me queda claro si esta substituye a la anterior, creo que también hay métodos en las que se pueden combinar la nueva y la original. Y ahora es iterativo, se vuelve a evaluar el fitness de la nueva generación, se seleccionan los mejores, etc. 
+
+Esto puede parar por diferentes criterios: 
+
+* Número máximo de iteraciones
+* Muchas generaciones con el mismo fitness
+* Convergencia de la población (?)
+
+Como el valor de fitness en este problema sería el número de coincidencias, que es discreto, es posible que haya muchas soluciones con el mismo valor. Por ello, un segundo criterio de desempate sería lo ideal. 
+
+
+### Esquema
+
+Dada una población inicial $\mathcal{P}^{(0)}$ de vectores de pesos válidos, en cada generación ($t$) se realizan los pasos:
+
+1. **Evaluación:** calcular la fitness de cada individuo como el número de matrices correctamente clasificadas.
+2. **Selección:** escoger progenitores con probabilidad creciente con la fitness.
+3. **Cruce:** combinar progenitores para obtener descendientes.
+4. **Mutación:** perturbar aleatoriamente algunos genes.
+5. **Reparación:** asegurar que todos los pesos son no negativos y suman 1.
+6. **Reemplazo:** construir la siguiente población, preservando opcionalmente los mejores individuos.
+7. **Parada:** detener el algoritmo cuando se alcance el número máximo de generaciones o no haya mejora apreciable.
+
+El mejor individuo final proporciona el vector de pesos óptimo aproximado:
+
+$$
+w^\star = (w_1^\star,\dots,w_6^\star)
+$$
+
+
+## Consideraciones
+
+### Planteamiento formal
+
+Sea un conjunto de $M=100$ matrices. Para cada matriz $m$, con $m=1,\dots,M$, tienes:
+
+* $R$ filas candidatas
+* $p=6$ columnas
+* una fila objetivo $y^{(m)}$, seleccionada manualmente
+* una fila específica identificada como `Log`, a la que se aplica una corrección multiplicativa
+
+Si denotamos por $X^{(m)}_{ij}$ el valor de la fila $i$ y columna $j$ en la matriz $m$, y por $w=(w_1,\dots,w_6)$ el vector de pesos, entonces la puntuación intermedia de la fila $i$ es:
+
+
+$$z_i^{(m)}(w)=\sum_{j=1}^6 w_j X_{ij}^{(m)}$$
+
+con las restricciones:
+
+$$
+w_j \in [0,1], \qquad \sum_{j=1}^6 w_j = 1
+$$
+
+Después, la puntuación final incorpora la corrección multiplicativa:
+
+$$
+s_i^{(m)}(w)=z_i^{(m)}(w),\ell_i^{(m)}
+$$
+
+donde:
+
+* $\ell_i^{(m)} = L^{(m)}$ para la fila `Log`
+* $\ell_i^{(m)} = 1$ para el resto de filas
+
+La predicción del modelo para la matriz (m) es la fila con menor puntuación:
+
+$$
+\hat y^{(m)}(w)=\arg\min_i s_i^{(m)}(w)
+$$
+
+Y la función objetivo que quieres maximizar es el número total de aciertos:
+
+$$
+F(w)=\sum_{m=1}^{M}\mathbf{1}\big(\hat y^{(m)}(w)=y^{(m)}\big)
+$$
+
+Este es un problema de **optimización combinada con parámetros continuos**, donde la función objetivo es discreta y no derivable.
+
+
+### Uso del algoritmo genético
+
+Los algoritmos genéticos son especialmente útiles cuando:
+
+* la función objetivo no es suave
+* no hay gradientes útiles
+* hay múltiples óptimos locales
+* el espacio de búsqueda está acotado
+* la evaluación de cada solución es posible aunque no exista una expresión analítica simple para optimizar
+
+Tu caso cumple todo eso.
+
+La función $F(w)$ no cambia suavemente cuando cambian ligeramente los pesos. Un pequeño cambio en $w$ puede no alterar ninguna predicción, y otro cambio pequeño puede modificar el mínimo de una o varias matrices de golpe. Por tanto, métodos basados en derivadas no son los más naturales.
+
+El algoritmo genético, en cambio, trata cada vector de pesos como una solución candidata, evalúa su calidad y va generando nuevas soluciones a partir de las mejores.
+
+#### Representación en la problemática actual 
+
+Cada individuo de la población es un vector de seis pesos:
+
+$$
+\mathbf{w}^{(k)}=(w_1^{(k)},w_2^{(k)},w_3^{(k)},w_4^{(k)},w_5^{(k)},w_6^{(k)})
+$$
+
+donde:
+
+* $k$ identifica al individuo dentro de la población
+* cada gen corresponde a un peso asociado a una columna
+* todos los genes son reales no negativos
+* la suma total de los genes es 1
+
+Por tanto:
+
+* **gen** = un peso individual
+* **cromosoma o individuo** = el vector completo de 6 pesos
+* **población** = conjunto de muchos vectores de pesos candidatos
+
+
+#### Función de fitness
+
+La pieza central del algoritmo genético es la **función de fitness**:
+
+$$
+\text{fitness}(w)=F(w)
+$$
+
+es decir, el número de matrices en las que la fila predicha coincide con la fila correcta.
+
+Como el algoritmo genético suele formularse como problema de maximización, esto encaja directamente.
+
+También se podrían definir versiones más refinadas, por ejemplo:
+
+* número de aciertos
+* y, en caso de empate entre individuos, usar como criterio secundario el margen medio (diferencia máxima entre el primero y el segundo)
+
+Se puede definir una función fitness compuesta, por ejemplo:
+
+$$
+\text{fitness}(w)=\text{hits}(w)+\lambda \cdot \text{marginScore}(w)
+$$
+
+o usar primero hits y luego desempatar con otra métrica.
+
+
+#### Estructura del GA
+
+##### Población: Inicialización
+
+Se genera una población inicial de (N) individuos. Cada individuo es un vector de seis pesos que debe cumplir las restricciones.
+
+Por ejemplo:
+
+$$
+\mathbf{w}^{(1)}=(0.10,0.15,0.20,0.05,0.30,0.20)
+$$
+
+$$
+\mathbf{w}^{(2)}=(0.02,0.25,0.08,0.10,0.40,0.15)
+$$
+
+etc.
+
+La generación aleatoria debe respetar:
+
+* $w_j \ge 0$
+* $\sum_j w_j=1$
+
+Una forma sencilla es:
+
+1. generar seis valores positivos aleatorios $u_1,\dots,u_6$
+2. normalizarlos:
+
+$$
+w_j=\frac{u_j}{\sum_{k=1}^6 u_k}
+$$
+
+Así obtienes pesos válidos automáticamente.
+
+##### Fitnes: evaluación
+
+Para cada individuo $\mathbf{w}^{(k)}$:
+
+1. calculas las puntuaciones de todas las filas en las 100 matrices
+2. identificas la fila con score mínimo en cada matriz
+3. comparas con la fila objetivo
+4. cuentas cuántos aciertos hay
+
+Ese número es su fitness.
+
+
+
+##### Selección
+
+Una vez evaluados todos los individuos, el algoritmo favorece a los más aptos para reproducirse.
+
+La selección se basa en la idea de que los individuos con mayor fitness tienen mayor probabilidad de transmitir su información genética a la siguiente generación.
+
+Métodos habituales:
+
+* selección por ruleta
+* torneo
+* ranking
+
+Académicamente, la selección introduce **presión selectiva**, es decir, favorece la explotación de las mejores regiones del espacio de búsqueda. Esto significa que los vectores de pesos que mejor identifican la fila correcta tenderán a generar descendencia.
+
+##### Cruce o crossover
+
+El cruce combina la información de dos progenitores para obtener uno o varios descendientes.
+
+* En codificación binaria
+
+Se mezclan bits.
+
+*  En codificación real
+
+Se mezclan valores numéricos.
+
+Por ejemplo, si tienes dos padres:
+
+$$
+p^{(1)}=(0.10,0.20,0.30,0.15,0.10,0.15)
+$$
+
+$$
+p^{(2)}=(0.25,0.10,0.15,0.20,0.05,0.25)
+$$
+
+puede generarse un hijo como combinación convexa:
+
+$$
+h=\alpha p^{(1)}+(1-\alpha)p^{(2)}
+$$
+
+con $0 \le \alpha \le 1$.
+
+Si $\alpha=0.4$, entonces cada gen del hijo sería:
+
+$
+h_j=0.4,p_j^{(1)}+0.6,p_j^{(2)}
+$
+
+Esto mantiene la naturaleza continua del problema.
+
+Además, si ambos padres cumplen suma 1, el descendiente también la cumple automáticamente.
+
+##### Mutación
+
+La mutación introduce cambios aleatorios pequeños en algunos genes para mantener diversidad en la población y evitar convergencia prematura a óptimos locales.
+
+En codificación real, la mutación no consiste en cambiar un 0 por un 1, sino en perturbar ligeramente un peso. Por ejemplo:
+
+$$
+w_3 \leftarrow w_3 + \varepsilon
+$$
+
+donde $\varepsilon$ es un pequeño ruido aleatorio.
+
+El problema es que, tras mutar, la suma puede dejar de ser 1 o aparecer un valor negativo. Por eso, después de la mutación suele hacerse una **reparación** o **renormalización**:
+
+1. truncar valores negativos a 0
+2. renormalizar:
+
+$$
+w_j \leftarrow \frac{w_j}{\sum_k w_k}
+$$
+
+De ese modo el individuo sigue siendo válido.
+
+##### Reemplazo y elitismo
+
+Tras generar descendientes, se construye la nueva población. Lo habitual es:
+
+* conservar algunos de los mejores individuos actuales
+* reemplazar otros por nuevos descendientes
+
+El **elitismo** consiste en garantizar que los mejores individuos de una generación pasen intactos a la siguiente. Esto evita perder soluciones buenas por azar. Es muy recomendable en este problema, porque la función fitness puede tener muchas mesetas y no conviene perder un vector de pesos con buen rendimiento.
+
+##### Criterio de parada
+
+El algoritmo se detiene cuando se cumple alguna condición:
+
+* número máximo de generaciones
+* ausencia de mejora durante varias generaciones
+* convergencia de la población
+
+Por ejemplo, parar tras 200 generaciones o tras 50 generaciones sin mejora del mejor fitness.
+
+### Ventajas del GA
+
+1. No necesita derivadas: Muy importante, porque el fitness en este problema es una función escalonada.
+
+2. Tolera bien objetivos discretos, ya que ña métrica principal es un conteo de aciertos.
+
+3. Explora globalmente: no depende tanto del punto inicial como un método local.
+
+4. Maneja bien múltiples óptimos locales, que es muy probable en este problema, dado que diferentes combinaciones de pesos pueden producir el mismo número de aciertos.
+
+5. Permite incorporar criterios adicionales
+
+
+
+### Limitaciones y precauciones
+
+1. No garantiza óptimo global exacto: Encuentra buenas soluciones, a menudo muy buenas, pero no prueba optimalidad global.
+
+2. Puede sobreajustar, por ello mejor usar train/test y validación cruzada repetida
+
+3. Sensibilidad a los hiperparámetros: tTamaño de población, probabilidad de mutación, número de generaciones y elitismo pueden influir en el resultado.
+
+4. Mesetas de fitness: Como muchas soluciones pueden dar el mismo número de aciertos, la función objetivo puede tener zonas planas. En esos casos ayuda mucho añadir una métrica secundaria de desempate.
+
+### Posibles hiperparámetros
+
+Para un problema pequeño como este, con solo 6 variables (pesos), una configuración inicial razonable podría ser:
+
+* tamaño de población: 50–200
+* generaciones: 100–500
+* elitismo: conservar 1–5 mejores individuos
+* probabilidad de cruce: alta
+* probabilidad de mutación: moderada
+
+No hace falta una población enorme, porque el espacio paramétrico es pequeño. El coste computacional dependerá más de cuántas veces se evalúen las 100 matrices.
+
+
+
+## Implementación en R
+
+### Datos de entrada
+
+Para los 100 datasets del Gold Standard, lo ideal es tener una lista donde cada elemento corresponda a un dataset y que sea otra lista con los mismos 4 elementos en todas:
+
+* la matriz de valores de los 6 items en las 8 normalizaciones (mismo orden de filas)
+* vector o character con el nombre de la fila correcta (mejor normalización) para ese dataset.
+* `numeric` con el valor del factor multiplicativo de `Log`
+
+
+#### Funciones para los datos
+
+##### Auxiliares de pesos
+
+###### Función softmaxWeights {#softmaxWeights}
+
+Es una función que transforma los vectores de pesos generados aleatoriamente por el algoritmo genético en otros equivalentes que cumplan las restricciones de pesos, las cuales son dos: sumar 1 y valores positivos. Para conseguirlo, se obtenie el exponencial de los pesos del vector generado (para tener número positivos), y se calcula el porcentaje que suponen los mismos sobre el total (para sumar 1). De esta forma, el vector será diferente pero equivalente al original. 
+
+##### Auxiliares de normScore
+
+###### Función normScoreAssembly {#normScoreAssembly}
+
+Dados los elementos de cada dataset:
+
+* una matriz
+* un vector de pesos
+* el factor multiplicativo de la fila Log
+
+esta función debe calcular la puntuación final de todas las filas y devolver la fila con puntuación mínima. Para los empates, se selecciona la fila más alta en la jerarquía establecida de antemano (consistente en ordenar los métodos de normalización según su sencillez, del más sencillo al más complejo, para aplicar el principio de parsimonia). 
+
+###### Función assessNormScore {#assessNormScore}
+
+Dado un vector de pesos y una lista con los elementos necesarios para cada dataset (matriz, item 0, mejor normalización, mejores normalizaciones), esta función llama a la anterior ([normScoreAssembly](#normScoreAssembly)) para calcular el normScore con estos pesos, recibiendo como resultado una normalización considerada como la mejor por el normScore y la evalúa:
+
+* Criterio 1: 1 si es la mejor normalización según el Gold Standard, 
+* Criterio 2: 1 si, a pesar de no cumplir el criterio 1, si aparece dentro de la lista de las normalizaciones posibles. 
+
+Los criterios se combinan como:
+
+$$Fitness = C1 + \epsilon C2$$
+donde $\epsilon$ es una constante que penaliza al criterio 2, teniendo siempre más peso el 1. 
+
+##### Función objetivo global: getFitness {#funObjG}
+
+Dado un vector de pesos, esta función debe recorrer las 100 matrices evaluando cada una y sumando cuántos aciertos hay en total. Ese número será la **fitness global** que usará el algoritmo genético.
+
+
+### Código algoritmo genético
+
+El algoritmo genético se implementa mediante el paquete `GA` de R, función `ga()`, que de forma general necesitará:
+
+#### Definición de los individuos
+
+Cada individuo será un vector de longitud 6 (6 pesos son un individuo). El algoritmo funciona con valores reales libres, pero se utilizará una transformación equivalente (no lineal) para ajustarlo a las especificaciones requeridas de pesos: sumar 1 y ser positivos; implementada en la función [softmaxWeights](#softmaxWeights).
+
+#### Función fitness
+
+El GA llamará repetidamente a la [función objetivo global](#funObjG) que recibe de entrada un vector candidato de 6 números (transformado como se explica en la sección anterior) y la salida será el número total de aciertos.
+
+
+#### Otros hiperparámetros
+
+Ya mencionados en otro apartado.
+
+
+### Resultados 
+
+* Mejor vector de pesos
+* Valor del mejor fitness (número máximo de aciertos conseguido)
+* Evolución de la optimización: por ejemplo, mejor fitness por generación o fitness medio por generación. Esto servirá para ver si el algoritmo converge.
+* Evaluación detallada final
+
+#### Evaluación detallada final
+
+Con los pesos óptimos, conviene recalcular sobre los 100 casos y guardar:
+
+* fila predicha
+* fila correcta
+* si hubo acierto
+* score de cada fila, si hace falta
+* margen
+* ranking de la fila correcta
+
+Esto es muy útil para interpretar resultados.
+
+
+
+
+# Resultados GA
+
+## Evolución del GA 
+
+```{r}
+source(file = "3_AssessmentFunctions.R")
+tipoFitness <- 1
+resGA_1 <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
+                             tipoFitness, "_TRAIN.rds")) 
+tipoFitness <- 2
+resGA_2 <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
+                             tipoFitness, "_TRAIN.rds")) 
+tipoFitness <- 3
+resGA_3 <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
+                             tipoFitness, "_TRAIN.rds"))
+```
+
+```{r fig.show='hold', out.width='50%'}
+plot(resGA_1$model, main = "Fitness 1")
+plot(resGA_2$model, main = "Fitness 2")
+plot(resGA_3$model, main = "Fitness 3")
+```
+
+## Fitness global
+
+Para train y test. 
+
+```{r}
+df <- data.frame(
+  Dataset = c("Train", "Test"),
+  Fitness1 = c(resGA_1$fitnessTrain, resGA_1$fitnessTest),
+  Fitness2 = c(resGA_2$fitnessTrain, resGA_2$fitnessTest),
+  Fitness3 = c(resGA_3$fitnessTrain, resGA_3$fitnessTest)
+)
+js <- Biomics::blueRow
+
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold') %>% DT::formatPercentage(2:4, digits = 1)
+
+```
+
+## Métricas de performance
+
+### Fitness 1 
+
+```{r}
+resAllNS <- formatNormScoreResults(finalList = resNS, item0 = F)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
