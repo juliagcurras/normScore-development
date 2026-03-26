@@ -149,7 +149,43 @@ assessNormScore <- function(datasetList, itemWeights, fitness = 1){
     }
     ## Combinación
     fitness <- C1 + 0.1 * C2
+  } else if (fitness == 4){
+    #----------------------- Fitness 4
+    ## C1: algunha normalización do top 3 aparece na lista de aceptadas polo GS
+    top3 <- rankedNorms[seq_len(min(3, length(rankedNorms)))]
+    C1 <- as.integer(any(top3 %in% solutions))
+    
+    ## C2: as normalizacións aceptadas polo GS ocupan posicións altas no ranking
+    rankPos <- match(solutions, rankedNorms)
+    rankPos <- rankPos[!is.na(rankPos)]
+    
+    if (length(rankPos) == 0) {
+      C2 <- 0
+    } else {
+      C2 <- mean(1 / rankPos)
+    }
+    
+    ## Combinación
+    fitness <- 0.6 * C1 + 0.4 * C2
   }
+  # else if (fitness == 4){
+  #   #----------------------- Fitness 4
+  #   ## C1: top1 segundo ranking = mellor normalización por GS
+  #   C1 <- as.integer(finalNorm == solution)
+  #   
+  #   ## C2: mellor normalización por GS aparece no top 3 do ranking
+  #   top3 <- rankedNorms[seq_len(min(3, length(rankedNorms)))]
+  #   C2 <- as.integer(solution %in% top3)
+  #   
+  #   ## C3: top1 do ranking aparece na lista de normalizacións aceptadas polo GS
+  #   C3 <- as.integer(finalNorm %in% solutions)
+  #   
+  #   ## C4: algunha normalización do top3 aparece na lista de aceptadas polo GS
+  #   C4 <- as.integer(any(top3 %in% solutions))
+  #   
+  #   ## Combinación
+  #   fitness <- 0.20 * C1 + 0.35 * C2 + 0.35 * C3 + 0.10 * C4
+  # }
   
   return(fitness)
 }
@@ -164,7 +200,7 @@ generateRandomWeights <- function(nWeights = 6) {
 
 getFitness <- function(
     itemWeights, 
-    fitness = 3
+    fitness = 4
 ){
   # transform weights
   weights <- softmaxWeights(itemWeights)
@@ -221,7 +257,6 @@ randomSearchWeights <- function(nIter, nWeights = 6, seed = 123,
 # Data required #
 allDatasetsList <- readRDS(file = "AssessmentFiles/Refinement_inputData.rds") # IMPORTANTE QUE SE CHAME datasetsList!!!
 
-
 # Applying train-test #
   # Generation data partition 70 - 30
 set.seed(1165)
@@ -241,6 +276,7 @@ datasetsListTest <- allDatasetsList[idTest]
 # parameter in getFitness function)
 library(GA)
 datasetsList <- datasetsListTrain # IMPORTANTE QUE O OBXECTO COS DATOS SE CHAME datasetsList!!!
+datasetsList <- allDatasetsList # IMPORTANTE QUE O OBXECTO COS DATOS SE CHAME datasetsList!!!
 gaModel <- ga(
   type = "real-valued",
   fitness = getFitness,
@@ -251,13 +287,14 @@ gaModel <- ga(
   run = 50,
   pcrossover = 0.8,
   pmutation = 0.1,
-  elitism = 10,
+  # elitism = 10,
   monitor = TRUE,
   seed = 9396,
   parallel = T 
 )
-tipoFitness <- 3 # cambiar en getFitness manualmente
-# gaModel <- readRDS(file = "AssessmentFiles/Refinement_results_GA_FITNESS3_TRAIN.rds") # 500 iteracións
+tipoFitness <- 4 # cambiar en getFitness manualmente
+# gaModel <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
+#                                  tipoFitness, "_TRAIN.rds")) # 500 iteracións
 
 # Assess for test
 summary(gaModel)
@@ -279,7 +316,7 @@ resGA <- list(
   fitnessTest = fitnessTEST
 )
 saveRDS(resGA, file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
-                             tipoFitness, "_TRAIN.rds")) # 500 iteracións
+                             tipoFitness, "_ALL.rds")) # 500 iteracións
 
 
 # Assess all

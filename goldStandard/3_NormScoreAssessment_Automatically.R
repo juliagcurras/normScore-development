@@ -41,8 +41,9 @@ normScoreList <- sapply(allFiles, function(i){
     onlyDetailRanking = T
   )$detailRanking)
 },simplify = F, USE.NAMES = T)
-saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_modItem2.rds")
-# normScoreList <- readRDS(file = "AssessmentFiles/normScore_dataGS_All.rds")
+saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_gamma_09_12.rds")
+# saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_AnyCorrection.rds")
+# saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_suavizadoItem0_2.rds")
 
 
 ## Select best normalization from GS ####
@@ -236,7 +237,7 @@ source(file = "3_AssessmentFunctions.R")
 
 ### Format data ####
 resAllGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds") # Manual ranking
-resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_modItem2.rds") # NS results non corrected
+resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_suavizado_alpha09.rds") # NS results non corrected
 resNSCorrected <- readRDS(file = "AssessmentFiles/normScore_CORRECTED_dataGS_All_MOdItem2_ManualWeights.rds") # NS results corrected
 
 resAllNS_Corrected <- formatNormScoreResults(finalList = resNSCorrected, item0 = T)

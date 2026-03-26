@@ -14,8 +14,6 @@ setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
 
 #..........................................................................####
 # Functions ####
-source(file = "../R/scoreFunction.R", encoding = "UTF-8")
-source(file = "3_AssessmentFunctions.R", encoding = "UTF-8")
 softmaxWeights  <- function(weights, fitness = 1) {
   # O GA() xera números reales que nos adaptamos ás restriccions dos pesos: sumar 1 e ser positivas
   weights <- weights - max(weights) # Esto é solo para que non de +Inf con valores moi altos
@@ -76,8 +74,70 @@ fitness <- 1
 resGA <- readRDS(file = paste0(outDir, "Refinement_results_GA_FITNESS", 
                                fitness, "_TRAIN.rds"))
 pesos <- softmaxWeights(resGA$model@solution[1,])
-resNS1 <- lapply(datasetsListTrain, normScoreAssembly, itemWeights = pesos)
+resNS1_train <- lapply(datasetsListTrain, normScoreAssembly, itemWeights = pesos)
+resNS1_test <- lapply(datasetsListTest, normScoreAssembly, itemWeights = pesos)
+resNS1_all <- lapply(allDatasetsList, normScoreAssembly, itemWeights = pesos)
 
+out1 <- list(
+  train  = resNS1_train,
+  test  = resNS1_test, 
+  all = resNS1_all
+)
+
+saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness1.RDS")
+
+
+#..........................................................................####
+# Fitness 2 ####
+fitness <- 2 
+resGA <- readRDS(file = paste0(outDir, "Refinement_results_GA_FITNESS", 
+                               fitness, "_TRAIN.rds"))
+pesos <- softmaxWeights(resGA$model@solution[1,])
+resNS1_train <- lapply(datasetsListTrain, normScoreAssembly, itemWeights = pesos)
+resNS1_test <- lapply(datasetsListTest, normScoreAssembly, itemWeights = pesos)
+resNS1_all <- lapply(allDatasetsList, normScoreAssembly, itemWeights = pesos)
+
+out1 <- list(
+  train  = resNS1_train,
+  test  = resNS1_test, 
+  all = resNS1_all
+)
+
+saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness2.RDS")
+
+
+
+#..........................................................................####
+# Fitness 3 ####
+fitness <- 3 
+resGA <- readRDS(file = paste0(outDir, "Refinement_results_GA_FITNESS", 
+                               fitness, "_TRAIN.rds"))
+pesos <- softmaxWeights(resGA$model@solution[1,])
+resNS1_train <- lapply(datasetsListTrain, normScoreAssembly, itemWeights = pesos)
+resNS1_test <- lapply(datasetsListTest, normScoreAssembly, itemWeights = pesos)
+resNS1_all <- lapply(allDatasetsList, normScoreAssembly, itemWeights = pesos)
+
+out1 <- list(
+  train  = resNS1_train,
+  test  = resNS1_test, 
+  all = resNS1_all
+)
+
+saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness3.RDS")
+
+#..........................................................................####
+# Fitness 3 ####
+fitness <- 4
+resGA <- readRDS(file = paste0(outDir, "Refinement_results_GA_FITNESS", 
+                               fitness, "_ALL.rds"))
+pesos <- softmaxWeights(resGA@solution[1,])
+resNS1_all <- lapply(allDatasetsList, normScoreAssembly, itemWeights = pesos)
+
+out1 <- list(
+  all = resNS1_all
+)
+
+saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness4.RDS")
 
 
 

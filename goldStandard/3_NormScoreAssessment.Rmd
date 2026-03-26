@@ -76,7 +76,10 @@ js <- c(
 
 ```{r}
 resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_modItem2.rds")) # NS results non corrected
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_AnyCorrection.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha075.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_gamma_09_12.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
 source(file = "3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 ```
@@ -376,6 +379,21 @@ df$Position <- factor(
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 
+#### MRR bottom - all best methods{-}
+
+La posición más baja de la mejor normalización del grupo determinado en el GS. 
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+
+
 ### Worst methods - Bottom {.tabset}
 
 #### Bottom Coverage  - excluded methods {-}
@@ -402,11 +420,27 @@ Biostatech::getCatTable(df)$tablaFormato
 dfW <- data.frame(Pos = summaryGlobal$Worst$mrrRes)
 dfW$Position <- factor(
   dfW$Pos, 
-  levels = rev(allClassess), 
+  # levels = rev(allClassess), 
+  levels = allClassess, 
   labels = paste0("Posición ", 1:8))
 Biostatech::getCatTable(dfW$Position)$tablaFormato
 ```
 
+
+
+#### MRR top - excluded methods {-}
+
+Posición más alta de la normalización del grupo de excluidas por cada dataset. 
+
+```{r}
+dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
+
+dfW$Position <- factor(
+  dfW$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
 
 ---
 

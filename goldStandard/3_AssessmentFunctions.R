@@ -88,11 +88,12 @@ mrrAtK <- function(
   }
   
   if (type == "top") {
-    1 / min(pos)
+    1 / min(pos) # 1 = primero, 0.5 = segundo, ... 0.125 = octavo
   } else if (type == "bottom") {
-    # posición desde abajo: 1 = último, 2 = penúltimo, ...
-    posFromBottom <- n - pos + 1
-    1 / min(posFromBottom)
+    # posición desde abajo: 1 = último, 0.5 = penúltimo, ...
+    # posFromBottom <- n - pos + 1
+    posFromBottom <- pos
+    1 / max(posFromBottom)
   } else {
     stop("Error! Revisa el código")
   }
@@ -322,12 +323,19 @@ resultsGlobal <- function(
         rankedMethods = resGlobalNS[[i]], 
         targetSet = bestSet[[i]],   
         type = "top"))
-    table(resMrrBestsAll)
+    resMrrBestsAllBottom <- sapply(names(resGlobalNS), function(i) 
+      mrrAtK(
+        rankedMethods = resGlobalNS[[i]], 
+        targetSet = bestSet[[i]],   
+        type = "bottom"))
+    # table(resMrrBestsAll)
     
     resBests <- list(
       hitRes = resHitBestsAll, 
       hitTable = summaryHit(res = resHitBestsAll), 
-      mrrRes = resMrrBestsAll)
+      mrrRes = resMrrBestsAll, 
+      mrrResBottom = resMrrBestsAllBottom
+      )
     
     resultados[["Bests"]] <- resBests
   }
@@ -364,20 +372,27 @@ resultsGlobal <- function(
     
     # worst
     worstToAsses <- intersect(names(resGlobalGS_WORST), names(resGlobalNS))
-    worstSetNS <- resGlobalGS_WORST[worstToAsses]
-    worstSetGS <- resGlobalNS[worstToAsses]
+    worstSetGS <- resGlobalGS_WORST[worstToAsses]
+    worstSetNS <- resGlobalNS[worstToAsses]
     resMrrWorstAll <- sapply(names(worstSetGS), function(i) 
       mrrAtK(
         rankedMethods = worstSetNS[[i]], 
         targetSet = worstSetGS[[i]],   
         type = "bottom")
     )
+    resMrrWorstAllTop <- sapply(names(worstSetGS), function(i) 
+      mrrAtK(
+        rankedMethods = worstSetNS[[i]], 
+        targetSet = worstSetGS[[i]],   
+        type = "top")
+    )
     # table(resMrrWorstAll)
     
     
     resWorst <- list(
       coverageRes = resCovWorstAll, 
-      mrrRes = resMrrWorstAll)
+      mrrRes = resMrrWorstAll, 
+      mrrResTop = resMrrWorstAllTop)
     
     resultados[["Worst"]] <- resWorst
   }
