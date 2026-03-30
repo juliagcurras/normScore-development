@@ -79,7 +79,8 @@ resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manu
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_AnyCorrection.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha075.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_gamma_09_12.rds")) # Originales
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
 source(file = "3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 ```
@@ -359,12 +360,14 @@ summaryGlobal$Bests$hitTable
 #### MRR - only the best method {-}
 
 ```{r}
+# allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
 df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
 df$Position <- factor(
   df$Pos, 
-  levels = rev(sort(unique(df$Pos))), 
+  levels = allClassess, 
+  # levels = rev(sort(unique(df$Pos))), 
   labels = paste0("Posición ", 1:8))
-allClassess <- rev(sort(unique(df$Pos)))
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 

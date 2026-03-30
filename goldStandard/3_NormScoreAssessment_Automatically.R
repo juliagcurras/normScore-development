@@ -41,7 +41,9 @@ normScoreList <- sapply(allFiles, function(i){
     onlyDetailRanking = T
   )$detailRanking)
 },simplify = F, USE.NAMES = T)
-saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_gamma_09_12.rds")
+# saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_suavizado_alpha07_Item2_01.rds")
+saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01.rds")
+# saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_gamma_09_12.rds")
 # saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_AnyCorrection.rds")
 # saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_suavizadoItem0_2.rds")
 
