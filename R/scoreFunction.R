@@ -249,7 +249,13 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
   return(vecFinal)
 }
 
-
+adjustItem0 <- function(item0, gammaLow = 0.5, gammaHigh = 0.9) {
+  ifelse(
+    item0 < 0.5,
+    item0^gammaLow,
+    item0^gammaHigh
+  )
+}
 
 
 #...........................................................................####
@@ -283,9 +289,11 @@ normScore <- function(
   
   # ITEM 0 - correction factor ####
   totalIntensities <- colSums(dfRaw, na.rm = T)
-  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)*2
-  item0 <- cv(totalIntensities, proportion = T, na.rm = T)
-  item0 <- 0.5 * (item0 - 1) # suavizado
+  item0 <- cv(totalIntensities, proportion = T, na.rm = T)*3
+  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)
+  # item0 <- 1+0.7*(item0 - 1) # suavizado # 0.75
+  # item0 <- adjustItem0(item0)
+  
   
   # ITEM 1 - PVC ####
   dfPCV <- data.frame(lapply(normMatrixList, getPCV, grupos = totalGroups, 
@@ -312,7 +320,8 @@ normScore <- function(
     1-(median(i, na.rm = T)-IQR(i, na.rm = T)/3) 
   }, simplify = T, USE.NAMES = T)
   # item2["CyclicLoess"] <- item2["CyclicLoess"]*1.2
-  scoreFinal[["Correlation"]] <- item2*0.5
+  # scoreFinal[["Correlation"]] <- item2*0.5
+  scoreFinal[["Correlation"]] <- item2
   
   
   # ITEM 3 - MAplot regression line 0 ####
@@ -359,7 +368,7 @@ normScore <- function(
   # # 1) Small variability: no need for normalization
   # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
   # # 2) CyclicLoess outstands in correlation: small correction
-  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.3
+  scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.1
   # # 3) MAD outstands in PVC: small correction
   # scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
   # # 4) Quantile outstands in TI graphics: small correction
