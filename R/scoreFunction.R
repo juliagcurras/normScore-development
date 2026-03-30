@@ -257,6 +257,13 @@ adjustItem0 <- function(item0, gammaLow = 0.5, gammaHigh = 0.9) {
   )
 }
 
+# Computing total score for each normalization after resampling proteins (rows)
+bootstrap_score_rows <- function(data, indices) {
+  resampled_matrix <- data[indices, , drop = FALSE]
+  total_scores <- colSums(resampled_matrix)
+  return(total_scores)  # One score per normalization
+}
+
 
 #...........................................................................####
 # SCORE: main function #### 
@@ -271,7 +278,8 @@ normScore <- function(
     corrected = F, 
     onlyFinalRank = F, 
     onlyDetailRanking = T, 
-    detailRankItem0 = F
+    detailRankItem0 = F, 
+    doBootstrap = F
   ){
   # Input: 
   # 1. List of normalized matrix (normMatrixList)
@@ -364,15 +372,13 @@ normScore <- function(
   
   # Corrections ####
   rownames(scoreDF_norm) <- rownames(scoreDF)
-  # scoreDF_norm_raw <- scoreDF_norm
-  # # 1) Small variability: no need for normalization
-  # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), ]*item0
-  # # 2) CyclicLoess outstands in correlation: small correction
+  # # 1) Low discrimination power for item2 (correlation)
+  # scoreDF_norm["CyclicLoess", 2] <- scoreDF_norm["CyclicLoess", 2]*0.1
+  # scoreDF_norm[, 2] <- scoreDF_norm[, 2]*0
   scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.1
-  # # 3) MAD outstands in PVC: small correction
-  # scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1] <- scoreDF_norm[which(rownames(scoreDF_norm) != "MAD"), 1]*0.8
-  # # 4) Quantile outstands in TI graphics: small correction
-  # scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6] <- scoreDF_norm[which(rownames(scoreDF_norm) != "Quantile"), 6]*0.8
+  # # 2) Worst performance of item3 (Maplot)
+  # scoreDF_norm[, 3] <- scoreDF_norm[, 3]*0.9
+  
   if (corrected){
     itemWeights <- readRDS(file = "AssessmentFiles/weigths_All.rds")
     scoreDF_norm <- sweep(scoreDF_norm, 2, itemWeights, `*`)
@@ -404,15 +410,8 @@ normScore <- function(
     return(list(
       item0 = item0, 
       matriz = scoreDF_norm))
-  } else {
+  } else if (doBootstrap){
     # CI bootstrap ####
-  
-    # Computing total score for each normalization after resampling proteins (rows)
-    bootstrap_score_rows <- function(data, indices) {
-      resampled_matrix <- data[indices, , drop = FALSE]
-      total_scores <- colSums(resampled_matrix)
-      return(total_scores)  # One score per normalization
-    }
     
     # Bootstrap
     # n_boot <- 1000
