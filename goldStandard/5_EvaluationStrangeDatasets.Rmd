@@ -1,0 +1,741 @@
+---
+title: "Evaluation discordanse normScore - Gold Standard"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   self_contained: yes
+  rmdformats::readthedown:
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+```{r}
+# Julia G Curras - 2026/03/27
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/AssessmentFiles/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+
+source(file = "3_AssessmentFunctions.R")
+
+
+#...........................................................................####
+# Datasets ####
+## Gold Standard results ####
+resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
+
+## NormScore final results ####
+# Item0x3 and Item2 scaledx0.1
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
+
+
+#...........................................................................####
+# Results ####
+## By item ####
+summaryByItem <- resultsByItem(resNormScore = resAllNS$resByItem, 
+                               resGS = resAllGS$byItem)
+
+
+
+## Global ####
+summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
+                               resGlobalGS_BEST = resAllGS$globalBest,
+                               resGlobalGS_BESTS = resAllGS$globalBests,
+                               resGlobalGS_WORST = resAllGS$globalWorst)
+```
+
+
+
+# Results by Item {.tabset}
+
+En esta sección se identificaron los datasets que presentaban discordancias muy extremas entre los resultados del normScore y el Gold Standard para determinar su causa. El objetivo final es identificar si el normScore presenta algún tipo de fallo.
+
+```{r}
+# Selecting datasets with pairwise = 0 and cor = -1
+df <- summaryByItem$results %>% 
+  filter(pairAccuracy == 0.5 | spearman < 0 | tau < 0) %>%
+  arrange(Item, pairAccuracy, spearman, tau)
+
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = T, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# table(table(df$ID)>1)
+```
+
+
+## Item 3 {.tabset}
+
+Motivos de discrepancia:
+
+* Discordancia entre evaluación de forma respecto a evaluación del alineamiento en y=0. Especialmente afecta cuando:
+
+
+    * Hay pocas proteínas en el datasets
+    * Hay bastantes outliers en valores altos de average expression (eje X)
+    * No hay muchas diferencias porque todas las normalizaciones funcionan bien, estando la clasificación por gold standard poco afinada. 
+    * Formas extrañas del MAplot
+
+
+Esto NO afecta a la elección final en ningún caso! El error se ve contrarrestado por los otros items. 
+
+Importante también: en general, quantile es siempre la mejor en el item6 porque la forma de actuar se ve resumida por la misma, lo que le da una cierta ventaja, pero siendo una normalización relativamente sencilla y que funciona bien en muchos casos, esta ventaja es positiva en el normScore: aunque quantile no sea la mejor en un caso concreto pero sí se seleccione como la mejor, va a funcionar bien porque en general es la que mejor funciona.
+
+### PXD055964 {-}
+
+El item 3 evalúa tanto la localización de las proteínas representadas según logFC y average expresión en un y=0 como la forma del conjunto de puntos (cuña descendente). 
+
+En este datasets la discrepancia entre entre el normScore y el Gold Standard puede venir porque, a pesar de que la forma de los MAplots en la diferentes normalizaciones es buena en general, existen proteínas con valores extremas en el eje Y a lo largo del eje X, que podrían estar en la evaluación de la forma del mismo. 
+
+Outliers afectando a la evaluación de forma y alineamiento en y=0.
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == "PXD055964") %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == "PXD055964") %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = "Evaluation/PXD055964_item3.png")
+
+```
+
+### PXD028841 {-}
+
+```{r include = F}
+idDataset <- "PXD028841"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+A nivel global y no de item para este datasets, no hay muchas diferencias entre normalizaciones, el normScore sigue haciendo el ranking hilando fino y clasificando en base a pequeñas diferencias, mientras que el escogido por el Gold Standard es el más sencillo siguiendo la regla de la navaja de Occam ya que todos funcionan bien. Supongo que el hecho de ser pocas proteínas tampoco ayuda. 
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Aquí lo importante sería fijarse en los valores Totales del ranking del normScore, y también en los intervalos bootstrap, ya que quedan todos muy próximos, lo que indica que no hay muchas diferencias entre métodos, siendo una buena opción para escoger el más sencillo. Recordemos que el normScore podría tomar valores de 0 a 7.1 para cada normalización: cuanto más próximo de 0, mejor funciona el método, cuanto más próximo a 7.1 (mayor en caso de Log), peor funcionaría. En este caso, el valor máximo es de 2.69, y para la mejor normalización (median) es de 2, muy bajo. 
+
+```{r}
+df <- t(data.frame(
+  normScore = resNS[[idDataset]]$TotalCorrected))
+colnames(df) <-   rownames(resNS[[idDataset]])
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatRound(1:ncol(df),digits = 2)
+```
+
+
+Pocas proteínas afectando a la evaluación de forma y alineamiento en y=0.
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+
+```
+
+### PXD050996 {-}
+
+```{r include = F}
+idDataset <- "PXD050996"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Todas funcionan bien, difícil de evaluar cualitativamente al generar el gold standard.
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+
+```
+
+### PXD010785 {-}
+
+```{r include = F}
+idDataset <- "PXD010785"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Todas funcionan bien, difícil de evaluar cualitativamente al generar el gold standard.
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+```
+
+
+### PXD045554 {-}
+
+```{r include = F}
+idDataset <- "PXD045554"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Forma rara de MAplot.
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+
+```
+
+### PXD045554 {-}
+
+```{r include = F}
+idDataset <- "PXD045554"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Forma rara de MAplot.
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+
+```
+
+### PXD051201 {-}
+
+```{r include = F}
+idDataset <- "PXD051201"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Forma rara de MAplot y eso genera muchos outliers. 
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+
+```
+
+### PXD043729 {-}
+
+```{r include = F}
+idDataset <- "PXD043729"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Conflicto entre forma y alineamiento en y=0 por muchos outliers. 
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+
+```
+
+
+
+
+
+
+
+## Item 5 {.tabset}
+
+Problemas:
+
+* Mal alineamiento pero unas muestras contrarrestan a otras lo que implica y=0 de medianas
+
+* Al igual que con el item 3, cuando todas funcionan muy bien es difícil clasificar a ojo y pequeñas diferencias que no se ven en los boxplots pueden estar reflejas a nivel numérico y recogidas por el normScore. 
+
+Conclusión: no afecta a la clasificación general, el resto de items salvan. 
+
+### PXD014311  {-}
+
+```{r include = F}
+bestGS <- resAllGS$globalBests$PXD014311
+worstGS <- resAllGS$globalWorst$PXD014311
+bestNS <- resAllNS$resGlobal$PXD014311
+```
+
+
+Salen mejor Log, Mean y TI que el resto (exceptuando Quantile). Explicación:
+
+* En el resto de normalizaciones las medianas se alinean mejor peeeero lo hacen algo más abajo de 0, con una pendiente ligeramente negativa, mientras que en Log, Mean y TI no se alinean bien, suben y bajan, haciendo que la recta de regresión que se ajuste más en el y = 0. Posible sesgo de esta métrica. 
+
+Peeero aunque haya un error, el resto de items salvan la evaluación final, y la selección del mejor método:
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == "PXD014311") %>% filter(Item == "Item5")
+df2 <- resAllNS$resByItem %>% filter(ID == "PXD014311") %>% filter(Item == "Item5") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = "Evaluation/PXD014311_Item5.png")
+
+```
+
+
+
+
+### PXD068597 {-}
+
+```{r include = F}
+bestGS <- resAllGS$globalBests$PXD068597
+worstGS <- resAllGS$globalWorst$PXD068597
+bestNS <- resAllNS$resGlobal$PXD068597
+```
+
+
+Pasa similar al caso anterior, en este datastes hay cuatro muestras con mediana centrada en 0 y otras dos que se contrarrestan (una con boxplot desplazado arriba y otra, abajo), entonces la alineación en log es en 0. Mientras que al normalizar estas dos muestras mejoran, y las otras 4 empeoran ligeramente, lo que hace que el alinemiento sea peor. 
+
+Volvemos a lo mismo, la clasificación global salva la situación:
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Log está de 3 porque Quantile reduce mucho el error en todas, en este caso se escogió Log según el gold standard por la regla de la navaja de Occam o principio de parsimonia: realmente no hay tanta varibilidad en los datos, nos quedamos con la opción más sencilla que funcione bien. 
+
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == "PXD068597") %>% filter(Item == "Item5")
+df2 <- resAllNS$resByItem %>% filter(ID == "PXD068597") %>% filter(Item == "Item5") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = "Evaluation/PXD068597_Item5.png")
+
+```
+
+### PXD054374 {-}
+
+```{r include = F}
+bestGS <- resAllGS$globalBests$PXD054374
+worstGS <- resAllGS$globalWorst$PXD054374
+bestNS <- resAllNS$resGlobal$PXD054374
+```
+
+Clasificación global:
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Problema: todas funcionan muy bien, difícil la clasificación cualitativa en el gold standard. 
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == "PXD054374") %>% filter(Item == "Item5")
+df2 <- resAllNS$resByItem %>% filter(ID == "PXD054374") %>% filter(Item == "Item5") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = "Evaluation/PXD054374_Item5.png")
+
+```
+
+
+
+## Item 6 {.tabset}
+
+
+### PXD028772 {-}
+
+```{r include = F}
+idDataset <- "PXD028772"
+bestGS <- resAllGS$globalBests[[idDataset]]
+worstGS <- resAllGS$globalWorst[[idDataset]]
+bestNS <- resAllNS$resGlobal[[idDataset]]
+```
+
+* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+
+* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+
+* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+
+Conflicto entre forma y alineamiento en y=0 por muchos outliers. 
+
+```{r}
+# Tabla
+df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item6")
+df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item6") %>%
+  mutate(Ranking = order(Ranking))
+df <- merge(df1, df2, by = colnames(df1)[-4])
+df <- df %>%
+  arrange(RankGS) %>%
+  rename(
+    GoldStandard = RankGS, 
+    NormScore = Ranking)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatStyle(1, font = 'bold')
+
+# Grafico
+knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item6.png"))
+
+```
+
+
+
+# Global
+
+
+```{r}
+dfAux <- summaryGlobal$Bests$hitRes %>% as.data.frame
+dfAux$Total <- rowSums(dfAux)
+colnames(dfAux) <- c("Top 1", "Top 2", "Top 3", "Total")
+df <- dfAux %>% arrange(Total)
+
+DT::datatable(df, extensions = "Buttons", rownames = T, escape = F,
+              options = list(ordering = F, dom = "Brt", scrollY = '500px',
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))
+              ) %>% 
+  DT::formatStyle(1, font = 'bold')
+
+```
+
+
+
+
+
+
+
