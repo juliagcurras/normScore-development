@@ -32,7 +32,7 @@ normScoreList <- sapply(allFiles, function(i){
     detailRankItem0 = T
   ))
 },simplify = F, USE.NAMES = T)
-saveRDS(object = normScoreList, file = "AssessmentFiles/Refinement_normScore_dataGS_All.rds")
+saveRDS(object = normScoreList, file = "AssessmentFiles/Refinement_normScore_dataGS_All_item0x3_item2_01.rds")
 # normScoreList <- readRDS(file = "AssessmentFiles/normScore_dataGS_All.rds")
 
 
@@ -200,7 +200,7 @@ generateRandomWeights <- function(nWeights = 6) {
 
 getFitness <- function(
     itemWeights, 
-    fitness = 4
+    fitness = 3
 ){
   # transform weights
   weights <- softmaxWeights(itemWeights)
@@ -276,7 +276,7 @@ datasetsListTest <- allDatasetsList[idTest]
 # parameter in getFitness function)
 library(GA)
 datasetsList <- datasetsListTrain # IMPORTANTE QUE O OBXECTO COS DATOS SE CHAME datasetsList!!!
-datasetsList <- allDatasetsList # IMPORTANTE QUE O OBXECTO COS DATOS SE CHAME datasetsList!!!
+# datasetsList <- allDatasetsList # IMPORTANTE QUE O OBXECTO COS DATOS SE CHAME datasetsList!!!
 gaModel <- ga(
   type = "real-valued",
   fitness = getFitness,
@@ -292,7 +292,7 @@ gaModel <- ga(
   seed = 9396,
   parallel = T 
 )
-tipoFitness <- 4 # cambiar en getFitness manualmente
+tipoFitness <- 3 # cambiar en getFitness manualmente
 # gaModel <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
 #                                  tipoFitness, "_TRAIN.rds")) # 500 iteracións
 
@@ -316,7 +316,7 @@ resGA <- list(
   fitnessTest = fitnessTEST
 )
 saveRDS(resGA, file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
-                             tipoFitness, "_ALL.rds")) # 500 iteracións
+                             tipoFitness, "_TRAIN.rds")) # 500 iteracións
 
 
 # Assess all

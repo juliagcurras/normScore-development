@@ -948,120 +948,120 @@ Biostatech::getCatTable(dfW$Position)$tablaFormato
 
 
 
-##  Fitness 4 - Performance
+<!-- ##  Fitness 4 - Performance -->
 
-```{r}
-resAllGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds") # Manual ranking
-out <- readRDS(file = "AssessmentFiles/Refinement_AssessingWeigths_fitness4.RDS")
-resAllNS <- formatNormScoreResults(finalList = out$all, item0 = T)
+<!-- ```{r} -->
+<!-- resAllGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds") # Manual ranking -->
+<!-- out <- readRDS(file = "AssessmentFiles/Refinement_AssessingWeigths_fitness4.RDS") -->
+<!-- resAllNS <- formatNormScoreResults(finalList = out$all, item0 = T) -->
 
-### Global ####
-# Non corrected
-summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
-                               resGlobalGS_BEST = resAllGS$globalBest,
-                               resGlobalGS_BESTS = resAllGS$globalBests,
-                               resGlobalGS_WORST = resAllGS$globalWorst)
-```
+<!-- ### Global #### -->
+<!-- # Non corrected -->
+<!-- summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal,  -->
+<!--                                resGlobalGS_BEST = resAllGS$globalBest, -->
+<!--                                resGlobalGS_BESTS = resAllGS$globalBests, -->
+<!--                                resGlobalGS_WORST = resAllGS$globalWorst) -->
+<!-- ``` -->
 
-### Best methods (top) {.tabset}
+<!-- ### Best methods (top) {.tabset} -->
 
-#### Top 1 - only the best method {-}
+<!-- #### Top 1 - only the best method {-} -->
 
-```{r}
-summaryGlobal$Best$hitTable
-```
+<!-- ```{r} -->
+<!-- summaryGlobal$Best$hitTable -->
+<!-- ``` -->
 
-#### Top 1 - all best methods {-}
+<!-- #### Top 1 - all best methods {-} -->
 
-```{r}
-summaryGlobal$Bests$hitTable
-```
-
-
-#### MRR - only the best method {-}
-
-```{r}
-df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
-df$Position <- factor(
-  df$Pos, 
-  levels = rev(sort(unique(df$Pos))), 
-  labels = paste0("Posición ", 1:8))
-allClassess <- rev(sort(unique(df$Pos)))
-Biostatech::getCatTable(df$Position)$tablaFormato
-```
-
-#### MRR - all best methods {-}
-
-```{r}
-df <- data.frame(Pos = summaryGlobal$Bests$mrrRes)
-df$Position <- factor(
-  df$Pos, 
-  levels = allClassess, 
-  labels = paste0("Posición ", 1:8))
-Biostatech::getCatTable(df$Position)$tablaFormato
-```
-
-#### MRR bottom - all best methods{-}
-
-La posición más baja de la mejor normalización del grupo determinado en el GS. 
-
-```{r}
-df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
-df$Position <- factor(
-  df$Pos, 
-  levels = allClassess, 
-  labels = paste0("Posición ", 1:8))
-Biostatech::getCatTable(df$Position)$tablaFormato
-```
-
-### Worst methods - Bottom {.tabset}
-
-#### Bottom Coverage  - excluded methods {-}
-
-```{r}
-df <- data.frame(Prop = summaryGlobal$Worst$coverageRes)
-df$PropGroups <- ifelse(is.na(df$Prop), NA, 
-                        ifelse(df$Prop < 0.5, "< 0.5",
-                               ifelse(df$Prop<0.75, "0.5-0.75", 
-                                      ifelse(df$Prop < 1, "0.75-1", 
-                                             ifelse(df$Prop == 1, "1", "Error")
-                                             )
-                                      )
-                               )
-                        )
-colnames(df) <- c("Proportion", "Proportion by groups")
-df <- df[, 2:1]
-Biostatech::getCatTable(df)$tablaFormato
-```
-
-#### MRR - excluded methods {-}
-
-Posición más baja de la normalización del grupo de excluidas según GS para cada dataset. 
-
-```{r}
-dfW <- data.frame(Pos = summaryGlobal$Worst$mrrRes)
-dfW$Position <- factor(
-  dfW$Pos, 
-  levels = allClassess, 
-  # levels = rev(allClassess), 
-  labels = paste0("Posición ", 1:8))
-Biostatech::getCatTable(dfW$Position)$tablaFormato
-```
+<!-- ```{r} -->
+<!-- summaryGlobal$Bests$hitTable -->
+<!-- ``` -->
 
 
-#### MRR top - excluded methods {-}
+<!-- #### MRR - only the best method {-} -->
 
-Posición más alta de la normalización del grupo de excluidas por cada dataset. 
+<!-- ```{r} -->
+<!-- df <- data.frame(Pos = summaryGlobal$Best$mrrRes) -->
+<!-- df$Position <- factor( -->
+<!--   df$Pos,  -->
+<!--   levels = rev(sort(unique(df$Pos))),  -->
+<!--   labels = paste0("Posición ", 1:8)) -->
+<!-- allClassess <- rev(sort(unique(df$Pos))) -->
+<!-- Biostatech::getCatTable(df$Position)$tablaFormato -->
+<!-- ``` -->
 
-```{r}
-dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
+<!-- #### MRR - all best methods {-} -->
 
-dfW$Position <- factor(
-  dfW$Pos, 
-  levels = allClassess, 
-  labels = paste0("Posición ", 1:8))
-Biostatech::getCatTable(dfW$Position)$tablaFormato
-```
+<!-- ```{r} -->
+<!-- df <- data.frame(Pos = summaryGlobal$Bests$mrrRes) -->
+<!-- df$Position <- factor( -->
+<!--   df$Pos,  -->
+<!--   levels = allClassess,  -->
+<!--   labels = paste0("Posición ", 1:8)) -->
+<!-- Biostatech::getCatTable(df$Position)$tablaFormato -->
+<!-- ``` -->
+
+<!-- #### MRR bottom - all best methods{-} -->
+
+<!-- La posición más baja de la mejor normalización del grupo determinado en el GS.  -->
+
+<!-- ```{r} -->
+<!-- df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom) -->
+<!-- df$Position <- factor( -->
+<!--   df$Pos,  -->
+<!--   levels = allClassess,  -->
+<!--   labels = paste0("Posición ", 1:8)) -->
+<!-- Biostatech::getCatTable(df$Position)$tablaFormato -->
+<!-- ``` -->
+
+<!-- ### Worst methods - Bottom {.tabset} -->
+
+<!-- #### Bottom Coverage  - excluded methods {-} -->
+
+<!-- ```{r} -->
+<!-- df <- data.frame(Prop = summaryGlobal$Worst$coverageRes) -->
+<!-- df$PropGroups <- ifelse(is.na(df$Prop), NA,  -->
+<!--                         ifelse(df$Prop < 0.5, "< 0.5", -->
+<!--                                ifelse(df$Prop<0.75, "0.5-0.75",  -->
+<!--                                       ifelse(df$Prop < 1, "0.75-1",  -->
+<!--                                              ifelse(df$Prop == 1, "1", "Error") -->
+<!--                                              ) -->
+<!--                                       ) -->
+<!--                                ) -->
+<!--                         ) -->
+<!-- colnames(df) <- c("Proportion", "Proportion by groups") -->
+<!-- df <- df[, 2:1] -->
+<!-- Biostatech::getCatTable(df)$tablaFormato -->
+<!-- ``` -->
+
+<!-- #### MRR - excluded methods {-} -->
+
+<!-- Posición más baja de la normalización del grupo de excluidas según GS para cada dataset.  -->
+
+<!-- ```{r} -->
+<!-- dfW <- data.frame(Pos = summaryGlobal$Worst$mrrRes) -->
+<!-- dfW$Position <- factor( -->
+<!--   dfW$Pos,  -->
+<!--   levels = allClassess,  -->
+<!--   # levels = rev(allClassess),  -->
+<!--   labels = paste0("Posición ", 1:8)) -->
+<!-- Biostatech::getCatTable(dfW$Position)$tablaFormato -->
+<!-- ``` -->
+
+
+<!-- #### MRR top - excluded methods {-} -->
+
+<!-- Posición más alta de la normalización del grupo de excluidas por cada dataset.  -->
+
+<!-- ```{r} -->
+<!-- dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop) -->
+
+<!-- dfW$Position <- factor( -->
+<!--   dfW$Pos,  -->
+<!--   levels = allClassess,  -->
+<!--   labels = paste0("Posición ", 1:8)) -->
+<!-- Biostatech::getCatTable(dfW$Position)$tablaFormato -->
+<!-- ``` -->
 
 
 
