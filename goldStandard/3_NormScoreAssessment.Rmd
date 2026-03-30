@@ -79,8 +79,10 @@ resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manu
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_AnyCorrection.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha075.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_gamma_09_12.rds")) # Originales
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_Item3_09.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_.rds")) # Originales
 source(file = "3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 ```
@@ -215,11 +217,11 @@ data <- summaryByItem$results
 colnames(data)
 
 p1 <- Biostatech::plotBox(base = data, varResumen = "tau", varGrupo = "Item", 
-                    interact = F, tituloY = "Kendall's Tau")$grafico
+                    interact = F, tituloY = "Kendall's Tau")$grafico + ylim(c(-1, 1))
 p2 <- Biostatech::plotBox(base = data, varResumen = "spearman", varGrupo = "Item", 
-                    interact = F, tituloY = "Spearman's coefficient")$grafico
+                    interact = F, tituloY = "Spearman's coefficient")$grafico+ ylim(c(-1, 1))
 p3 <- Biostatech::plotBox(base = data, varResumen = "pairAccuracy", varGrupo = "Item", 
-                    interact = F, tituloY = "Pairwise Accuracy")$grafico
+                    interact = F, tituloY = "Pairwise Accuracy")$grafico+ ylim(c(0, 1))
 ```
 
 

@@ -116,6 +116,13 @@ DT::formatStyle(1, font = 'bold')
 ```
 
 
+```{r include = F}
+## Item 2
+resNS$PXD041237 %>% dplyr::select(Item2)
+resAllGS$byItem %>% filter(ID == "PXD054553") %>% filter(Item == "Item2")
+```
+
+
 ## Item 3 {.tabset}
 
 Motivos de discrepancia:
@@ -233,47 +240,47 @@ knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
 
 ```
 
-### PXD050996 {-}
+<!-- ### PXD050996 {-} -->
 
 ```{r include = F}
-idDataset <- "PXD050996"
-bestGS <- resAllGS$globalBests[[idDataset]]
-worstGS <- resAllGS$globalWorst[[idDataset]]
-bestNS <- resAllNS$resGlobal[[idDataset]]
+# idDataset <- "PXD050996"
+# bestGS <- resAllGS$globalBests[[idDataset]]
+# worstGS <- resAllGS$globalWorst[[idDataset]]
+# bestNS <- resAllNS$resGlobal[[idDataset]]
 ```
 
-* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+<!-- * Clasificación normScore: `r paste0(bestNS, collapse = " > ")` -->
 
-* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+<!-- * Clasificación gold standard: `r paste0(bestGS, collapse = ", ")` -->
 
-* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+<!-- * Excluídas gold standard: `r paste0(worstGS, collapse = ", ")` -->
 
-Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Todas funcionan bien, difícil de evaluar cualitativamente al generar el gold standard.
+<!-- Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Todas funcionan bien, difícil de evaluar cualitativamente al generar el gold standard. -->
 
 ```{r}
-# Tabla
-df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
-df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
-  mutate(Ranking = order(Ranking))
-df <- merge(df1, df2, by = colnames(df1)[-4])
-df <- df %>%
-  arrange(RankGS) %>%
-  rename(
-    GoldStandard = RankGS, 
-    NormScore = Ranking)
-DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-              options = list(ordering = F, dom = "Brt", scrollY = F,
-                            scrollX = F, pageLength = nrow(df),
-                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
-                            full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
-                                          list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
-
-# Grafico
-knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
+# # Tabla
+# df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
+# df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
+#   mutate(Ranking = order(Ranking))
+# df <- merge(df1, df2, by = colnames(df1)[-4])
+# df <- df %>%
+#   arrange(RankGS) %>%
+#   rename(
+#     GoldStandard = RankGS, 
+#     NormScore = Ranking)
+# DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+#               options = list(ordering = F, dom = "Brt", scrollY = F,
+#                             scrollX = F, pageLength = nrow(df),
+#                             columnDefs = list(list(className = 'dt-center', targets = '_all')),
+#                             full_width = TRUE, rowCallback = DT::JS(js),
+#                             buttons = list(list(extend = "copy", text = "Copiar"),
+#                                           list(extend = "csv"), 
+#                                           list(extend = "excel")), 
+#                             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+# DT::formatStyle(1, font = 'bold')
+# 
+# # Grafico
+# knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
 
 ```
 
@@ -320,50 +327,6 @@ DT::formatStyle(1, font = 'bold')
 knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
 ```
 
-
-### PXD045554 {-}
-
-```{r include = F}
-idDataset <- "PXD045554"
-bestGS <- resAllGS$globalBests[[idDataset]]
-worstGS <- resAllGS$globalWorst[[idDataset]]
-bestNS <- resAllNS$resGlobal[[idDataset]]
-```
-
-* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
-
-* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
-
-* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
-
-Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Forma rara de MAplot.
-
-```{r}
-# Tabla
-df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
-df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
-  mutate(Ranking = order(Ranking))
-df <- merge(df1, df2, by = colnames(df1)[-4])
-df <- df %>%
-  arrange(RankGS) %>%
-  rename(
-    GoldStandard = RankGS, 
-    NormScore = Ranking)
-DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-              options = list(ordering = F, dom = "Brt", scrollY = F,
-                            scrollX = F, pageLength = nrow(df),
-                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
-                            full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
-                                          list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
-
-# Grafico
-knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
-
-```
 
 ### PXD045554 {-}
 
@@ -667,51 +630,52 @@ knitr::include_graphics(path = "Evaluation/PXD054374_Item5.png")
 ### PXD028772 {-}
 
 ```{r include = F}
-idDataset <- "PXD028772"
-bestGS <- resAllGS$globalBests[[idDataset]]
-worstGS <- resAllGS$globalWorst[[idDataset]]
-bestNS <- resAllNS$resGlobal[[idDataset]]
+# idDataset <- "PXD028772"
+# bestGS <- resAllGS$globalBests[[idDataset]]
+# worstGS <- resAllGS$globalWorst[[idDataset]]
+# bestNS <- resAllNS$resGlobal[[idDataset]]
 ```
 
-* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
+<!-- * Clasificación normScore: `r paste0(bestNS, collapse = " > ")` -->
 
-* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
+<!-- * Clasificación gold standard: `r paste0(bestGS, collapse = ", ")` -->
 
-* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
+<!-- * Excluídas gold standard: `r paste0(worstGS, collapse = ", ")` -->
 
-Conflicto entre forma y alineamiento en y=0 por muchos outliers. 
+<!-- Conflicto entre forma y alineamiento en y=0 por muchos outliers.  -->
 
 ```{r}
-# Tabla
-df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item6")
-df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item6") %>%
-  mutate(Ranking = order(Ranking))
-df <- merge(df1, df2, by = colnames(df1)[-4])
-df <- df %>%
-  arrange(RankGS) %>%
-  rename(
-    GoldStandard = RankGS, 
-    NormScore = Ranking)
-DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-              options = list(ordering = F, dom = "Brt", scrollY = F,
-                            scrollX = F, pageLength = nrow(df),
-                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
-                            full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
-                                          list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
-
-# Grafico
-knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item6.png"))
+# # Tabla
+# df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item6")
+# df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item6") %>%
+#   mutate(Ranking = order(Ranking))
+# df <- merge(df1, df2, by = colnames(df1)[-4])
+# df <- df %>%
+#   arrange(RankGS) %>%
+#   rename(
+#     GoldStandard = RankGS, 
+#     NormScore = Ranking)
+# DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+#               options = list(ordering = F, dom = "Brt", scrollY = F,
+#                             scrollX = F, pageLength = nrow(df),
+#                             columnDefs = list(list(className = 'dt-center', targets = '_all')),
+#                             full_width = TRUE, rowCallback = DT::JS(js),
+#                             buttons = list(list(extend = "copy", text = "Copiar"),
+#                                           list(extend = "csv"), 
+#                                           list(extend = "excel")), 
+#                             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+# DT::formatStyle(1, font = 'bold')
+# 
+# # Grafico
+# knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item6.png"))
 
 ```
 
 
 
-# Global
+# Global 
 
+## Top issues {.tabset}
 
 ```{r}
 dfAux <- summaryGlobal$Bests$hitRes %>% as.data.frame
@@ -732,6 +696,149 @@ DT::datatable(df, extensions = "Buttons", rownames = T, escape = F,
   DT::formatStyle(1, font = 'bold')
 
 ```
+
+
+```{r}
+idDataset <- df %>% filter(Total < 3) %>% rownames
+
+
+for (id in idDataset){
+  cat("\n\n### ", id, " {-}\n\n")
+  # Tabla
+  gsBests <- resAllGS$globalBests[[id]]
+  # gsworsts <- resAllGS$globalWorst[[id]]
+  df <- resNS[[id]]
+  df$Ranking <- 1:8
+  df$GS <- c(gsBests, rep("", 8-length(gsBests)))
+  df$NS <- rownames(df)
+  df <- df %>% dplyr::select(Ranking, NS, GS, TotalCorrected, everything())
+
+  print(htmltools::tagList(DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+                options = list(ordering = T, dom = "Bfrt", scrollY = T,
+                              scrollX = F, pageLength = nrow(df),
+                              columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                              full_width = TRUE, rowCallback = DT::JS(js),
+                              buttons = list(list(extend = "copy", text = "Copiar"),
+                                            list(extend = "csv"), 
+                                            list(extend = "excel")), 
+                              language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% DT::formatRound(4:ncol(df), digits = 2)
+  ))
+}
+
+```
+
+```{r include = F}
+lista <- list(abc = list(DT::datatable(iris), DT::datatable(iris)))
+htmltools::tagList(lista$abc[1:2]) 
+```
+
+
+
+
+
+
+
+
+
+## Bottom issues {.tabset}
+
+```{r}
+dfAux <- summaryGlobal$Worst$mrrResTop # %>% as.data.frame
+idDataset <- names(dfAux[dfAux >= 1/3])
+
+for (id in idDataset){
+  cat("\n\n### ", id, " {-}\n\n")
+  # Tabla
+  gsworsts <- resAllGS$globalWorst[[id]]
+  # gsworsts <- resAllGS$globalWorst[[id]]
+  df <- resNS[[id]]
+  df$Ranking <- 1:8
+  df$GS <- c(rep("", 8-length(gsworsts)), gsworsts)
+  df$NS <- rownames(df)
+  df <- df %>% dplyr::select(Ranking, NS, GS, TotalCorrected, everything())
+
+  print(htmltools::tagList(DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+                options = list(ordering = T, dom = "Bfrt", scrollY = T,
+                              scrollX = T, pageLength = nrow(df),
+                              columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                              full_width = TRUE, rowCallback = DT::JS(js),
+                              buttons = list(list(extend = "copy", text = "Copiar"),
+                                            list(extend = "csv"), 
+                                            list(extend = "excel")), 
+                              language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% DT::formatRound(4:ncol(df), digits = 2)
+  ))
+}
+
+```
+
+
+
+
+## {- .toc-ignore}
+
+
+```{r}
+# table(sapply(resAllGS$globalBest, "[[", 1))
+
+
+# Best
+id <- unname(sapply(resAllGS$globalBests, function(lista) "Log" %in% lista))
+bestLog <- names(resAllGS$globalBests[id])
+# Worst
+id <- unname(sapply(resAllGS$globalWorst, function(lista) "Log" %in% lista))
+worstLog <- names(resAllGS$globalWorst[id])
+
+# Final dataframe
+final <- sapply(names(resAllGS$globalBest), function(i) {
+  res <- unlist(resNS[[i]]["Log", c("Total", "TotalCorrected"), drop = T])
+  res
+  # res["Total"]/res["TotalCorrected"]
+}, simplify = T, USE.NAMES = T)
+final <- as.data.frame(t(final))
+df <- final %>% 
+  tibble::rownames_to_column("Dataset") %>%
+  as.data.frame() %>%
+  mutate(
+    Ratio = Total/TotalCorrected,
+    Type = if_else(Dataset %in% bestLog, "Best", 
+                   if_else(Dataset %in% worstLog, "Worst", "Other"))) %>% 
+  arrange(Type, Total) %>% 
+  dplyr::select(Dataset, Type, everything())
+
+# Print
+DT::datatable(df, extensions = "Buttons", rownames = T, escape = F,
+              options = list(ordering = T, dom = "Brft", scrollY = '500px',
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+DT::formatRound(3:5, digits = 2) %>% DT::formatStyle(0, font = 'bold')
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
