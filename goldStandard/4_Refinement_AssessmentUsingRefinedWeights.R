@@ -126,19 +126,20 @@ out1 <- list(
 
 saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness3.RDS")
 
+
 #..........................................................................####
-# Fitness 3 ####
-fitness <- 4
-resGA <- readRDS(file = paste0(outDir, "Refinement_results_GA_FITNESS", 
-                               fitness, "_ALL.rds"))
-pesos <- softmaxWeights(resGA@solution[1,])
-resNS1_all <- lapply(allDatasetsList, normScoreAssembly, itemWeights = pesos)
-
-out1 <- list(
-  all = resNS1_all
-)
-
-saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness4.RDS")
+# Fitness 4 ####
+# fitness <- 4
+# resGA <- readRDS(file = paste0(outDir, "Refinement_results_GA_FITNESS", 
+#                                fitness, "_ALL.rds"))
+# pesos <- softmaxWeights(resGA@solution[1,])
+# resNS1_all <- lapply(allDatasetsList, normScoreAssembly, itemWeights = pesos)
+# 
+# out1 <- list(
+#   all = resNS1_all
+# )
+# 
+# saveRDS(out1, file = "AssessmentFiles/Refinement_AssessingWeigths_fitness4.RDS")
 
 
 

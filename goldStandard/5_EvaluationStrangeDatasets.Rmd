@@ -110,7 +110,7 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
                                           list(extend = "csv"), 
                                           list(extend = "excel")), 
                             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
+DT::formatStyle(1, font = 'bold') %>% DT::formatRound(3:5, digits = 2)
 
 # table(table(df$ID)>1)
 ```

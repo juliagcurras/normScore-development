@@ -200,7 +200,7 @@ generateRandomWeights <- function(nWeights = 6) {
 
 getFitness <- function(
     itemWeights, 
-    fitness = 3
+    fitness = 1
 ){
   # transform weights
   weights <- softmaxWeights(itemWeights)
@@ -292,7 +292,7 @@ gaModel <- ga(
   seed = 9396,
   parallel = T 
 )
-tipoFitness <- 3 # cambiar en getFitness manualmente
+tipoFitness <- 1 # cambiar en getFitness manualmente
 # gaModel <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
 #                                  tipoFitness, "_TRAIN.rds")) # 500 iteracións
 
