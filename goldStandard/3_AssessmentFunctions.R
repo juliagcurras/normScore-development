@@ -47,7 +47,7 @@ rankMethods <- function(score_named_vec) {
   names(sort(score_named_vec, decreasing = FALSE, na.last = NA))
 }
 
-hitAtK<- function(
+hitAtK <- function(
     rankMethods, # normScore result
     targetSet, # normScore result
     k = 1, 

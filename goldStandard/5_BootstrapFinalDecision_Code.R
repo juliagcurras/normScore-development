@@ -189,10 +189,11 @@ compareNormPairBootstrap <- function(
 }
 
 
+
 selectBestNormBootstrap <- function(
     scoreBootstrap, 
     bootMatrix, 
-    ordenNorm, 
+    ordenNorm =  c("Log", "Median", "Mean", "TI", "Quantile",  "CyclicLoess", "RLR", "VSN"), 
     epsilon = NULL, 
     confLevel = 0.95){
   
@@ -335,6 +336,7 @@ selectBestNormBootstrap <- function(
   
   return(out)
 }
+
 
 
 #### Uso ####

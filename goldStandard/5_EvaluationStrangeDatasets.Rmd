@@ -675,7 +675,12 @@ knitr::include_graphics(path = "Evaluation/PXD054374_Item5.png")
 
 # Global 
 
+En las siguientes secciones se identifican las explicaciones a las diferencias de GS y NS en los primeros y últimos puestos respectivamente. 
+
+
 ## Top issues {.tabset}
+
+Analizando uno a uno los datasets en los cuales la mejor normalización no está entre los 3 primeros puestos del ranking (sucede en un total de 10 normalizaciones), se ha visto que el motivo principal es que todas las normalizaciones funcionan más o menos bien, habiendo pequeñas diferencias entre ellas, por lo que se estableció por gold standard la más sencilla (median normalmente), que no se localiza en las primeras posiciones por las pequeñas diferencias. 
 
 ```{r}
 dfAux <- summaryGlobal$Bests$hitRes %>% as.data.frame
@@ -734,13 +739,9 @@ htmltools::tagList(lista$abc[1:2])
 
 
 
-
-
-
-
-
-
 ## Bottom issues {.tabset}
+
+Los problemas con aquellas normalizaciones que deberían ser excluidas y sin embargo aparecen muy arriba de la clasificación es básicamente la corrección por item0 agresiva (poca variabilidad entre muestras) que hace que la normalización Log más básica sea la de menor puntuación, y su exclusión en el gold standard fue debida a un mal comportamiento en uno de los items con comportamiento normal en el resto. 
 
 ```{r}
 dfAux <- summaryGlobal$Worst$mrrResTop # %>% as.data.frame
@@ -826,7 +827,128 @@ DT::formatRound(3:5, digits = 2) %>% DT::formatStyle(0, font = 'bold')
 
 
 
+# Decision by bootstrap 
 
+En la clasificación global se observó que el problema en los primeros puestos es que cuando las normalizaciones son muy parecidas se escoge _Median_ como la más sencilla pero el normScore hace la clasificación más al detalle, quedando esta más abajo. Para corregir esto, se plantea comparar normalizaciones con los intervalos bootstrap y reclasificar considerando un orden de sencillez de las normalizaciones que no tengan diferencias de puntuación. Los resultados globales con este nuevo ranking basado en las comparaciones del intervalo bootstrap se localizan en las siguientes pestañas:
+
+
+
+## Results 
+
+```{r}
+# resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP_epsilon02.rds")
+# resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP.rds")
+resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP_epsilon025.rds")
+resAllNS <- sapply(resBS, "[[", 2, simplify = F, USE.NAMES = T)
+summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS, 
+                               resGlobalGS_BEST = resAllGS$globalBest,
+                               resGlobalGS_BESTS = resAllGS$globalBests,
+                               resGlobalGS_WORST = resAllGS$globalWorst)
+```
+
+
+### Best methods (top) {.tabset}
+
+#### Top 1 - only the best method {-}
+
+```{r}
+summaryGlobal$Best$hitTable
+```
+
+#### Top 1 - all best methods {-}
+
+```{r}
+summaryGlobal$Bests$hitTable
+```
+
+
+#### MRR - only the best method {-}
+
+```{r}
+# allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
+df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  # levels = rev(sort(unique(df$Pos))), 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR - all best methods{-}
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR bottom - all best methods{-}
+
+La posición más baja de la mejor normalización del grupo determinado en el GS. 
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+
+
+### Worst methods - Bottom {.tabset}
+
+#### Bottom Coverage  - excluded methods {-}
+
+```{r}
+df <- data.frame(Prop = summaryGlobal$Worst$coverageRes)
+df$PropGroups <- ifelse(is.na(df$Prop), NA, 
+                        ifelse(df$Prop < 0.5, "< 0.5",
+                               ifelse(df$Prop<0.75, "0.5-0.75", 
+                                      ifelse(df$Prop < 1, "0.75-1", 
+                                             ifelse(df$Prop == 1, "1", "Error")
+                                             )
+                                      )
+                               )
+                        )
+colnames(df) <- c("Proportion", "Proportion by groups")
+df <- df[, 2:1]
+Biostatech::getCatTable(df)$tablaFormato
+```
+
+#### MRR - excluded methods {-}
+
+```{r}
+dfW <- data.frame(Pos = summaryGlobal$Worst$mrrRes)
+dfW$Position <- factor(
+  dfW$Pos, 
+  # levels = rev(allClassess), 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
+
+
+
+#### MRR top - excluded methods {-}
+
+Posición más alta de la normalización del grupo de excluidas por cada dataset. 
+
+```{r}
+dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
+
+dfW$Position <- factor(
+  dfW$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
 
 
 

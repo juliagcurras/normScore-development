@@ -51,6 +51,7 @@ normScoreAssembly <- function(datasetList, itemWeights){
 
 #..........................................................................####
 # Datasets ####
+# Este input crease en 4_Refinement_GA_RS
 allDatasetsList <- readRDS(file = "AssessmentFiles/Refinement_inputData.rds") # IMPORTANTE QUE SE CHAME datasetsList!!!
 
 # Applying train-test #
