@@ -1,0 +1,22 @@
+slurmstepd: info: Setting TMPDIR to /scratch/4864217. Previous errors about TMPDIR can be discarded
+
+*****************************************************************************
+*                                                                           *
+*                    JOB EFFICIENCY REPORT (seff 4864217)                   *
+*                                                                           *
+*****************************************************************************
+
+Job ID: 4864217
+Cluster: finisterrae3
+User/Group: ulcesjgc/ulc
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 24
+CPU Utilized: 01:31:34
+CPU Efficiency: 13.98% of 10:55:12 core-walltime
+Job Wall-clock time: 00:27:18
+Memory Utilized: 2.00 GB
+Memory Efficiency: 85.29% of 2.34 GB
+
+*****************************************************************************
+

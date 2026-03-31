@@ -1,0 +1,55 @@
+slurmstepd: info: Setting TMPDIR to /scratch/4854071. Previous errors about TMPDIR can be discarded
+
+*****************************************************************************
+*                                                                           *
+*                    JOB EFFICIENCY REPORT (seff 4854071)                   *
+*                                                                           *
+*****************************************************************************
+
+Job ID: 4854071
+Cluster: finisterrae3
+User/Group: ulcesjgc/ulc
+State: COMPLETED (exit code 0)
+Nodes: 2
+Cores per node: 12
+CPU Utilized: 02:57:25
+CPU Efficiency: 26.88% of 11:00:00 core-walltime
+Job Wall-clock time: 00:27:30
+Memory Utilized: 2.69 GB
+Memory Efficiency: 38.30% of 7.03 GB
+
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ++   Memory Efficiency is too small. Please review the requested memory. ++
+ ++ It seems that you do not need that much memory so we recommend        ++
+ ++ requesting less memory in other similar jobs.                         ++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 
+*****************************************************************************
+
+
+*****************************************************************************
+*                                                                           *
+*                    JOB EFFICIENCY REPORT (seff 4854071)                   *
+*                                                                           *
+*****************************************************************************
+
+Job ID: 4854071
+Cluster: finisterrae3
+User/Group: ulcesjgc/ulc
+State: COMPLETED (exit code 0)
+Nodes: 2
+Cores per node: 12
+CPU Utilized: 02:57:25
+CPU Efficiency: 26.88% of 11:00:00 core-walltime
+Job Wall-clock time: 00:27:30
+Memory Utilized: 2.69 GB
+Memory Efficiency: 38.30% of 7.03 GB
+
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ++   Memory Efficiency is too small. Please review the requested memory. ++
+ ++ It seems that you do not need that much memory so we recommend        ++
+ ++ requesting less memory in other similar jobs.                         ++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 
+*****************************************************************************
+

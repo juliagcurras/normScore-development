@@ -1,0 +1,111 @@
+﻿#main .nav-pills > li.active > a,
+main .nav-pills > li.active > a:hover,
+main .nav-pills > li.active > a:focus {
+    background-color: rgb(0,111,182);
+}
+
+main .nav-pills > li > a:hover {
+    background-color: #003C72;
+    color: #003C72;
+}
+
+nav-top span.glyphicon {
+    color: #003C72;}
+
+table-of-contents header {
+    color: #003C72;
+    background-color: #003C72;
+}
+
+table-of-contents h2 {
+    background-color: #003C72;
+}
+
+main a {
+    background-image: linear-gradient(180deg,#003C72,#003C72);
+    color: #6C8092;
+}
+
+a:hover {
+    color: #6C8092;
+}
+
+a:visited {
+    color: #6C8092;
+}
+
+content {
+  background-color: #FFF;
+}
+
+
+#sidebar {
+  color: #003C72;
+  background-color: #6C8092;
+}
+
+
+#postamble {
+  color: #003C72;
+  background-color: #6C8092;
+}
+
+
+
+body {
+  font-family: Calibri, helvetica, sans-serif;
+  font-size: 16px;
+  text-align: justify;
+}
+
+h1 {
+  color: rgb(0,62,119);
+  font-size: 147%;
+  font-weight: bold;
+}
+
+h2 {
+  color: rgb(0,62,119);
+  font-size: 137%;
+  font-weight: bold;
+}
+
+h3 {
+  color: rgb(0,111,182);
+  font-size: 119%;
+  font-weight: bold;
+}
+
+h4 {
+ color: rgb(0,111,182);
+  font-size: 110%;
+  font-weight: bold;
+  font-style: italic;
+}
+
+.watermark {
+  opacity: 0.2;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  font-size: 500%;
+  color: #00407d;
+}
+
+.math {font-size: small;} /* Disminuye tamaño de ecuaciones */
+
+code.r{
+  font-size: 10px; /* Disminuye tamaño del código */
+}
+pre {
+  font-size: 10px; /* Disminuye tamaño de los resultados del chunk y el color */
+  color: #00407d;
+
+}
+
+<style>
+.main-container,
+body {
+  max-width: 5000px;
+}
+</style>

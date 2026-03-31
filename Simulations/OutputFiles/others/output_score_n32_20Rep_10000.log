@@ -1,0 +1,28 @@
+slurmstepd: info: Setting TMPDIR to /scratch/4939695. Previous errors about TMPDIR can be discarded
+
+*****************************************************************************
+*                                                                           *
+*                    JOB EFFICIENCY REPORT (seff 4939695)                   *
+*                                                                           *
+*****************************************************************************
+
+Job ID: 4939695
+Cluster: finisterrae3
+User/Group: ulcesjgc/ulc
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 32
+CPU Utilized: 04:05:54
+CPU Efficiency: 4.60% of 3-17:03:28 core-walltime
+Job Wall-clock time: 02:46:59
+Memory Utilized: 2.48 GB
+Memory Efficiency: 31.69% of 7.81 GB
+
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ++   Memory Efficiency is too small. Please review the requested memory. ++
+ ++ It seems that you do not need that much memory so we recommend        ++
+ ++ requesting less memory in other similar jobs.                         ++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 
+*****************************************************************************
+

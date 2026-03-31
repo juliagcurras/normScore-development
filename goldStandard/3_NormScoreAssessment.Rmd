@@ -1,0 +1,475 @@
+---
+title: "Assessment: Performance metrics for normScore"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   toc: yes
+  #   self_contained: yes
+  rmdformats::readthedown:
+    # toc: yes
+    self_contained: yes
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggpubr)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/AssessmentFiles/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+
+```{r}
+resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_AnyCorrection.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha075.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_gamma_09_12.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_Item3_09.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_.rds")) # Originales
+source(file = "3_AssessmentFunctions.R")
+resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
+```
+
+
+# **Evaluación por ítem (By item)**
+
+Para cada item, se evalúa en qué medida el método propuesto reproduce el **orden relativo de las normalizaciones** establecido por el Gold Standard para cada uno de los ítems considerados.
+
+Dado que el Gold Standard puede contener **empates (niveles equivalentes)**, se emplean métricas robustas a este tipo de estructuras.
+
+
+## Correlación de Kendall (tau)
+
+### Definición
+
+La correlación de Kendall mide el grado de concordancia entre dos rankings basándose en la proporción de pares de elementos que mantienen el mismo orden relativo.
+
+Tiene en cuenta:
+
+* Pares concordantes (mismo orden)
+* Pares discordantes (orden invertido)
+* Ajuste por empates
+
+### Qué evalúa
+
+* La **coherencia global del orden**
+* La consistencia en comparaciones pareadas
+* Es especialmente adecuada cuando existen empates en el Gold Standard
+
+### Interpretación
+
+| Valor   | Interpretación   |
+| ------- | ---------------- |
+| > 0.7   | Muy alto acuerdo |
+| 0.6–0.7 | Alto             |
+| 0.4–0.6 | Moderado         |
+| < 0.4   | Bajo             |
+
+Es la métrica más **estricta y conservadora**.
+
+## Correlación de Spearman (rho)
+
+### Definición
+
+La correlación de Spearman mide la relación entre dos rankings transformándolos en rangos y evaluando su correlación.
+
+### Qué evalúa
+
+* La **estructura global del ranking**
+* La tendencia general del orden
+* Es menos sensible a pequeñas discrepancias que Kendall
+
+### Interpretación
+
+| Valor   | Interpretación |
+| ------- | -------------- |
+| > 0.8   | Muy alto       |
+| 0.7–0.8 | Alto           |
+| 0.5–0.7 | Moderado       |
+
+Es una métrica intermedia en exigencia.
+
+## Pairwise Accuracy
+
+### Definición
+
+Se basa en comparar todos los pares de métodos para los cuales el Gold Standard establece un orden claro (excluyendo empates), y calcular la proporción de comparaciones en las que el método evaluado coincide con dicho orden.
+
+
+### Qué evalúa
+
+* El grado en que se respetan las **decisiones claras del Gold Standard**
+* Ignora comparaciones ambiguas (empates)
+* Se centra en relaciones locales entre métodos
+
+### Interpretación
+
+| Valor     | Interpretación  |
+| --------- | --------------- |
+| > 0.85    | Excelente       |
+| 0.75–0.85 | Alta            |
+| 0.65–0.75 | Buena           |
+| ≈ 0.5     | Similar al azar |
+
+Es la métrica más **robusta e interpretable** en presencia de empates.
+
+## Resultados 
+
+Resultados para el normScore sin pesos y para el total de datasets (100) de la base de datos de Gold Standard. 
+
+
+```{r include = F}
+### By item ####
+# Same between corrected and non corrected
+summaryByItem <- resultsByItem(resNormScore = resAllNS$resByItem, 
+                                        resGS = resAllGS$byItem)
+# formatting
+df <- as.data.frame(summaryByItem$tabla)
+df[, 4:ncol(df)] <- apply(df[, 4:ncol(df)], 2, round, digits = 3)
+df <- as.data.frame(t(df))
+colnames(df) <- df[1,]
+df <- df[-1,]
+
+df$Variable <- c("N", "", "", "Kendall Tau", "", "", "", "Spearman", "", "", "", 
+                 "Pairwise Accuracy", "", "", "")
+df$Statistic <- c("Total", "N valid", "Proportion N valid", "Median", "Mean", "SD", "Prop > 0.6", 
+                  "Median", "Mean", "SD", "Prop > 0.7", "Median", "Mean", "SD", "Prop > 0.8")
+df <- df %>% dplyr::select(Variable, Statistic, dplyr::everything())
+
+```
+
+```{r}
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = T, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+  DT::formatStyle(1, font = "bold") %>%
+  DT::formatStyle(valueColumns = 1, columns = 1:ncol(df), 
+                  `border-top` = styleEqual(c("Kendall Tau", "Spearman", 
+                                              "Pairwise Accuracy"), "solid 0.8px"))
+```
+
+
+```{r include = F}
+data <- summaryByItem$results
+colnames(data)
+
+p1 <- Biostatech::plotBox(base = data, varResumen = "tau", varGrupo = "Item", 
+                    interact = F, tituloY = "Kendall's Tau")$grafico + ylim(c(-1, 1))
+p2 <- Biostatech::plotBox(base = data, varResumen = "spearman", varGrupo = "Item", 
+                    interact = F, tituloY = "Spearman's coefficient")$grafico+ ylim(c(-1, 1))
+p3 <- Biostatech::plotBox(base = data, varResumen = "pairAccuracy", varGrupo = "Item", 
+                    interact = F, tituloY = "Pairwise Accuracy")$grafico+ ylim(c(0, 1))
+```
+
+
+```{r fig.width=12, fig.height=12}
+cowplot::plot_grid(
+    cowplot::plot_grid(p1+theme(legend.position = "none"),
+                       p2+theme(legend.position = "none"),
+                       ncol = 2, nrow = 1),
+    cowplot::plot_grid(NULL, p3, NULL, rel_widths = c(0.5, 1, 0.5), nrow = 1),
+    nrow = 2,
+    rel_heights = c(1, 1))
+```
+
+
+
+
+--- 
+
+# **Evaluación global**
+
+En este nivel se evalúa la capacidad del método para identificar correctamente las **mejores y peores normalizaciones**, sin necesidad de reproducir el ranking completo.
+
+El Gold Standard define conjuntos de:
+
+* Normalizaciones recomendadas (mejores)
+* Normalizaciones a descartar (peores)
+
+## Hit@k (Top)
+
+### Definición
+
+Evalúa si al menos una de las normalizaciones consideradas como óptimas por el Gold Standard aparece dentro de las primeras *k* posiciones del ranking.
+
+### Qué evalúa
+
+* La capacidad de recuperar **al menos una solución válida**
+* Relevante para escenarios prácticos donde basta con identificar una buena opción
+
+### Interpretación
+
+* Valores cercanos a 1 indican alta capacidad de recuperación
+* El rendimiento se interpreta en relación con el azar
+
+Por ejemplo, con 8 métodos:
+
+* Top-1 por azar ≈ 12.5%
+* Valores sustancialmente superiores indican buen desempeño
+
+
+## Bottom Coverage (Worst)
+
+### Definición
+
+Evalúa cuántas de las normalizaciones consideradas como inadecuadas por el Gold Standard se sitúan correctamente en las últimas posiciones del ranking.
+
+Puede expresarse como:
+
+* Número absoluto de métodos correctamente ubicados
+* Proporción respecto al total de métodos a descartar
+
+### Qué evalúa
+
+* La capacidad de identificar **métodos que deben evitarse**
+* La coherencia en la parte inferior del ranking
+
+---
+
+### Interpretación
+
+| Proporción | Interpretación          |
+| ---------- | ----------------------- |
+| 1.0        | Identificación perfecta |
+| 0.75–1.0   | Alta                    |
+| 0.5–0.75   | Moderada                |
+| < 0.5      | Baja                    |
+
+Es especialmente relevante para decisiones de exclusión.
+
+## Mean Reciprocal Rank (MRR)
+
+### Definición
+
+Mide la posición de la primera aparición de una normalización considerada óptima por el Gold Standard dentro del ranking.
+
+Se define como el inverso de dicha posición:
+
+* 1 si aparece en primera posición
+* 1/2 si aparece en segunda, etc.
+
+### Qué evalúa
+
+* Qué tan arriba se sitúan las mejores soluciones
+* Penaliza progresivamente posiciones más bajas
+
+### Interpretación
+
+Con un número finito de métodos (por ejemplo, 8):
+
+* Valores cercanos a 1 indican que las mejores opciones se sitúan en las primeras posiciones
+* Existe un valor esperado bajo selección aleatoria (≈ 0.34 en este caso)
+
+| MRR       | Interpretación |
+| --------- | -------------- |
+| > 0.60    | Muy alto       |
+| 0.50–0.60 | Alto           |
+| 0.40–0.50 | Moderado       |
+| ≈ azar    | Bajo           |
+
+
+## Resultados
+
+Resultados para el normScore sin pesos y para el total de datasets (100) de la base de datos de Gold Standard, dividido según evaluación de mejores métodos (top) y peores (bottom). 
+
+```{r}
+### Global ####
+# Non corrected
+summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
+                               resGlobalGS_BEST = resAllGS$globalBest,
+                               resGlobalGS_BESTS = resAllGS$globalBests,
+                               resGlobalGS_WORST = resAllGS$globalWorst)
+```
+
+### Best methods (top) {.tabset}
+
+#### Top 1 - only the best method {-}
+
+```{r}
+summaryGlobal$Best$hitTable
+```
+
+#### Top 1 - all best methods {-}
+
+```{r}
+summaryGlobal$Bests$hitTable
+```
+
+
+#### MRR - only the best method {-}
+
+```{r}
+# allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
+df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  # levels = rev(sort(unique(df$Pos))), 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR - all best methods{-}
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR bottom - all best methods{-}
+
+La posición más baja de la mejor normalización del grupo determinado en el GS. 
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+
+
+### Worst methods - Bottom {.tabset}
+
+#### Bottom Coverage  - excluded methods {-}
+
+```{r}
+df <- data.frame(Prop = summaryGlobal$Worst$coverageRes)
+df$PropGroups <- ifelse(is.na(df$Prop), NA, 
+                        ifelse(df$Prop < 0.5, "< 0.5",
+                               ifelse(df$Prop<0.75, "0.5-0.75", 
+                                      ifelse(df$Prop < 1, "0.75-1", 
+                                             ifelse(df$Prop == 1, "1", "Error")
+                                             )
+                                      )
+                               )
+                        )
+colnames(df) <- c("Proportion", "Proportion by groups")
+df <- df[, 2:1]
+Biostatech::getCatTable(df)$tablaFormato
+```
+
+#### MRR - excluded methods {-}
+
+```{r}
+dfW <- data.frame(Pos = summaryGlobal$Worst$mrrRes)
+dfW$Position <- factor(
+  dfW$Pos, 
+  # levels = rev(allClassess), 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
+
+
+
+#### MRR top - excluded methods {-}
+
+Posición más alta de la normalización del grupo de excluidas por cada dataset. 
+
+```{r}
+dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
+
+dfW$Position <- factor(
+  dfW$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
+
+---
+
+
+# Resumen conceptual
+
+* **Evaluación por ítem**:
+  Analiza si el método reproduce correctamente la **estructura del ranking completo**.
+
+* **Evaluación global**:
+  Analiza si el método permite tomar decisiones correctas en la práctica:
+
+  * Identificar buenas opciones
+  * Evitar malas opciones
+
+
+## 🎯 Idea clave
+
+Ambos niveles son complementarios:
+
+* El análisis por ítem valida la **coherencia interna del método**
+* El análisis global valida su **utilidad práctica**
+
+
+
+
+
