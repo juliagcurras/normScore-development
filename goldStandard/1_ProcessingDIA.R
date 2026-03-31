@@ -3192,6 +3192,7 @@ dfRaw <- readxl::read_xlsx(path = "Datasets/PXD028772_20210119_063120_BS20082_al
 # Set Filtered to NA #
 dfRaw[dfRaw == "Filtered"] <- NA
 dfRaw <- as.data.frame(dfRaw)
+dfRaw[dfRaw<10] <- NA
 
 ## Datasets ####
 ## Quantification matrix ###
@@ -3259,6 +3260,7 @@ data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0)$tabla
 # Imputation & log-transformation
 dataLog <- as.matrix(log(data, base =2))
 pheatmap::pheatmap(dataLog, scale = "row")
+min(dataLog)
 
 ## Normalization ###
 listaNorm <- Biomics::doNormalization(rawData = data, logData = dataLog,
