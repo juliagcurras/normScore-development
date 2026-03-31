@@ -264,6 +264,138 @@ bootstrap_score_rows <- function(data, indices) {
   return(total_scores)  # One score per normalization
 }
 
+compareNormPairBootstrap <- function(
+    bootMatrix, 
+    norm1, 
+    norm2, 
+    epsilon, 
+    confLevel = 0.95){
+  
+  alpha <- 1 - confLevel
+  
+  diffBoot <- bootMatrix[, norm1] - bootMatrix[, norm2]
+  
+  ciDiff <- stats::quantile(
+    diffBoot,
+    probs = c(alpha / 2, 1 - alpha / 2),
+    na.rm = TRUE
+  )
+  
+  # A) Criterio de equivalencia con margen de epsilon
+  noDifference <- (ciDiff[1] >= -epsilon) & (ciDiff[2] <= epsilon)
+  # B) Criterio de ausencia de diferencia clara (o 0 incluído no IC das diferencias)
+  # noDifference <- (ciDiff[1] <= 0) & (ciDiff[2] >= 0) # Comentar a superior si se quere usar este criterio
+  
+  out <- list(
+    meanDiff = mean(diffBoot, na.rm = TRUE),
+    llDiff = unname(ciDiff[1]),
+    ulDiff = unname(ciDiff[2]),
+    noDifference = noDifference
+  )
+  
+  return(out)
+}
+
+rankNormsBootstrap <- function(
+    scoreBootstrap, 
+    bootMatrix, 
+    ordenNorm =  c("Log", "Median", "Mean", "TI", "Quantile",  "CyclicLoess", "RLR", "VSN"), 
+    epsilon = NULL, 
+    confLevel = 0.95){
+  
+  scoreDf <- scoreBootstrap
+  
+  scoreDf$`Mean Total Score` <- as.numeric(scoreDf$`Mean Total Score`)
+  scoreDf$`LL95%` <- as.numeric(scoreDf$`LL95%`)
+  scoreDf$`UL95%` <- as.numeric(scoreDf$`UL95%`)
+  
+  if (is.null(epsilon)){
+    # Just estimating a good epsilon - porcentaje del rango
+    rangeScores <- max(scoreDf$`Mean Total Score`) - min(scoreDf$`Mean Total Score`)
+    epsilon <- 0.2 * rangeScores
+  }
+  
+  bootMatrix <- bootMatrix[, scoreDf$Normalization, drop = FALSE]
+  
+  scoreDf$initialRank <- seq_len(nrow(scoreDf))
+  scoreDf$simplicityRank <- match(scoreDf$Normalization, ordenNorm)
+  
+  groupId <- integer(nrow(scoreDf))
+  groupId[1] <- 1
+  
+  comparisonTraceList <- vector("list", max(0, nrow(scoreDf) - 1))
+  
+  if (nrow(scoreDf) > 1){
+    for (i in 2:nrow(scoreDf)){
+      
+      prevNorm <- scoreDf$Normalization[i - 1]
+      currNorm <- scoreDf$Normalization[i]
+      
+      prevIndex <- match(prevNorm, colnames(bootMatrix))
+      currIndex <- match(currNorm, colnames(bootMatrix))
+      
+      comparison <- compareNormPairBootstrap(
+        bootMatrix = bootMatrix,
+        norm1 = prevIndex,
+        norm2 = currIndex,
+        epsilon = epsilon,
+        confLevel = confLevel
+      )
+      
+      if (comparison$noDifference){
+        groupId[i] <- groupId[i - 1]
+      } else {
+        groupId[i] <- groupId[i - 1] + 1
+      }
+      
+      comparisonTraceList[[i - 1]] <- data.frame(
+        step = i - 1,
+        norm1 = prevNorm,
+        norm2 = currNorm,
+        meanDiff = comparison$meanDiff,
+        llDiff = comparison$llDiff,
+        ulDiff = comparison$ulDiff,
+        epsilon = epsilon,
+        noDifference = comparison$noDifference,
+        assignedGroup = groupId[i],
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  
+  scoreDf$groupId <- groupId
+  
+  groupSummary <- scoreDf %>%
+    dplyr::arrange(groupId, simplicityRank, `Mean Total Score`) %>%
+    dplyr::mutate(finalRank = seq_len(dplyr::n()))
+  
+  rankedNormalizations <- groupSummary$Normalization
+  
+  comparisonTrace <- if (length(comparisonTraceList) > 0){
+    do.call(rbind, comparisonTraceList)
+  } else {
+    data.frame(
+      step = numeric(0),
+      norm1 = character(0),
+      norm2 = character(0),
+      meanDiff = numeric(0),
+      llDiff = numeric(0),
+      ulDiff = numeric(0),
+      epsilon = numeric(0),
+      noDifference = logical(0),
+      assignedGroup = numeric(0),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  out <- list(
+    rankedNormalizations = rankedNormalizations,
+    groupSummary = groupSummary,
+    comparisonTrace = comparisonTrace
+  )
+  
+  return(out)
+}
 
 #...........................................................................####
 # SCORE: main function #### 
@@ -412,6 +544,8 @@ normScore <- function(
       matriz = scoreDF_norm))
   } else if (doBootstrap){
     # CI bootstrap ####
+    scores_matrix <- t(scoreDF_norm[, 1:6])
+    scores_matrix[, "Log"] <- scores_matrix[, "Log"]*item0 # correction previous to total calculation
     
     # Bootstrap
     # n_boot <- 1000
@@ -433,22 +567,39 @@ normScore <- function(
       dplyr::arrange(`Mean Total Score`)
     
     
+    # Pairwise comparison between normalizations
+    bootMatrix <- boot_results$t
+    colnames(bootMatrix) <- score_bootstrap$Normalization
+    # bestNormResults <- selectBestNormBootstrap(
+    bestNormResults <- rankNormsBootstrap(
+      scoreBootstrap = score_bootstrap,
+      bootMatrix = bootMatrix,
+      confLevel = 0.95
+    )
+    
+    # Output
+    names(scoreDF_norm) <- c(paste0("Item", 1:6), "Total", "TotalCorrected")
+    return(list(
+      detailRanking = scoreDF_norm, 
+      finalRank = bestNormResults$rankedNormalizations, 
+      normSummary = bestNormResults$groupSummary, 
+      comparisonTrace = bestNormResults$comparisonTrace
+      ))
     
     # Gráfico ####
-    
-    p1 <- Biostatech::plotForest(etiquetas = score_bootstrap$Normalization, 
-                           estPunt = score_bootstrap$`Mean Total Score`, 
-                            LI = score_bootstrap$`LL95%`, 
-                            LS = score_bootstrap$`UL95%`, 
-                           tituloX = "normScore with bootstrap interval")$grafico
+    # p1 <- Biostatech::plotForest(etiquetas = score_bootstrap$Normalization, 
+    #                        estPunt = score_bootstrap$`Mean Total Score`, 
+    #                         LI = score_bootstrap$`LL95%`, 
+    #                         LS = score_bootstrap$`UL95%`, 
+    #                        tituloX = "normScore with bootstrap interval")$grafico
     
     
     # Return ####
-    return(list(finalRanking = finalRank, 
-                detailRanking = scoreDF_norm, 
-                detailScore = scoreDF, 
-                bootstrapScore = score_bootstrap, 
-                graphic = p1))
+    # return(list(finalRanking = finalRank, 
+    #             detailRanking = scoreDF_norm, 
+    #             detailScore = scoreDF, 
+    #             bootstrapScore = score_bootstrap, 
+    #             graphic = p1))
   }
   
 }
