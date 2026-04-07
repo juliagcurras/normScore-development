@@ -1,0 +1,317 @@
+---
+title: "Assessment: Performance metrics for normScore in benchmarking datasets"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   toc: yes
+  #   self_contained: yes
+  rmdformats::readthedown:
+    # toc: yes
+    self_contained: yes
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggpubr)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/Benchmarking/Data/"
+# outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+```{r}
+source(file = "../goldStandard/3_AssessmentFunctions.R")
+```
+
+
+# DIA datasets
+
+```{r}
+# LOADING DATA FOR DIA
+tipoAnalisis <- "DIA"
+resNormScore <- readRDS(file = paste0(inputDir, tipoAnalisis, "/", tipoAnalisis, "_normScoreRanking.rds"))
+datosEval <- readRDS(file = paste0(inputDir, tipoAnalisis, "/3_EvalData_3_MAPE.rds"))
+```
+
+
+```{r}
+# PREPARING DATA
+### MAPE ####
+mapeRealRank <- list()
+for (nombre in names(datosEval)){
+  lista <- datosEval[[nombre]]
+  lista[["MAD"]] <- NULL
+  resInd <- sapply(lista, "[[", 7)
+  resInd <- sort(resInd)
+  resInd[names(resInd)] <- 1:8
+  mapeRealRank[[nombre]] <- resInd # Real classification
+}
+
+# normScore rank order by real accuracy order
+normScoreRank <- list()
+for (nombre in names(resNormScore)){
+  # orden real por MAPE
+  realOrden <- names(mapeRealRank[[nombre]])
+  
+  # Orden por normScore
+  resInd <- resNormScore[[nombre]]
+  resInd <- sort(resInd)
+  resInd[names(resInd)] <- 1:8
+  
+  # Ordenar según ranking real
+  resInd <- resInd[realOrden]
+  
+  # Out
+  normScoreRank[[nombre]] <- resInd
+}
+
+
+# Kendall correlation
+corRes <- sapply(names(mapeRealRank), function(i) cor(
+  x = unname(mapeRealRank[[i]]), 
+  y = unname(normScoreRank[[i]]),
+  method = "kendall"), USE.NAMES = T, simplify = F)
+```
+
+```{r}
+
+resNormScoreNames <- lapply(resNormScore, names)
+mapeRealRankNames <- lapply(mapeRealRank, names)
+
+
+### Global ####
+# Non corrected
+summaryGlobal <- resultsGlobal(
+  resGlobalNS = resNormScoreNames, 
+  resGlobalGS_BEST = lapply(mapeRealRankNames, function(i) i[1]),
+  resGlobalGS_BESTS = lapply(mapeRealRankNames, function(i) i[1:3]), 
+  resGlobalGS_WORST = NULL
+  )
+```
+
+### Best methods (top) {.tabset}
+
+#### Top 1 - only the best method {-}
+
+```{r}
+summaryGlobal$Best$hitTable
+```
+
+#### Top 1 - all best methods {-}
+
+```{r}
+summaryGlobal$Bests$hitTable
+```
+
+
+#### MRR - only the best method {-}
+
+```{r}
+# allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
+df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  # levels = rev(sort(unique(df$Pos))), 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR - all best methods {-}
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR bottom - all best methods {-}
+
+La posición más baja de la mejor normalización del grupo determinado por MAPE.  
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+
+
+# DDA datasets
+
+```{r}
+# LOADING DATA FOR DIA
+tipoAnalisis <- "DDA"
+resNormScore <- readRDS(file = paste0(inputDir, tipoAnalisis, "/", tipoAnalisis, "_normScoreRanking.rds"))
+datosEval <- readRDS(file = paste0(inputDir, tipoAnalisis, "/3_EvalData_3_MAPE.rds"))
+```
+
+
+```{r}
+# PREPARING DATA
+### MAPE ####
+mapeRealRank <- list()
+for (nombre in names(datosEval)){
+  lista <- datosEval[[nombre]]
+  lista[["MAD"]] <- NULL
+  resInd <- sapply(lista, "[[", 5)
+  resInd <- sort(resInd)
+  resInd[names(resInd)] <- 1:8
+  mapeRealRank[[nombre]] <- resInd # Real classification
+}
+
+# normScore rank order by real accuracy order
+normScoreRank <- list()
+for (nombre in names(resNormScore)){
+  # orden real por MAPE
+  realOrden <- names(mapeRealRank[[nombre]])
+  
+  # Orden por normScore
+  resInd <- resNormScore[[nombre]]
+  resInd <- sort(resInd)
+  resInd[names(resInd)] <- 1:8
+  
+  # Ordenar según ranking real
+  resInd <- resInd[realOrden]
+  
+  # Out
+  normScoreRank[[nombre]] <- resInd
+}
+
+
+# Kendall correlation
+corRes <- sapply(names(mapeRealRank), function(i) cor(
+  x = unname(mapeRealRank[[i]]), 
+  y = unname(normScoreRank[[i]]),
+  method = "kendall"), USE.NAMES = T, simplify = F)
+```
+
+```{r}
+# preparing data
+resNormScoreNames <- lapply(resNormScore, names)
+mapeRealRankNames <- lapply(mapeRealRank, names)
+
+
+### Global ####
+# Non corrected
+summaryGlobal <- resultsGlobal(
+  resGlobalNS = resNormScoreNames, 
+  resGlobalGS_BEST = lapply(mapeRealRankNames, function(i) i[1]),
+  resGlobalGS_BESTS = lapply(mapeRealRankNames, function(i) i[1:3]), 
+  resGlobalGS_WORST = NULL
+  )
+```
+
+### Best methods (top) {.tabset}
+
+#### Top 1 - only the best method {-}
+
+```{r}
+summaryGlobal$Best$hitTable
+```
+
+#### Top 1 - all best methods {-}
+
+```{r}
+summaryGlobal$Bests$hitTable
+```
+
+
+#### MRR - only the best method {-}
+
+```{r}
+# allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
+df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  # levels = rev(sort(unique(df$Pos))), 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR - all best methods {-}
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+#### MRR bottom - all best methods {-}
+
+La posición más baja de la mejor normalización del grupo determinado por MAPE.  
+
+```{r}
+df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
