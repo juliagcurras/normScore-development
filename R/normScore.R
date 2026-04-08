@@ -249,7 +249,7 @@ getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
 }
 
 # Computing total score for each normalization after resampling proteins (rows)
-bootstrap_score_rows <- function(data, indices) {
+bootstrapScoreRows <- function(data, indices) {
   resampled_matrix <- data[indices, , drop = FALSE]
   total_scores <- colSums(resampled_matrix)
   return(total_scores)  # One score per normalization
@@ -384,7 +384,7 @@ normScore <- function(
     # Bootstrap
     # n_boot <- 1000
     boot_results <- boot::boot(data = scores_matrix,              # data
-                               statistic = bootstrap_score_rows,  # function for getting the scores by nomralization
+                               statistic = bootstrapScoreRows,  # function for getting the scores by nomralization
                                R = 1000)                        # number of resamples  
     
     # Output mean scores and confidence intervals
