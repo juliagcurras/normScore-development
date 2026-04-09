@@ -10,7 +10,7 @@
 # Simulación de datos de proteómica (log2-scale)
 # rm(list=ls())
 # graphics.off()
-setwd("C:/Users/julia/Documents/GitHub/normScore/R")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/R")
 
 # library(MASS)
 # library(future.apply)
@@ -21,7 +21,7 @@ library(dplyr)
 # source(file = "supportFunctions.R", encoding = "UTF-8")
 # source(file = "scoreFunction.R", encoding = "UTF-8")
 
-pathToData <- "C:/Users/julia/Documents/GitHub/normScore/Simulations/others/"
+pathToData <- "C:/Users/julia/Documents/GitHub/normScore-development/Simulations/others/"
 
 
 #.............................................................................

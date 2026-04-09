@@ -8,8 +8,8 @@
 # Julia G Curras - 2026/03/11
 rm(list=ls())
 graphics.off()
-outDir <-  "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 source(file = "../R/scoreFunction.R", encoding = "UTF-8")
 
@@ -200,7 +200,7 @@ generateRandomWeights <- function(nWeights = 6) {
 
 getFitness <- function(
     itemWeights, 
-    fitness = 1
+    fitness = 3
 ){
   # transform weights
   weights <- softmaxWeights(itemWeights)
@@ -292,7 +292,7 @@ gaModel <- ga(
   seed = 9396,
   parallel = T 
 )
-tipoFitness <- 1 # cambiar en getFitness manualmente
+tipoFitness <- 3 # cambiar en getFitness manualmente!!!!!!!!!!!
 # gaModel <- readRDS(file = paste0("AssessmentFiles/Refinement_results_GA_FITNESS", 
 #                                  tipoFitness, "_TRAIN.rds")) # 500 iteracións
 

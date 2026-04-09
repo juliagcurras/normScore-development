@@ -8,8 +8,8 @@
 # Julia G Curras - 2026/03/02
 rm(list=ls())
 graphics.off()
-outDir <-  "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 #...........................................................................####
 # Set up ####
@@ -20,7 +20,7 @@ library(boot)
 
 source(file = "../R/simulationFunction.R", encoding = "UTF-8")
 source(file = "../R/scoreFunction.R", encoding = "UTF-8")
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 
 #...........................................................................####
@@ -131,7 +131,56 @@ saveRDS(allResultsGS, file = "AssessmentFiles/results_Gold_Standard.rds")
 
 
 #...........................................................................####
+# Assessment ####
+source(file = "3_AssessmentFunctions.R")
+
+# SAME INFO AS THE ONE INCLUDED AT 3_NormScoreAssesment.rmd file
+
+## All ####
+
+### Format data ####
+resAllGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds") # Manual ranking
+resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01.rds") # NS results non corrected
+
+resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
+
+### By item ####
+summaryByItem <- resultsByItem(resNormScore = resAllNS$resByItem, 
+                                        resGS = resAllGS$byItem)
+summaryByItem$tabla %>% View
+
+### Global ####
+# Non corrected
+summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
+                               resGlobalGS_BEST = resAllGS$globalBest,
+                               resGlobalGS_BESTS = resAllGS$globalBests,
+                               resGlobalGS_WORST = resAllGS$globalWorst)
+summaryGlobal$Best$hitTable
+summaryGlobal$Bests$hitTable
+table(summaryGlobal$Worst$coverageRes)
+table(summaryGlobal$Worst$mrrRes)
+
+
+
+#
+
+
+
+
+
+
+
+
+
+
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>####
+# OLD CODE - README ####
+# The code below was adapated as generalized functions and stored together at 
+# script 3_AssessmentFunctions.R
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>####
+...........................................................................####
 # Format data ####
+
 
 ## Just binding normScore results from each datasets ####
 metricsLong <- purrr::imap_dfr(normScoreList, function(mat, i) { # pasteing all
@@ -288,77 +337,6 @@ Biostatech::plotForest(etiquetas = colnames(res),
                        LS = res["SL", ])$grafico
 
 Biostatech::plotBoxMultivar(base = cvWeigths, varResumen = colnames(cvWeigths))$grafico
-
-
-
-
-
-#...........................................................................####
-# Assessment ####
-source(file = "3_AssessmentFunctions.R")
-
-## All ####
-
-### Format data ####
-resAllGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds") # Manual ranking
-resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_suavizado_alpha09.rds") # NS results non corrected
-resNSCorrected <- readRDS(file = "AssessmentFiles/normScore_CORRECTED_dataGS_All_MOdItem2_ManualWeights.rds") # NS results corrected
-
-resAllNS_Corrected <- formatNormScoreResults(finalList = resNSCorrected, item0 = T)
-resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
-
-### By item ####
-# Same between corrected and non corrected
-summaryByItem <- resultsByItem(resNormScore = resAllNS$resByItem, 
-                                        resGS = resAllGS$byItem)
-summaryByItem$tabla %>% View
-
-### Global ####
-# Non corrected
-summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
-                               resGlobalGS_BEST = resAllGS$globalBest,
-                               resGlobalGS_BESTS = resAllGS$globalBests,
-                               resGlobalGS_WORST = resAllGS$globalWorst)
-summaryGlobal$Best$hitTable
-summaryGlobal$Bests$hitTable
-table(summaryGlobal$Worst$coverageRes)
-table(summaryGlobal$Worst$mrrRes)
-
-# Corrected
-summaryGlobalCorrected <- resultsGlobal(resGlobalNS = resAllNS_Corrected$resGlobal, 
-                                        resGlobalGS_BEST = resAllGS$globalBest,
-                                        resGlobalGS_BESTS = resAllGS$globalBests,
-                                        resGlobalGS_WORST = resAllGS$globalWorst)
-summaryGlobalCorrected$Best$hitTable
-summaryGlobalCorrected$Bests$hitTable
-table(summaryGlobalCorrected$Worst$coverageRes)
-table(summaryGlobalCorrected$Worst$mrrRes)
-
-
-summaryGlobal$Best$hitTable
-summaryGlobalCorrected$Best$hitTable
-
-## Training ####
-
-
-## Test ####
-
-
-## Non-weitghted score ####
-
-
-
-#
-
-
-
-
-
-
-
-
-
-
 
 
 

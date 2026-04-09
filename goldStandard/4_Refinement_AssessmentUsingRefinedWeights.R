@@ -8,8 +8,8 @@
 # Julia G Curras - 2026/03/24
 rm(list=ls())
 graphics.off()
-outDir <-  "C:/Users/julia/Documents/GitHub/normScore/goldStandard/AssessmentFiles/"
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 
 #..........................................................................####

@@ -5,11 +5,11 @@
 ###############################################################################-
 
 
-# Julia G Curras - 2026/03/02
+# Julia G Curras - 2026/03/31
 rm(list=ls())
 graphics.off()
-outDir <-  "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 #...........................................................................####
 # Set up ####
@@ -20,7 +20,7 @@ library(boot)
 
 source(file = "../R/simulationFunction.R", encoding = "UTF-8")
 source(file = "../R/scoreFunction.R", encoding = "UTF-8")
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 
 
@@ -45,10 +45,11 @@ normScoreList <- sapply(allFiles, function(i){
     doBootstrap = T
   ))
 },simplify = F, USE.NAMES = T)
-saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP.rds")
+saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP_epsilon025.rds")
 
 
 ## Retrieve best norm ####
+# SAME INFO AS THE ONE INCLUDED AT 5_EvaluatingStrangeDatasets.rmd file
 allGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds")
 resNSNoBoot <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01.rds")
 bestGS <- (unlist(allGS$globalBest[names(normScoreList)]))

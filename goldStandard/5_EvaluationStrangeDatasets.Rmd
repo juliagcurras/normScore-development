@@ -56,9 +56,9 @@ js <- c(
 
 ```{r}
 # Julia G Curras - 2026/03/27
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/AssessmentFiles/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 source(file = "3_AssessmentFunctions.R")
 

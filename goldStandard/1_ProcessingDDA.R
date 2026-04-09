@@ -8,15 +8,15 @@
 # Julia G Curras - 2026/01/27
 rm(list=ls())
 graphics.off()
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 #.............................................................................
 # Set up ####
 # Libraries
 library(dplyr)
 library(ggplot2)
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
 
 
 
@@ -108,8 +108,8 @@ saveRDS(object = output, file = paste0(outDir, idDataset, ".rds"))
 
 
 #...........................................................................####
-# PXD058699 ####
-idDataset <- "PXD058699"
+# PXD076216 ####
+idDataset <- "PXD076216"
 dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"), 
                     header = T, sep = "\t")
 
@@ -118,6 +118,7 @@ dfRaw <- read.table(file = paste0("Datasets/", idDataset,"_proteinGroups.txt"),
 # Selecting interesting cols #
 df <- dfRaw %>% dplyr::select(Protein.IDs, 
                               starts_with("Intensity"), #"LFQ.Intensity
+                              -Intensity,
                               Reverse, Only.identified.by.site,
                               Potential.contaminant) #, -Intensity)
 # Set 0 to NA #
@@ -137,16 +138,23 @@ rownames(df) <- df$Protein.IDs
 df$Protein.IDs <- NULL
 
 # Group in white
-colnames(df)[1] <- "C"
-colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.rep", replacement = "C.rep")
+# colnames(df)[1] <- "C"
 colnames(df) <- gsub(x= colnames(df), pattern = "Intensity.", replacement = "")
-colnames(df)[1:4] <- paste0(colnames(df)[1:4], ".rep0")
 
 ## Design matrix ###
+dm <- read.table(file = paste0("Datasets/", idDataset,"_sdrf.tsv"), sep = "\t", header = T)
+# volcano plot from paper => POTS vs noPOTs
 dm <- data.frame(
   Samples = colnames(df),
-  Groups = substr(x = colnames(df), start = 1, stop = 1)
+  Groups = sapply(strsplit(x = colnames(df), split = "_", fixed = T), "[[", 3)
+  # Groups = substr(x = colnames(df), start = 5, stop = 20)
 )
+
+rmID <- dm[dm$Groups == "NA", "Samples"] 
+df <- df %>% dplyr::select(-all_of(rmID))
+dm <- dm[-which(dm$Samples == rmID), ]
+table(dm$Groups, useNA = "always")
+colnames(df) == dm$Samples
 
 
 
@@ -165,11 +173,12 @@ res$graficoMuestra
 res$graficoProteina # proteinas con moitos valores faltantes
 
 # Applying different thresholds for filtering
-resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = c(0, 0.1, 0.2, 0.3, 0.5))
+resFilt <- Biomics::filterMissing(df = data, dfGrupos = dm, 
+                                  threshold = c(0, 0.1, 0.2, 0.3, 0.4, 0.5))
 resFilt$tablaFormato
 
 # Finally: permitimos hasta un 30% de valores faltantes por grupo
-data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.2)$tabla
+data <- Biomics::filterMissing(df = data, dfGrupos = dm, threshold = 0.4)$tabla
 
 ## Log and visualization ###
 pheatmap::pheatmap(data, show_rownames = F)
