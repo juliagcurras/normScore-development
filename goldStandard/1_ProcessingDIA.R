@@ -8,15 +8,15 @@
 # Julia G Curras - 2026/01/27
 rm(list=ls())
 graphics.off()
-setwd("C:/Users/julia/Documents/GitHub/normScore/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
 
 #.............................................................................
 # Set up ####
 # Libraries
 library(dplyr)
 library(ggplot2)
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
 
 
 
@@ -313,13 +313,13 @@ dm <- as.data.frame(dm)
 table(dm$Group)
 dm <- dm %>% 
   filter(Group %in% c("Control", "OSCC", "Pre-Malignant Lesions")) %>% 
-  rename(Samples = `File name`)
+  rename(Samples = `File name`, Groups = Group)
 dm$Samples <- gsub(x= dm$Samples, pattern = ".d", replacement = "")
 dm$Samples <- gsub(x= dm$Samples, pattern = "-", replacement = ".", fixed = T)
 df <- df[, dm$Samples]
 dm$Samples <- sapply(strsplit(dm$Samples, split = "_", fixed = T), "[[", 1)
 colnames(df) <- sapply(strsplit(colnames(df), split = "_", fixed = T), "[[", 1)
-
+dm
 
 ## Processing ####
 ## Filtering ###

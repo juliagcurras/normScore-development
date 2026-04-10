@@ -1099,14 +1099,22 @@ dm <- data.frame(
   Samples = colnames(df), 
   Groups = gsub("_[0-9]+$", "", colnames(df))
 )
-dm$GroupsNew <- factor(dm$Groups, levels = unique(dm$Groups), labels = paste0("G", 1:length(unique(dm$Groups))))
-dm$SamplesNew <- paste0(dm$GroupsNew, "_", as.integer(sub(".*_([0-9]+)$", "\\1", dm$Samples)))
+dm
+table(dm$Groups)
+table(colnames(df) %in% dm$Samples)
+table(dm$Samples %in% colnames(df))
 df <- df[, dm$Samples]
-colnames(df) <- dm$SamplesNew
-dm <- dm %>% 
-  dplyr::select(SamplesNew, GroupsNew) %>% 
-  rename(Samples = SamplesNew, 
-         Groups = GroupsNew)
+paste0(unique(dm$Groups), collapse = ";")
+
+
+# dm$GroupsNew <- factor(dm$Groups, levels = unique(dm$Groups), labels = paste0("G", 1:length(unique(dm$Groups))))
+# dm$SamplesNew <- paste0(dm$GroupsNew, "_", as.integer(sub(".*_([0-9]+)$", "\\1", dm$Samples)))
+# df <- df[, dm$Samples]
+# colnames(df) <- dm$SamplesNew
+# dm <- dm %>% 
+#   dplyr::select(SamplesNew, GroupsNew) %>% 
+#   rename(Samples = SamplesNew, 
+#          Groups = GroupsNew)
 
 
 ## Processing ####
