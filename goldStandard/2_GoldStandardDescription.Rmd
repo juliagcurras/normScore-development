@@ -1,0 +1,238 @@
+---
+title: "Gold Standard - Normalization Assessment"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   self_contained: yes
+  rmdformats::readthedown:
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(Biostatech)
+library(ggpubr)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+items <- paste0("item", 0:6)
+itemsDesc <- c("Sum total intensity", "PCV", "Correlation (Spearman)", 
+               "MAplot", "MeanSD plot", "RLE plot", "Total intensity distribution")
+names(itemsDesc) <- items
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+
+# Datasets 
+
+General characteristics of each dataset are depicted in the following table:
+
+```{r}
+df <- readxl::read_xlsx(path = "_Index.xlsx", sheet = 1, col_names = T)
+
+df$`N groups` <- sapply(strsplit(x = df$`Group names`, split = ";", fixed = T), length)
+# table(df$`N groups`)
+
+# df$`Publication (DOI)` <- gsub(pattern = "DOI: ", replacement = "", 
+#                                x = df$`Publication (DOI)`, fixed = T)
+urlDOI <- paste0("https://doi.org/", substr(x = df$`Publication (DOI)`, start = 6, stop = 50))
+df$`Publication (DOI)` <- paste0(
+    "<a href='", urlDOI, "' target='_blank'>", df$`Publication (DOI)`,"</a>"
+  )
+df <- df %>% arrange(Acquisition, `MS instrument`) %>% mutate(Number = 1:100)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F, filter = "top",
+              options = list(ordering = T, dom = "Bfrt", scrollY = '500px',
+                            scrollX = T, pageLength = nrow(df),
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")))) #%>% 
+  # DT::formatStyle(1, font = 'bold')
+```
+
+<br><br>
+
+## Descriptivo variables categóricas {.tabset}
+
+```{r fig.height=8}
+## Automáticamente:
+categoricas <- df %>%
+  select(Acquisition, `MS instrument (summary)`, `Analysis Software`, Specie, 
+         `Tissue (summary)`, `Cell culture`, `N groups`)
+
+
+printTabTitle("Análisis descriptivo de variables categóricas.")
+getCatTable(categoricas)$tablaFormato
+
+#--- Gráficos
+graficos <- lapply(
+  colnames(categoricas),
+  function(i) {
+    plotBarUnivar(categoricas[i], verticalBars = F, 
+      titulo = ifelse(Hmisc::label(categoricas[i]) == "", i,
+        Hmisc::label(categoricas[i])
+      )
+    )
+  }
+)
+
+for (i in 1:ncol(categoricas)) {
+  cat("
+### ", ifelse(Hmisc::label(categoricas[i]) == "", colnames(categoricas)[i], Hmisc::label(categoricas[i])), " {-} 
+
+")
+  cat("<div align='center' style = 'width:65%; height:auto; margin: auto;'>
+
+")
+  print(htmltools::tagList(graficos[i]))
+  cat("
+
+</div>
+
+")
+  printFigTitle(paste0("Representación gráfica de la variable ", ifelse(Hmisc::label(categoricas[i]) == "", colnames(categoricas)[i], Hmisc::label(categoricas[i])), "."))
+  cat("
+
+")
+}
+
+cat("
+## {- .toc-ignore}")
+
+```
+
+```{r include = F}
+htmltools::tagList(graficos[1:2]) # Necesario para iniciar la impresión de los gráficos
+```
+
+
+
+
+## Descriptivo variables cuantitativas {.tabset}
+
+```{r}
+
+## Seleccionar manualmente o bien automáticamente usando:
+cuantitativas <- df %>% dplyr::select(`Sample size`, `N groups`)
+
+printTabTitle("Análisis descriptivo de variables numéricas.")
+getNumTable(cuantitativas)$tablaFormato
+
+#--- Gráficos
+
+#-- BoxPlot
+graficos <- lapply(
+  colnames(cuantitativas),
+  function(i) {
+    Biostatech::plotBox(
+      base = cuantitativas, varResumen = i,
+      titulo = ifelse(Hmisc::label(cuantitativas[i]) == "", i,
+        Hmisc::label(cuantitativas[i])
+      )
+    )
+  }
+)
+
+#-- Histogramas
+graficosHist <- lapply(
+  colnames(cuantitativas),
+  function(i) {
+    # Extraemos la columna y la convertimos en un vector
+    datosColumna <- unlist(cuantitativas[[i]])
+    # Aplicamos Biostatech::plotHist
+    Biostatech::plotHist(
+      var = datosColumna,
+      tipo = "freq",
+      tituloX = ifelse(Hmisc::label(cuantitativas[[i]]) == "", i, Hmisc::label(cuantitativas[[i]]))
+    )
+  }
+)
+
+for (i in 1:ncol(cuantitativas)) {
+  cat(paste0("### ", ifelse(Hmisc::label(cuantitativas[i]) == "",
+    colnames(cuantitativas)[i],
+    Hmisc::label(cuantitativas[i])
+  ), " {-}
+"))
+
+  # Se ha eliminado la línea para centrar el gráfico
+
+  print(htmltools::tagList(plotly::subplot(graficos[i][[1]]$grafico,
+    graficosHist[i][[1]]$grafico,
+    titleY = TRUE, shareX = TRUE
+  ))) #%>% layout(title = "")))
+
+  printFigTitle(paste0(
+    "Representación gráfica de la variable ",
+    ifelse(Hmisc::label(cuantitativas[i]) == "",
+      colnames(cuantitativas)[i],
+      Hmisc::label(cuantitativas[i])
+    ),
+    " en forma de diagrama de cajas y de histograma."
+  ))
+  cat("
+")
+}
+cat("## {- .toc-ignore}
+")
+
+#--- Casos Atípicos
+# Hay que indicar la variable ID:
+
+printOutlierID(cuantitativas, varID = NULL)
+
+```
