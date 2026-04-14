@@ -210,6 +210,11 @@ dfRes1 <- sapply(res1, "[[", 1)
 rownames(dfRes1) <- colnames(res1$Log$lista)
 dfRes1
 
+# Heatmap 
+pheatmap::pheatmap(mat = as.matrix(df1), scale = 'none', cluster_rows = T, 
+                   cluster_cols = T, cutree_cols = 4, 
+                   color = grDevices::colorRampPalette(c("white","red"))(100))
+
 # Boxplot graphical representation
 dfLong <- df1 %>% 
   tibble::rownames_to_column("ID") %>%
@@ -223,7 +228,8 @@ dfLong <- df1 %>%
 Biostatech::plotBox( #- Typical boxplot
   base = dfLong, 
   varResumen = "percDAP", 
-  varGrupo = "Normalizations")$grafico
+  varGrupo = "Normalizations", 
+  interact = F)$grafico
 
 
 ggplot(dfLong, aes(x = Normalizations, y = percDAP)) + #- Paired boxplot
@@ -379,6 +385,17 @@ ggpubr::ggboxplot( #- Violin boxplot
   ylab = "Mean of concordance") + 
   ggplot2::ylim(c(0, 1))
 
+# Heatmap 
+df1 <- df
+df1 <- df1[!(df1$Var1 == df1$Var2), ]
+rownames(df1) <- paste0(df1$Var1, " - ", df1$Var2)
+df1$Var1 <- NULL; df1$Var2 <- NULL
+pheatmap::pheatmap(mat = as.matrix(df1), scale = 'none', cluster_rows = T, 
+                   cluster_cols = T, cutree_rows = 3, cutree_cols = 4,
+                   color = grDevices::colorRampPalette(c("white","red"))(100))
+# FALTARIA DESCRIBIR OS CLUSTERS DE DATASETS QUE MAIS DIFERENCIAS PRESENTAN ENTRE 
+# LOG E O RESTO / MEAN-TI E O RESTO => CARACTERIZACIÓN DE DATASETS NOS CALES AS 
+# DIFERENTES NORMALIZACIÓINS VAN IMPLICAR RESULTADOS MOI DIFERENTES.
 
 
   ## MATRIX 2: LOGFC ####
@@ -563,6 +580,92 @@ Biostatech::plotScatter(
   scale_x_continuous(breaks = seq(-20, 20, 5))
 
 
+
+#### By normalization ####
+
+# A representar x8 imaxes destas,unha para cada normalización, cos datos de logFC desa
+# normalización en lugar de usar o promedio. 
+
+# Extract info
+normalizacions <- colnames(dataFCMatrix$PXD055210$dfDetailed)[2:9]
+allPlots <- sapply(normalizacions, function(norma){
+  listPlot <- sapply(dataFCMatrix, "[[", 5, simplify = F)
+  listPlot <- sapply(listPlot, function(df) df[, c(norma, "SameSignInt")], 
+                     simplify = F)
+  listPlot <- sapply(names(listPlot), function(nome) {
+    df <- listPlot[[nome]]
+    df$Dataset <-  nome
+    df
+  }, simplify = F)
+  
+  # Table info
+  dfPlot <- do.call(rbind, listPlot)
+  colnames(dfPlot)[1] <- "Normalization"
+  # colnames(dfPlot)
+  ordenDatasets <- dfPlot %>% 
+    group_by(Dataset) %>%
+    summarise(maximo = max(abs(Normalization))) %>%
+    arrange(maximo) %>% 
+    pull(Dataset)
+  
+  dfPlot$Dataset <- factor(dfPlot$Dataset, levels = rev(ordenDatasets))
+  dfPlot$ID <- as.numeric(as.factor(dfPlot$Dataset))
+  table(dfPlot$ID)
+  dfPlot$SameSignInt <- factor(dfPlot$SameSignInt, 
+                               levels = c("Equal sign", "Different sign"))
+  
+  # Plot
+  sizeLetra <- 14
+  Biostatech::plotScatter(
+    base = dfPlot, 
+    varX = "Normalization", 
+    varY = "ID",
+    varGrupo = "SameSignInt",
+    adjustLine = F, 
+    color = Biostatech::colorPalette(n = 2), 
+    interact = F, 
+    sizeDots = 1, 
+    tituloX = paste0("logFC - normalization ", norma), 
+    tituloY = "Dataset", 
+    tituloLeyenda = "Proteins with..."
+  )$grafico + 
+    ggplot2::annotate(
+      "rect", xmin = minRes$lista[5], xmax = minRes$lista[6], 
+      ymin = -Inf, ymax = Inf, fill = "darkred", alpha = 0.2
+    ) +
+    ggplot2::annotate(
+      "rect", xmin = maxRes$lista[5], xmax = maxRes$lista[6], 
+      ymin = -Inf, ymax = Inf, fill = "darkred", alpha = 0.2
+    ) +
+    ggplot2::geom_vline(
+      xintercept = maxRes$lista[[1]], 
+      linewidth = 0.3, 
+      colour = "darkred") +
+    ggplot2::geom_vline(
+      xintercept = minRes$lista[[1]], 
+      linewidth = 0.3, 
+      colour = "darkred") +
+    # guides(shape = guide_legend(title = "Proteins with...", override.aes = list(size = 5))) +
+    theme(axis.text = element_text(size = sizeLetra),
+          axis.title = element_text(size = sizeLetra+2),
+          legend.text = element_text(size = sizeLetra-2), 
+          legend.title = element_blank(), 
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          legend.spacing.x = unit(4, 'cm'),
+          legend.position = "top"
+    ) + 
+    xlim(-20, 20) +
+    scale_y_continuous("Dataset",  
+                       labels = as.character(unique(dfPlot$Dataset)), 
+                       breaks = (1:100)) +
+    scale_x_continuous(breaks = seq(-20, 20, 5))
+  
+}, simplify = F, USE.NAMES = T)
+
+
+ggpubr::ggarrange(plotlist = allPlots, ncol = 3, nrow = 3, common.legend = T)
 
 #
 
