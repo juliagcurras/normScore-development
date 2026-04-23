@@ -47,7 +47,7 @@ library(ggpubr)
 
 ```{r}
 # variables
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore/Benchmarking/Data/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/Benchmarking/Data/"
 # outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
 js <- c(
 "function(row, data, num, index){",

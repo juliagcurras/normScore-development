@@ -91,9 +91,9 @@ rleKS <- function(dfDatos) {
 }
 
 # MAPE removing the logarithm
-mape <- function(actual, predicted, prop = F){
+mape <- function(actual, predicted, proportion = F){
   metric <- mean(abs((actual - predicted)/actual))
-  metric <- ifelse(!prop, metric*100, metric)
+  metric <- ifelse(!proportion, metric*100, metric)
   return(metric)
 }
 
@@ -341,7 +341,7 @@ normScore <- function(
   #----- ITEM 2 - Correlation (Spearman) ####
   allVectorsCorr <- lapply(normMatrixList, getCorrelationVector,
                            dfGrupos = designMatrix,
-                           metodo = "spearman")
+                           method = "spearman")
   
   dfCor <- data.frame(sapply(allVectorsCorr, "length<-", 
                              max(lengths(allVectorsCorr))))
