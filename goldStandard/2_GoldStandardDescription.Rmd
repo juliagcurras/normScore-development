@@ -31,6 +31,7 @@ knitr::opts_chunk$set(
 )
 
 library(dplyr)
+library(tidyr)
 library(DT)
 library(ggplot2)
 library(Biostatech)
@@ -75,19 +76,39 @@ js <- c(
 )
 ```
 
+```{r}
+
+# Loading basal data
+dfIndex <- readxl::read_xlsx( 
+  path = "C:/Users/julia/Documents/GitHub/proteomicsNormalizationStudy/Data/_Index.xlsx", 
+  sheet = "In", 
+  col_names = T)
+
+# Aggregating Specie and Software (necessary for next analysis)
+dfIndex <- dfIndex %>%
+  as.data.frame() %>%
+  dplyr::mutate(
+    SpecieGrouped = 
+      if_else(
+        !(Specie %in% c("Mus musculus", "Homo sapiens")), 
+        "Others", 
+        Specie),
+    Software = 
+      if_else(
+        !(`Analysis Software` %in% c("DIANN", "MaxQuant")),
+        "Others", 
+        `Analysis Software`),
+  )
+```
+
+
 
 # Datasets 
 
 General characteristics of each dataset are depicted in the following table:
 
 ```{r}
-df <- readxl::read_xlsx(path = "_Index.xlsx", sheet = 1, col_names = T)
-
-df$`N groups` <- sapply(strsplit(x = df$`Group names`, split = ";", fixed = T), length)
-# table(df$`N groups`)
-
-# df$`Publication (DOI)` <- gsub(pattern = "DOI: ", replacement = "", 
-#                                x = df$`Publication (DOI)`, fixed = T)
+df <- dfIndex
 urlDOI <- paste0("https://doi.org/", substr(x = df$`Publication (DOI)`, start = 6, stop = 50))
 df$`Publication (DOI)` <- paste0(
     "<a href='", urlDOI, "' target='_blank'>", df$`Publication (DOI)`,"</a>"
@@ -111,8 +132,10 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F, filter = "to
 ```{r fig.height=8}
 ## Automáticamente:
 categoricas <- df %>%
-  select(Acquisition, `MS instrument (summary)`, `Analysis Software`, Specie, 
-         `Tissue (summary)`, `Cell culture`, `N groups`)
+    select(Acquisition, `MS instrument (summary)`, 
+           Software, `Analysis Software`, 
+           SpecieGrouped, Specie,
+           `Tissue (summary)`, `Cell culture`, `N groups`)
 
 
 printTabTitle("Análisis descriptivo de variables categóricas.")
@@ -236,3 +259,104 @@ cat("## {- .toc-ignore}
 printOutlierID(cuantitativas, varID = NULL)
 
 ```
+
+
+## Assessment results
+
+
+```{r}
+dfAssess <- readxl::read_xlsx(path = "_Assessment.xlsx", sheet = 1, col_names = T)
+resAllGS <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/results_Gold_Standard.rds")
+```
+
+### By item 
+
+#### Top 1 normalizations
+
+```{r}
+dfItem <- resAllGS$byItem
+
+tab <- dfItem %>%
+  filter(RankGS == 1) %>%
+  count(Item, Normalization, name = "nBest") %>%
+  tidyr::pivot_wider(
+    names_from = Normalization,
+    values_from = nBest,
+    values_fill = 0
+  ) %>%
+  arrange(Item)
+tab$Item <- NULL
+rownames(tab) <- paste0("Item ", 1:6)
+
+
+pheatmap::pheatmap(mat = (tab), cluster_rows = F, cluster_cols = T, 
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 9, name = "OrRd"))(100))
+```
+
+
+#### Worst normalizations
+
+```{r}
+tab <- dfItem %>%
+  group_by(ID, Item) %>%
+  filter(RankGS == max(RankGS, na.rm = TRUE)) %>%
+  ungroup() %>%
+  count(Item, Normalization, name = "nWorst") %>%
+  complete(Item, Normalization, fill = list(nWorst = 0)) %>%
+  pivot_wider(
+    names_from = Normalization,
+    values_from = nWorst
+  ) %>%
+  arrange(Item)
+tab$Item <- NULL
+rownames(tab) <- paste0("Item ", 1:6)
+
+pheatmap::pheatmap(mat = tab, cluster_rows = F, cluster_cols = T, 
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 9, name = "Blues"))(100))
+```
+
+
+
+
+### Global
+
+#### Best (unique)
+
+```{r}
+dfBest <- data.frame(
+  ID =  names(resAllGS$globalBest),
+  Normalization = sapply(resAllGS$globalBest, "[[", 1))
+
+Biostatech::getCatTable(dfBest$Normalization)$tablaFormato
+```
+
+#### Bests
+
+```{r}
+dfBests <- data.frame(Normalizations  = unname(unlist(resAllGS$globalBests)))
+
+Biostatech::getCatTable(dfBests$Normalizations)$tablaFormato
+```
+
+#### Worst
+
+```{r}
+dfWorst <- data.frame(Normalizations  = unname(unlist(resAllGS$globalWorst)))
+
+Biostatech::getCatTable(dfWorst$Normalizations)$tablaFormato
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
