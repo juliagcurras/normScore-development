@@ -32,7 +32,7 @@ normScoreList <- sapply(allFiles, function(i){
     detailRankItem0 = T
   ))
 },simplify = F, USE.NAMES = T)
-saveRDS(object = normScoreList, file = "AssessmentFiles/Refinement_normScore_dataGS_All_item0x3_item2_01.rds")
+saveRDS(object = normScoreList, file = "AssessmentFiles/Refinement_normScore_dataGS_All_item0x4_item2_01.rds")
 # normScoreList <- readRDS(file = "AssessmentFiles/normScore_dataGS_All.rds")
 
 

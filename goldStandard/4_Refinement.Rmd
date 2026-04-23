@@ -627,9 +627,9 @@ summaryGlobal$Bests$hitTable
 df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
 df$Position <- factor(
   df$Pos, 
-  levels = rev(sort(unique(df$Pos))), 
+  levels = 1/1:8, 
   labels = paste0("Posición ", 1:8))
-allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 
@@ -748,9 +748,9 @@ summaryGlobal$Bests$hitTable
 df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
 df$Position <- factor(
   df$Pos, 
-  levels = rev(sort(unique(df$Pos))), 
+  levels = 1/1:8, 
   labels = paste0("Posición ", 1:8))
-allClassess <- rev(sort(unique(df$Pos)))
+allClassess <- 1/1:8
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 
@@ -867,9 +867,9 @@ summaryGlobal$Bests$hitTable
 df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
 df$Position <- factor(
   df$Pos, 
-  levels = rev(sort(unique(df$Pos))), 
+  levels = 1/1:8, 
   labels = paste0("Posición ", 1:8))
-allClassess <- rev(sort(unique(df$Pos)))
+allClassess <-1/1:8 
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 

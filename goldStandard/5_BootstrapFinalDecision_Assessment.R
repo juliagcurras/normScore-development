@@ -45,13 +45,13 @@ normScoreList <- sapply(allFiles, function(i){
     doBootstrap = T
   ))
 },simplify = F, USE.NAMES = T)
-saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP_epsilon025.rds")
+saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataGS_All_Item0_x4_Item2_01_BOOTSTRAP_epsilon025.rds")
 
 
 ## Retrieve best norm ####
 # SAME INFO AS THE ONE INCLUDED AT 5_EvaluatingStrangeDatasets.rmd file
 allGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds")
-resNSNoBoot <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01.rds")
+resNSNoBoot <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x4_Item2_01.rds")
 bestGS <- (unlist(allGS$globalBest[names(normScoreList)]))
 bestNS <- sapply(lapply(normScoreList, "[[", 2), "[", 1)
 bestNSNoBoost <- sapply(resNSNoBoot, function(i) rownames(i)[1])

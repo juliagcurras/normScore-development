@@ -70,7 +70,7 @@ resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manu
 
 ## NormScore final results ####
 # Item0x3 and Item2 scaledx0.1
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 
 
@@ -115,12 +115,6 @@ DT::formatStyle(1, font = 'bold') %>% DT::formatRound(3:5, digits = 2)
 # table(table(df$ID)>1)
 ```
 
-
-```{r include = F}
-## Item 2
-resNS$PXD041237 %>% dplyr::select(Item2)
-resAllGS$byItem %>% filter(ID == "PXD054553") %>% filter(Item == "Item2")
-```
 
 
 ## Item 3 {.tabset}
@@ -240,49 +234,6 @@ knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
 
 ```
 
-<!-- ### PXD050996 {-} -->
-
-```{r include = F}
-# idDataset <- "PXD050996"
-# bestGS <- resAllGS$globalBests[[idDataset]]
-# worstGS <- resAllGS$globalWorst[[idDataset]]
-# bestNS <- resAllNS$resGlobal[[idDataset]]
-```
-
-<!-- * Clasificación normScore: `r paste0(bestNS, collapse = " > ")` -->
-
-<!-- * Clasificación gold standard: `r paste0(bestGS, collapse = ", ")` -->
-
-<!-- * Excluídas gold standard: `r paste0(worstGS, collapse = ", ")` -->
-
-<!-- Discrepancias entre forma y alineamiento en y=0 pero coincidencia en el Quantile que claramente es el mejor. Todas funcionan bien, difícil de evaluar cualitativamente al generar el gold standard. -->
-
-```{r}
-# # Tabla
-# df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item3")
-# df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item3") %>%
-#   mutate(Ranking = order(Ranking))
-# df <- merge(df1, df2, by = colnames(df1)[-4])
-# df <- df %>%
-#   arrange(RankGS) %>%
-#   rename(
-#     GoldStandard = RankGS, 
-#     NormScore = Ranking)
-# DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-#               options = list(ordering = F, dom = "Brt", scrollY = F,
-#                             scrollX = F, pageLength = nrow(df),
-#                             columnDefs = list(list(className = 'dt-center', targets = '_all')),
-#                             full_width = TRUE, rowCallback = DT::JS(js),
-#                             buttons = list(list(extend = "copy", text = "Copiar"),
-#                                           list(extend = "csv"), 
-#                                           list(extend = "excel")), 
-#                             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-# DT::formatStyle(1, font = 'bold')
-# 
-# # Grafico
-# knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
-
-```
 
 ### PXD010785 {-}
 
@@ -464,215 +415,6 @@ knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item3.png"))
 
 
 
-
-
-## Item 5 {.tabset}
-
-Problemas:
-
-* Mal alineamiento pero unas muestras contrarrestan a otras lo que implica y=0 de medianas
-
-* Al igual que con el item 3, cuando todas funcionan muy bien es difícil clasificar a ojo y pequeñas diferencias que no se ven en los boxplots pueden estar reflejas a nivel numérico y recogidas por el normScore. 
-
-Conclusión: no afecta a la clasificación general, el resto de items salvan. 
-
-### PXD014311  {-}
-
-```{r include = F}
-bestGS <- resAllGS$globalBests$PXD014311
-worstGS <- resAllGS$globalWorst$PXD014311
-bestNS <- resAllNS$resGlobal$PXD014311
-```
-
-
-Salen mejor Log, Mean y TI que el resto (exceptuando Quantile). Explicación:
-
-* En el resto de normalizaciones las medianas se alinean mejor peeeero lo hacen algo más abajo de 0, con una pendiente ligeramente negativa, mientras que en Log, Mean y TI no se alinean bien, suben y bajan, haciendo que la recta de regresión que se ajuste más en el y = 0. Posible sesgo de esta métrica. 
-
-Peeero aunque haya un error, el resto de items salvan la evaluación final, y la selección del mejor método:
-
-* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
-
-* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
-
-* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
-
-
-```{r}
-# Tabla
-df1 <- resAllGS$byItem %>% filter(ID == "PXD014311") %>% filter(Item == "Item5")
-df2 <- resAllNS$resByItem %>% filter(ID == "PXD014311") %>% filter(Item == "Item5") %>%
-  mutate(Ranking = order(Ranking))
-df <- merge(df1, df2, by = colnames(df1)[-4])
-df <- df %>%
-  arrange(RankGS) %>%
-  rename(
-    GoldStandard = RankGS, 
-    NormScore = Ranking)
-DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-              options = list(ordering = F, dom = "Brt", scrollY = F,
-                            scrollX = F, pageLength = nrow(df),
-                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
-                            full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
-                                          list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
-
-# Grafico
-knitr::include_graphics(path = "Evaluation/PXD014311_Item5.png")
-
-```
-
-
-
-
-### PXD068597 {-}
-
-```{r include = F}
-bestGS <- resAllGS$globalBests$PXD068597
-worstGS <- resAllGS$globalWorst$PXD068597
-bestNS <- resAllNS$resGlobal$PXD068597
-```
-
-
-Pasa similar al caso anterior, en este datastes hay cuatro muestras con mediana centrada en 0 y otras dos que se contrarrestan (una con boxplot desplazado arriba y otra, abajo), entonces la alineación en log es en 0. Mientras que al normalizar estas dos muestras mejoran, y las otras 4 empeoran ligeramente, lo que hace que el alinemiento sea peor. 
-
-Volvemos a lo mismo, la clasificación global salva la situación:
-
-* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
-
-* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
-
-* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
-
-Log está de 3 porque Quantile reduce mucho el error en todas, en este caso se escogió Log según el gold standard por la regla de la navaja de Occam o principio de parsimonia: realmente no hay tanta varibilidad en los datos, nos quedamos con la opción más sencilla que funcione bien. 
-
-
-```{r}
-# Tabla
-df1 <- resAllGS$byItem %>% filter(ID == "PXD068597") %>% filter(Item == "Item5")
-df2 <- resAllNS$resByItem %>% filter(ID == "PXD068597") %>% filter(Item == "Item5") %>%
-  mutate(Ranking = order(Ranking))
-df <- merge(df1, df2, by = colnames(df1)[-4])
-df <- df %>%
-  arrange(RankGS) %>%
-  rename(
-    GoldStandard = RankGS, 
-    NormScore = Ranking)
-DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-              options = list(ordering = F, dom = "Brt", scrollY = F,
-                            scrollX = F, pageLength = nrow(df),
-                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
-                            full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
-                                          list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
-
-# Grafico
-knitr::include_graphics(path = "Evaluation/PXD068597_Item5.png")
-
-```
-
-### PXD054374 {-}
-
-```{r include = F}
-bestGS <- resAllGS$globalBests$PXD054374
-worstGS <- resAllGS$globalWorst$PXD054374
-bestNS <- resAllNS$resGlobal$PXD054374
-```
-
-Clasificación global:
-
-* Clasificación normScore: `r paste0(bestNS, collapse = " > ")`
-
-* Clasificación gold standard: `r paste0(bestGS, collapse = ", ")`
-
-* Excluídas gold standard: `r paste0(worstGS, collapse = ", ")`
-
-Problema: todas funcionan muy bien, difícil la clasificación cualitativa en el gold standard. 
-
-```{r}
-# Tabla
-df1 <- resAllGS$byItem %>% filter(ID == "PXD054374") %>% filter(Item == "Item5")
-df2 <- resAllNS$resByItem %>% filter(ID == "PXD054374") %>% filter(Item == "Item5") %>%
-  mutate(Ranking = order(Ranking))
-df <- merge(df1, df2, by = colnames(df1)[-4])
-df <- df %>%
-  arrange(RankGS) %>%
-  rename(
-    GoldStandard = RankGS, 
-    NormScore = Ranking)
-DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-              options = list(ordering = F, dom = "Brt", scrollY = F,
-                            scrollX = F, pageLength = nrow(df),
-                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
-                            full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
-                                          list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-DT::formatStyle(1, font = 'bold')
-
-# Grafico
-knitr::include_graphics(path = "Evaluation/PXD054374_Item5.png")
-
-```
-
-
-
-## Item 6 {.tabset}
-
-
-### PXD028772 {-}
-
-```{r include = F}
-# idDataset <- "PXD028772"
-# bestGS <- resAllGS$globalBests[[idDataset]]
-# worstGS <- resAllGS$globalWorst[[idDataset]]
-# bestNS <- resAllNS$resGlobal[[idDataset]]
-```
-
-<!-- * Clasificación normScore: `r paste0(bestNS, collapse = " > ")` -->
-
-<!-- * Clasificación gold standard: `r paste0(bestGS, collapse = ", ")` -->
-
-<!-- * Excluídas gold standard: `r paste0(worstGS, collapse = ", ")` -->
-
-<!-- Conflicto entre forma y alineamiento en y=0 por muchos outliers.  -->
-
-```{r}
-# # Tabla
-# df1 <- resAllGS$byItem %>% filter(ID == idDataset) %>% filter(Item == "Item6")
-# df2 <- resAllNS$resByItem %>% filter(ID == idDataset) %>% filter(Item == "Item6") %>%
-#   mutate(Ranking = order(Ranking))
-# df <- merge(df1, df2, by = colnames(df1)[-4])
-# df <- df %>%
-#   arrange(RankGS) %>%
-#   rename(
-#     GoldStandard = RankGS, 
-#     NormScore = Ranking)
-# DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
-#               options = list(ordering = F, dom = "Brt", scrollY = F,
-#                             scrollX = F, pageLength = nrow(df),
-#                             columnDefs = list(list(className = 'dt-center', targets = '_all')),
-#                             full_width = TRUE, rowCallback = DT::JS(js),
-#                             buttons = list(list(extend = "copy", text = "Copiar"),
-#                                           list(extend = "csv"), 
-#                                           list(extend = "excel")), 
-#                             language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
-# DT::formatStyle(1, font = 'bold')
-# 
-# # Grafico
-# knitr::include_graphics(path = paste0("Evaluation/", idDataset, "_item6.png"))
-
-```
-
-
-
 # Global 
 
 En las siguientes secciones se identifican las explicaciones a las diferencias de GS y NS en los primeros y últimos puestos respectivamente. 
@@ -680,7 +422,7 @@ En las siguientes secciones se identifican las explicaciones a las diferencias d
 
 ## Top issues {.tabset}
 
-Analizando uno a uno los datasets en los cuales la mejor normalización no está entre los 3 primeros puestos del ranking (sucede en un total de 10 normalizaciones), se ha visto que el motivo principal es que todas las normalizaciones funcionan más o menos bien, habiendo pequeñas diferencias entre ellas, por lo que se estableció por gold standard la más sencilla (median normalmente), que no se localiza en las primeras posiciones por las pequeñas diferencias. 
+Analizando uno a uno los datasets en los cuales la mejor normalización no está entre los 3 primeros puestos del ranking (sucede en un total de 9 normalizaciones), se ha visto que el motivo principal es que todas las normalizaciones funcionan más o menos bien, habiendo pequeñas diferencias entre ellas, por lo que se estableció por gold standard la más sencilla (median normalmente), que no se localiza en las primeras posiciones por las pequeñas diferencias. 
 
 ```{r}
 dfAux <- summaryGlobal$Bests$hitRes %>% as.data.frame
@@ -838,7 +580,7 @@ En la clasificación global se observó que el problema en los primeros puestos 
 ```{r}
 # resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP_epsilon02.rds")
 # resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP.rds")
-resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x3_Item2_01_BOOTSTRAP_epsilon025.rds")
+resBS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x4_Item2_01_BOOTSTRAP_epsilon025.rds")
 resAllNS <- sapply(resBS, "[[", 2, simplify = F, USE.NAMES = T)
 summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS, 
                                resGlobalGS_BEST = resAllGS$globalBest,

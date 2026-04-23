@@ -81,7 +81,7 @@ resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manu
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_gamma_09_12.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_Item3_09.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
 # resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_.rds")) # Originales
 source(file = "3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
