@@ -113,11 +113,11 @@ getResultsByItem <- function(dfRaw, listaNorm, dm, item){
         Biomics::plotBoxMulti(
           base = datos, varResumen = colnames(datos),
           interact = F, tituloX = nome, tituloY = "Intensity distribution"
-        )$grafico + theme(axis.text.x = element_text(angle = 65, vjust = 0.5))
+        )$grafico # + theme(axis.text.x = element_text(angle = 65, vjust = 0.5))
       } else if (item == "item5"){
         Biomics::plotRLE(df = datos, normalizacion = nome, interact = F, 
-                         tituloX = nome)$grafico + 
-          theme(axis.text.x = element_text(angle = 65, vjust = 0.5))
+                         tituloX = nome)$grafico # + 
+          # theme(axis.text.x = element_text(angle = 65, vjust = 0.5))
       } else if (item == "item4"){
         Biomics::plotMeanSD(df = datos, interact = F, tituloX = nome)$grafico
       } else if (item == "item3"){
@@ -156,7 +156,7 @@ getResultsByItem <- function(dfRaw, listaNorm, dm, item){
         listaNorm, 
         Biomics::getPooledCor, 
         dfGrupos = dm,
-        metodo = "spearman")
+        method = "spearman")
       dfPlot <- data.frame(sapply(allVectorsCorr, "length<-", max(lengths(allVectorsCorr))))
       empties <- c(Biomics::plotBoxMulti(
         base = dfPlot, 
