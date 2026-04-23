@@ -100,9 +100,8 @@ js <- c(
 )
 
 df <- readRDS(file = "../allSimulations.rds")
-df <- df %>% filter(!(especificos %in% c(1,8)))
-
-# df <- df %>% filter(especificos %in% c(0, 4, 5, 6, 7))
+df <- df %>% filter(!(especificos %in% c(1,4,8))) # quitamos o 1 que ten control negativo en item 3, o 4 pq é moi reiterativo co 3 e non aporta nada, e o 8 porque pa valores extremos en item3 a situación ponse rara.
+df$especificos <- factor(df$especificos, levels= c(0, 2:3, 5:7), labels = 1:6)
 ```
 
 # Simulations
@@ -151,7 +150,7 @@ df2 <- df %>%
     names_from = especificos,
     values_from = corr
   )
-dfAux <- df2 %>% dplyr::select(Items, `0`:`7`)
+dfAux <- df2 %>% dplyr::select(Items, `1`:`6`)
 colnames(dfAux)[-1] <- paste0("Type of error (", colnames(dfAux)[-1], ")")
 Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
 ```
@@ -169,12 +168,14 @@ graficos <- sapply(unique(df$especificos), function(i){
   Biomics::plotBoxMulti(
     base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Error ", i), 
     interact = F, 
-    color = rep(unname(colores[as.character(i)]), 8))$grafico + ylim(c(-1, 1))
+    color = rep(unname(colores[as.character(i)]), 8))$grafico +
+    ylim(c(-1, 1)) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 65))
 })
 ```
 
-```{r  fig.height=12, fig.align='center', fig.width=10}
-ggpubr::ggarrange(plotlist = graficos, nrow = 3, ncol = 3) 
+```{r  fig.height=10, fig.align='center', fig.width=10}
+ggpubr::ggarrange(plotlist = graficos, nrow = 2, ncol = 3) 
 ```
 
 
@@ -192,7 +193,10 @@ df2 <- df %>%
     names_from = n_proteins,
     values_from = corr
   )
-dfAux <- df2 %>% dplyr::select(Items, `100`:`10000`)
+dfAux <- df2 %>% 
+  filter(especificos != "1") %>%
+  dplyr::select(Items, `100`:`10000`) #%>%
+  # mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo xa foi quitado ao inicio
 colnames(dfAux)[-1] <- paste0("Nº proteins:", colnames(dfAux)[-1])
 Biostatech::tableDescr(Items ~ ., data = dfAux, onlyDescr = T)$tablaFormato
 ```
@@ -204,8 +208,8 @@ names(colores) <- unique(df$n_proteins)
 graficos <- sapply(unique(df$n_proteins), function(i){
   dfAux <- df %>% 
     filter(n_proteins == i) %>% 
-    filter(especificos != 0) %>% # control negativo
-    mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    filter(especificos != 1) %>% # control negativo
+    # mutate(Item3 = if_else(especificos == 2, NA, Item3)) %>% # # control negativo Item3 xa foi quitado ao inicio
     dplyr::select(Item0:normScore)
   Biomics::plotBoxMulti(
     base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº proteins:  ", i), 
@@ -269,8 +273,8 @@ names(colores) <- unique(df$n_per_group)
 graficos <- sapply(unique(df$n_per_group), function(i){
   dfAux <- df %>% 
     filter(n_per_group == i) %>% 
-    filter(especificos != 0) %>% # control negativo
-    mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    filter(especificos != 1) %>% # control negativo
+    # mutate(Item3 = if_else(especificos == 2, NA, Item3)) %>% # # control negativo item3 xa foi quitado ao inicio
     dplyr::select(Item0:normScore)
   Biomics::plotBoxMulti(
     base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Nº samples:  ", i), 
@@ -336,8 +340,8 @@ names(colores) <- unique(df$semilla)
 graficos <- sapply(unique(df$semilla), function(i){
   dfAux <- df %>% 
     filter(semilla == i) %>% 
-    filter(especificos != 0) %>% # control negativo
-    mutate(Item3 = if_else(especificos == 1, NA, Item3)) %>% # control negativo
+    filter(especificos != 1) %>% # control negativo
+    # mutate(Item3 = if_else(especificos == 2, NA, Item3)) %>% # # control negativo item3 xa foi quitado ao inicio
     dplyr::select(Item0:normScore)
   Biomics::plotBoxMulti(
     base = dfAux, varResumen = colnames(dfAux), titulo = paste0("Repetición (semilla):  ", i), 
