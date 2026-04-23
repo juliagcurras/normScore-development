@@ -97,33 +97,47 @@ mape <- function(actual, predicted, prop = F){
   return(metric)
 }
 
-rleMAPE <- function(dfDatos) {
-  medianaProt <- apply(dfDatos, 1, stats::median, na.rm = T)
+rleMAPE <- function(data) {
+  rowMedians <- apply(data, 1, stats::median, na.rm = TRUE)
   
-  ## non log data
-  rleData <- as.data.frame(t(t(dfDatos) / medianaProt))
+  # rleData <- as.data.frame(t(t(data) / rowMedians))
+  rleData <- data - rowMedians
+  rleData <- 2^rleData
   
-  medianVector <- apply(rleData, 2, median, na.rm = T)
+  # sampleMedians <- apply(rleData, 2, stats::median, na.rm = TRUE)
+  # sampleMedians <- 2^sampleMedians # No log for MAPE
   
-  return(mape(actual = 1, predicted = medianVector, prop = F))
-}
-
-
-tiMAPE <- function(dfDatos) {
-  allMetrics <- apply(dfDatos, 2, stats::quantile, na.rm = T, simplify = F)
-  q1 <- sapply(allMetrics, "[[", 2)
-  q3 <- sapply(allMetrics, "[[", 4)
-  medianVector <- sapply(allMetrics, "[[", 3)
+  sampleQuantiles <- apply(rleData, 2, stats::quantile, na.rm = TRUE, simplify = FALSE)
+  q1 <- sapply(sampleQuantiles, "[[", 2)
+  sampleMedians <- sapply(sampleQuantiles, "[[", 3)
+  q3 <- sapply(sampleQuantiles, "[[", 4)
+  
   finalMetric <- 
-    # mse(actual = median(medianVector), predicted = medianVector)/median(medianVector) + 
-    mape(actual = median(medianVector), predicted = medianVector)/median(medianVector) + 
-    # mse(actual = median(q1), predicted = q1)/median(q1) +
-    mape(actual = median(q1), predicted = q1)/median(q1) +
-    # mse(actual = median(q3), predicted = q3)/median(q3)
-    mape(actual = median(q3), predicted = q3)/median(q3)
+    mape(actual = 1, predicted = sampleMedians, proportion = TRUE) +
+    mape(actual = stats::median(q1), predicted = q1, proportion = TRUE) +
+    mape(actual = stats::median(q3), predicted = q3, proportion = TRUE)
+  
+  # return(mape(actual = 1, predicted = sampleMedians, proportion = FALSE))
+  return(finalMetric)
+} 
+
+
+tiMAPE <- function(data) {
+  sampleQuantiles <- apply(data, 2, stats::quantile, na.rm = TRUE, simplify = FALSE)
+  q1 <- sapply(sampleQuantiles, "[[", 2)
+  sampleMedians <- sapply(sampleQuantiles, "[[", 3)
+  q3 <- sapply(sampleQuantiles, "[[", 4)
+  
+  finalMetric <- 
+    mape(actual = stats::median(sampleMedians), predicted = sampleMedians, proportion = TRUE) +
+    mape(actual = stats::median(q1), predicted = q1, proportion = TRUE) +
+    mape(actual = stats::median(q3), predicted = q3, proportion = TRUE)
   
   return(finalMetric)
-}
+} 
+
+
+
 
 meanSDdiffArea <- function(dfDatos){
   
@@ -228,26 +242,50 @@ maDiffAreas <- function(data, samplesG1, samplesG2){
 }
 
 
-getCorrelationVector <- function(df, dfGrupos, metodo = "pearson"){
-  df <- as.data.frame(df)
-  allCorrs <- lapply(unique(dfGrupos$Groups), function(i){
-    # Select samples
-    samplesByGroup <- dfGrupos %>% 
-      dplyr::filter(Groups == i) %>%
-      dplyr::pull(Samples)
-    dfCor <- df %>% 
-      dplyr::select(all_of(samplesByGroup))
-    # Estimate correlation
-    tabCor <- stats::cor(dfCor, use = "complete.obs", method = metodo)
-    # Get unique pairs of correlation
-    tabCor[lower.tri(tabCor)] <- NA # remove duplicated corr
-    diag(tabCor) <- NA # remove variance diagonal
-    tabCor <- stats::na.omit(reshape2::melt(tabCor))
-  }
-  )
-  vecFinal <- as.data.frame(dplyr::bind_rows(allCorrs)) %>% dplyr::pull(value)
-  return(vecFinal)
+# getCorrelationVector <- function(df, dfGrupos, method = "pearson"){
+#   df <- as.data.frame(df)
+#   allCorrs <- lapply(unique(dfGrupos$Groups), function(i){
+#     # Select samples
+#     samplesByGroup <- dfGrupos %>% 
+#       dplyr::filter(Groups == i) %>%
+#       dplyr::pull(Samples)
+#     dfCor <- df %>% 
+#       dplyr::select(all_of(samplesByGroup))
+#     # Estimate correlation
+#     tabCor <- stats::cor(dfCor, use = "complete.obs", method = metodo)
+#     # Get unique pairs of correlation
+#     tabCor[lower.tri(tabCor)] <- NA # remove duplicated corr
+#     diag(tabCor) <- NA # remove variance diagonal
+#     tabCor <- stats::na.omit(reshape2::melt(tabCor))
+#   }
+#   )
+#   vecFinal <- as.data.frame(dplyr::bind_rows(allCorrs)) %>% dplyr::pull(value)
+#   return(vecFinal)
+# }
+
+
+getCorrelationVector <- function(df, dfGrupos, method = "pearson"){
+  data <- as.data.frame(df)
+  groupData <- as.data.frame(dfGrupos)
+  
+  allCorrelations <- lapply(unique(groupData$Groups), function(group) {
+    samplesByGroup <- groupData[groupData$Groups == group, "Samples"]
+    
+    groupMatrix <- data[, samplesByGroup, drop = FALSE]
+    
+    corMatrix <- stats::cor(groupMatrix, use = "pairwise.complete.obs", method = method)
+    
+    corValues <- c()
+    for (i in seq_len(ncol(groupMatrix) - 1)) {
+      corValues <- c(corValues, corMatrix[i, -(seq_len(i))])
+    }
+    
+    corValues
+  })
+  
+  unlist(allCorrelations, use.names = FALSE)
 }
+
 
 # Computing total score for each normalization after resampling proteins (rows)
 bootstrapScoreRows <- function(data, indices) {
@@ -356,7 +394,7 @@ normScore <- function(
   
   #----- Corrections ####
   # Low discrimination power for item2 (correlation)
-  scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.1
+  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.1
 
   
   #----- Rank ####
