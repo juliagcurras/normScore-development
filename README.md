@@ -49,7 +49,7 @@ In the following sections, the estimation of each item is explaining.
 
 To assess the magnitude of the systematic bias, total intensity (sum of protein 
 intensities) is estimated for each sample. Then, the coefficiente of variance is 
-estimated for this data. This coefficiente is used as the correction factor. 
+estimated for this data. This coefficiente is used as the correction factor.
 
 ### Item 1
 
@@ -123,55 +123,167 @@ the perfect normalization. Thus, the following MAPE are computed:
 
 ### Simulations
 
-Simulation of proteomic data matrices were used to test the behavior of each 
-item in the assessment of metric and graphical information, and also to
-eval the global score. 
+Simulated proteomic datasets were used to evaluate the behavior of each scoring 
+item, as well as the overall performance of the `normScore` framework.
 
-Function structure:
+The simulation function is structured in three main components:
 
-* A first block of code corresponds to the generation of plain proteomic data. Two
-groups of study are considered, and different parameters can be changed, including 
-number of proteins; internal correlation between samples and proteins; proportion 
-of proteins with different quantities between groups; residual error; and
-quantification range.
+* **Baseline data generation**
+  A base proteomic dataset is generated assuming two biological groups. 
+  Several parameters can be controlled, including:
 
-* With the aim of increasing variability in data to mimic the different behavior 
-that must be detected across the score items, two extra blocks of code allow the 
-addition of a shift and a dependence between mean and intensity in the data. 
+  * number of proteins
+  * sample size per group
+  * correlation structure between samples and proteins
+  * proportion of differentially abundant proteins
+  * residual noise
+  * quantification range
 
-* Finally, the last block of code generates missing data following a pattern of 
-low quantity (not random missing data). 
+* **Systematic perturbations**
+  Additional components are introduced to mimic specific types of distortions 
+  targeted by the score:
 
-Using the predefined parameter values, the function simulates data with perfect 
-characteristics for all items. By changing parameters, error
-is included into the data, with the corresponding behaviour change. 
+  * global intensity shifts
+  * mean–variance dependence
 
-For each item, nine parameter values were selected, which was called "specific
-combination". The first value was used to 
-generate a perfect dataset, the ninth to generate the worst dataset, and the 
-remaining values to generate intermediate datasets with progressively worse quality.
-The item was then used to rate and sort the datasets, and Kendall correlation
-was computed between the observed and expected order. Nine specific combinations
-were stablish to recreate and assess different situations regarding datasets 
-behaviour. 
+* **Missing data generation**
+  Missing values are introduced following a low-abundance (MNAR-like) 
+  mechanism rather than random missingness.
 
-For each specific combination, 9 dataset were simulated and compared using the item, 
-obtaining one correlation. Then, these simulations were repeated for a different 
-combination of seeds (10), number of proteins (4) and sample size per group (4). 
-Therefore, a total number of 1440 combinations were obtained:
-
-$$\text{9 specific combinations} \times \text{10 repetitions} \times \text{4 diff nº of proteins}  \times \text{4 different sample size} = 1440$$
-
-For each specific combination, 9 datasets were simulated: 12960 simulations. 
-
-For general combination, one Kendall correlation is computed = 1440 Kendall correlation values. 
+Using the default parameters, the function generates datasets with ideal 
+characteristics for all score items. By progressively modifying parameters, 
+controlled levels of error are introduced, resulting in datasets of decreasing 
+quality.
 
 
+#### Item-wise evaluation
+
+For each scoring item, a set of nine parameter values was defined 
+(referred to as a *specific combination*), representing a gradient from 
+optimal to poor data quality:
+
+* the first value generates a near-perfect dataset
+* the ninth value generates a highly distorted dataset
+* intermediate values produce progressively degraded datasets
+
+Each item was then used to rank the nine simulated datasets, and the agreement 
+between the expected and observed ranking was assessed using Kendall’s correlation.
 
 
+#### Simulation design
+
+For each specific combination:
+
+* 9 datasets were generated
+* 1 Kendall correlation value was computed
+
+This process was repeated across multiple simulation conditions:
+
+* 20 random seeds
+* 4 different numbers of proteins
+* 4 sample sizes per group
+* 6 levels of error magnitude
+
+This results in:
+
+$$
+6 \times 20 \times 4 \times 4 = 1920 \text{ specific combinations}
+$$
+
+Since each combination contains 9 datasets:
+
+* **Total datasets generated:** 17280
+* **Total Kendall correlations computed:** 1920
 
 
+#### Error types evaluated
 
+Different types of perturbations were used to assess the sensitivity of each item:
+
+* Items 0, 1, 5, 6: global intensity shift
+* Item 2: correlation structure
+* Item 3: shift + residual variance
+* Item 4: mean–SD dependence
+* normScore: combination of all error types
+
+Considering all error scenarios:
+
+* **Total datasets simulated:** 86,400
+* **Total specific combinations:** 9,600
+
+
+> These simulations allowed us to verify that each item is sensitive to the 
+specific type of distortion it is designed to capture, and that the combined 
+score behaves consistently across heterogeneous scenarios.
+
+### Gold-standard benchmarking
+
+To evaluate the performance of the `normScore` framework beyond simulations, a
+curated gold-standard dataset was assembled. This dataset consisted of 100 
+proteomics studies from PRIDE, for which eight normalization methods were applied.
+
+Each dataset was manually annotated by ranking normalization methods according 
+to each individual criterion, and by identifying the best-performing methods 
+overall. In some cases, clearly suboptimal methods were also flagged for 
+exclusion.
+
+This gold-standard collection was used to assess the performance of `normScore` 
+using ranking-based metrics, including Hit@TopK and Mean Reciprocal Rank (MRR).
+
+
+### Score optimization strategies
+
+In addition to evaluation, two strategies were explored to improve the scoring
+system using the gold-standard datasets:
+
+
+#### Genetic algorithm-based weighting
+
+Genetic algorithms were used to search for optimal weights for the six scoring 
+items. Three different fitness functions were tested:
+
+* A function prioritizing agreement between the top-ranked method by `normScore` 
+and the manually selected top method, with a secondary penalty based on 
+disagreement with all manually selected best methods.
+* A reversed version of the previous fitness formulation.
+* A variant considering both the top1 and top2 methods from `normScore` relative 
+to the manually selected top method.
+
+Despite extensive exploration, no combination of weights consistently improved 
+the performance of the original unweighted scoring scheme.
+
+#### Bootstrap-based pairwise comparison and parsimony
+
+An alternative strategy was based on bootstrap resampling of item scores to 
+derive confidence intervals for each normalization method. Pairwise comparisons 
+were then performed, and in cases where differences were not statistically 
+significant, the simplest method was selected following the principle of parsimony.
+
+While this approach yielded reasonable results, it did not outperform the 
+standard `normScore` ranking.
+
+### Experimental benchmarking (DIA and DDA datasets)
+
+Finally, `normScore` was evaluated on a set of controlled benchmarking datasets,
+including 10 DIA and 10 DDA experiments with varying chromatographic conditions
+and sample loads.
+
+These datasets were constructed using mixtures of *E. coli*, human, and yeast 
+proteins across two groups (A and B), with known expected log fold changes:
+
+* *E. coli*: −2
+* Human: 0
+* Yeast: +1
+
+The normalization methods selected by `normScore` were compared against those 
+minimizing the mean absolute percentage error (MAPE) between observed and 
+expected logFC values.
+
+This analysis provided an independent validation of the scoring framework under 
+controlled experimental conditions.
+
+
+---
 
 
 
