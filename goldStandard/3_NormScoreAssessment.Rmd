@@ -76,15 +76,13 @@ js <- c(
 
 ```{r}
 resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
-# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_AnyCorrection.rds")) # Originales
-# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha075.rds")) # Originales
-# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_gamma_09_12.rds")) # Originales
-# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_Item3_09.rds")) # Originales
-# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_suavizado_alpha09.rds")) # Originales
 resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
-# resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x3_Item2_01_.rds")) # Originales
+resAllGSR2 <- readRDS(file = paste0(inputDir, "results_Gold_Standard_R2.rds")) # Manual ranking
+resNSR2 <- readRDS(file = paste0(inputDir, "normScore_dataR2_All_Item0_x4_Item2_01.rds")) # Originales
+
 source(file = "3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
+resAllNSR2 <- formatNormScoreResults(finalList = resNSR2, item0 = T)
 ```
 
 
@@ -170,10 +168,9 @@ Se basa en comparar todos los pares de métodos para los cuales el Gold Standard
 
 Es la métrica más **robusta e interpretable** en presencia de empates.
 
-## Resultados 
+## Resultados {.tabset}
 
 Resultados para el normScore sin pesos y para el total de datasets (100) de la base de datos de Gold Standard. 
-
 
 ```{r include = F}
 ### By item ####
@@ -191,11 +188,130 @@ df$Variable <- c("N", "", "", "Kendall Tau", "", "", "", "Spearman", "", "", "",
                  "Pairwise Accuracy", "", "", "")
 df$Statistic <- c("Total", "N valid", "Proportion N valid", "Median", "Mean", "SD", "Prop > 0.6", 
                   "Median", "Mean", "SD", "Prop > 0.7", "Median", "Mean", "SD", "Prop > 0.8")
-df <- df %>% dplyr::select(Variable, Statistic, dplyr::everything())
+df <- df %>%
+  # mutate(Reviewer = "R1 vs normScore") %>%
+  dplyr::select(Variable, Statistic, dplyr::everything())
+dfR1 <- df
+
+### By item R2 ####
+# Same between corrected and non corrected
+summaryByItemR2 <- resultsByItem(resNormScore = resAllNSR2$resByItem, 
+                                        resGS = resAllGSR2$byItem)
+# formatting
+df <- as.data.frame(summaryByItemR2$tabla)
+df[, 4:ncol(df)] <- apply(df[, 4:ncol(df)], 2, round, digits = 3)
+df <- as.data.frame(t(df))
+colnames(df) <- df[1,]
+df <- df[-1,]
+
+df$Variable <- c("N", "", "", "Kendall Tau", "", "", "", "Spearman", "", "", "", 
+                 "Pairwise Accuracy", "", "", "")
+df$Statistic <- c("Total", "N valid", "Proportion N valid", "Median", "Mean", "SD", "Prop > 0.6", 
+                  "Median", "Mean", "SD", "Prop > 0.7", "Median", "Mean", "SD", "Prop > 0.8")
+dfR2 <- df %>%
+  # mutate(Reviewer = "R2 vs normScore") %>%
+  dplyr::select(Variable, Statistic, dplyr::everything())
+
+
+### By item R2 ####
+# Same between corrected and non corrected
+resAllGS$byItem <- resAllGS$byItem %>% rename(Ranking = RankGS)
+summaryByItemR1R2 <- resultsByItem(resNormScore = resAllGS$byItem, 
+                                        resGS = resAllGSR2$byItem)
+# formatting
+df <- as.data.frame(summaryByItemR1R2$tabla)
+df[, 4:ncol(df)] <- apply(df[, 4:ncol(df)], 2, round, digits = 3)
+df <- as.data.frame(t(df))
+colnames(df) <- df[1,]
+df <- df[-1,]
+
+df$Variable <- c("N", "", "", "Kendall Tau", "", "", "", "Spearman", "", "", "", 
+                 "Pairwise Accuracy", "", "", "")
+df$Statistic <- c("Total", "N valid", "Proportion N valid", "Median", "Mean", "SD", "Prop > 0.6", 
+                  "Median", "Mean", "SD", "Prop > 0.7", "Median", "Mean", "SD", "Prop > 0.8")
+dfR1R2 <- df %>%
+  # mutate(Reviewer = "R1 vs R2") %>%
+  dplyr::select(Variable, Statistic, dplyr::everything())
+
+
+# All together
+# df <- rbind(dfR1, dfR2)
+# df <- rbind(df, dfR1R2)
+# df$Reviewer <- factor(df$Reviewer)
 
 ```
 
+```{r include = F}
+
+# Results normScore vs R1
+data <- summaryByItem$results
+colnames(data)
+
+listPlots <- list()
+
+listPlots[["p1"]] <- Biostatech::plotBox(base = data, varResumen = "tau", varGrupo = "Item", 
+                    interact = F, tituloY = "Kendall's Tau", color = "#003C72", 
+                    titulo = "Reviewer 1 vs normScore")$grafico + ylim(c(-1, 1))
+listPlots[["p4"]] <- Biostatech::plotBox(base = data, varResumen = "spearman", varGrupo = "Item", 
+                    interact = F, tituloY = "Spearman's coefficient", color = "#1786A3", 
+                    titulo = "Reviewer 1 vs normScore")$grafico + ylim(c(-1, 1))
+listPlots[["p7"]] <- Biostatech::plotBox(base = data, varResumen = "pairAccuracy", varGrupo = "Item", 
+                    interact = F, tituloY = "Pairwise Accuracy", color = "#2FB2AD", 
+                    titulo = "Reviewer 1 vs normScore")$grafico + ylim(c(0, 1))
+
+# Results normScore vs R2
+data <- summaryByItemR2$results
+colnames(data)
+
+listPlots[["p2"]] <- Biostatech::plotBox(base = data, varResumen = "tau", varGrupo = "Item", 
+                    interact = F, tituloY = "Kendall's Tau",  color = "#003C72", 
+                    titulo = "Reviewer 2 vs normScore")$grafico + ylim(c(-1, 1))
+listPlots[["p5"]] <- Biostatech::plotBox(base = data, varResumen = "spearman", varGrupo = "Item", 
+                    interact = F, tituloY = "Spearman's coefficient",color = "#1786A3",  
+                    titulo = "Reviewer 2 vs normScore")$grafico + ylim(c(-1, 1))
+listPlots[["p8"]] <- Biostatech::plotBox(base = data, varResumen = "pairAccuracy", varGrupo = "Item", 
+                    interact = F, tituloY = "Pairwise Accuracy", color = "#2FB2AD", 
+                    titulo = "Reviewer 2 vs normScore")$grafico + ylim(c(0, 1))
+
+
+# Results R1 vs R2
+data <- summaryByItemR1R2$results
+colnames(data)
+
+listPlots[["p3"]] <- Biostatech::plotBox(base = data, varResumen = "tau", varGrupo = "Item", 
+                    interact = F, tituloY = "Kendall's Tau",  color = "#003C72", 
+                    titulo = "Reviewer 1 vs Reviewer 2")$grafico + ylim(c(-1, 1))
+listPlots[["p6"]] <- Biostatech::plotBox(base = data, varResumen = "spearman", varGrupo = "Item", 
+                    interact = F, tituloY = "Spearman's coefficient", color = "#1786A3", 
+                    titulo = "Reviewer 1 vs Reviewer 2")$grafico + ylim(c(-1, 1))
+listPlots[["p9"]] <- Biostatech::plotBox(base = data, varResumen = "pairAccuracy", varGrupo = "Item", 
+                    interact = F, tituloY = "Pairwise Accuracy", color = "#2FB2AD", 
+                    titulo = "Reviewer 1 vs Reviewer 2")$grafico + ylim(c(0, 1))
+
+
+# Resultssss
+listPlots <- listPlots[paste0("p", 1:9)]
+```
+
+
+```{r fig.width=12, fig.height=12}
+
+ggpubr::ggarrange(plotlist = listPlots, ncol = 3, nrow = 3)
+
+# cowplot::plot_grid(
+#     cowplot::plot_grid(p1+theme(legend.position = "none"),
+#                        p2+theme(legend.position = "none"),
+#                        ncol = 2, nrow = 1),
+#     cowplot::plot_grid(NULL, p3, NULL, rel_widths = c(0.5, 1, 0.5), nrow = 1),
+#     nrow = 2,
+#     rel_heights = c(1, 1))
+```
+
+
+### R1 vs normScore {-}
+
 ```{r}
+df <- dfR1
 DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
               options = list(ordering = T, dom = "Brt", scrollY = F,
                             scrollX = F, pageLength = nrow(df),
@@ -211,29 +327,44 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
                                               "Pairwise Accuracy"), "solid 0.8px"))
 ```
 
+### R2 vs normScore {-}
 
-```{r include = F}
-data <- summaryByItem$results
-colnames(data)
-
-p1 <- Biostatech::plotBox(base = data, varResumen = "tau", varGrupo = "Item", 
-                    interact = F, tituloY = "Kendall's Tau")$grafico + ylim(c(-1, 1))
-p2 <- Biostatech::plotBox(base = data, varResumen = "spearman", varGrupo = "Item", 
-                    interact = F, tituloY = "Spearman's coefficient")$grafico+ ylim(c(-1, 1))
-p3 <- Biostatech::plotBox(base = data, varResumen = "pairAccuracy", varGrupo = "Item", 
-                    interact = F, tituloY = "Pairwise Accuracy")$grafico+ ylim(c(0, 1))
+```{r}
+df <- dfR2
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = T, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+  DT::formatStyle(1, font = "bold") %>%
+  DT::formatStyle(valueColumns = 1, columns = 1:ncol(df), 
+                  `border-top` = styleEqual(c("Kendall Tau", "Spearman", 
+                                              "Pairwise Accuracy"), "solid 0.8px"))
 ```
 
+### R1 vs R2 {-}
 
-```{r fig.width=12, fig.height=12}
-cowplot::plot_grid(
-    cowplot::plot_grid(p1+theme(legend.position = "none"),
-                       p2+theme(legend.position = "none"),
-                       ncol = 2, nrow = 1),
-    cowplot::plot_grid(NULL, p3, NULL, rel_widths = c(0.5, 1, 0.5), nrow = 1),
-    nrow = 2,
-    rel_heights = c(1, 1))
+```{r}
+df <- dfR1R2
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+              options = list(ordering = T, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            # columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                                          list(extend = "csv"), 
+                                          list(extend = "excel")), 
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+  DT::formatStyle(1, font = "bold") %>%
+  DT::formatStyle(valueColumns = 1, columns = 1:ncol(df), 
+                  `border-top` = styleEqual(c("Kendall Tau", "Spearman", 
+                                              "Pairwise Accuracy"), "solid 0.8px"))
 ```
+
 
 
 
@@ -338,44 +469,611 @@ Resultados para el normScore sin pesos y para el total de datasets (100) de la b
 ```{r}
 ### Global ####
 # Non corrected
+# Reviewer 1 vs normScore
 summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
                                resGlobalGS_BEST = resAllGS$globalBest,
                                resGlobalGS_BESTS = resAllGS$globalBests,
                                resGlobalGS_WORST = resAllGS$globalWorst)
-```
 
-### Best methods (top) {.tabset}
-
-#### Top 1 - only the best method {-}
-
-```{r}
-summaryGlobal$Best$hitTable
-```
-
-#### Top 1 - all best methods {-}
-
-```{r}
-summaryGlobal$Bests$hitTable
+# Reviewer 2 vs normScore
+summaryGlobalR2 <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
+                               resGlobalGS_BEST = resAllGSR2$globalBest,
+                               resGlobalGS_BESTS = resAllGSR2$globalBests,
+                               resGlobalGS_WORST = resAllGSR2$globalWorst)
 ```
 
 
-#### MRR - only the best method {-}
+### Jacqquar index {.tabset}
 
 ```{r}
-# allClassess <- rev(sort(unique(df$Pos)))
-allClassess <- 1/1:8
-df <- data.frame(Pos = summaryGlobal$Best$mrrRes)
-df$Position <- factor(
-  df$Pos, 
-  levels = allClassess, 
-  # levels = rev(sort(unique(df$Pos))), 
-  labels = paste0("Posición ", 1:8))
-Biostatech::getCatTable(df$Position)$tablaFormato
+
+# R1 vs normScore
+jacIndR1NS <- sapply(names(resAllGS$globalBests), function(i) 
+  jaccardTopSet(
+    rankedMethods = resAllNS$resGlobal[[i]], 
+    referenceSet = resAllGS$globalBests[[i]]
+  )
+)
+
+# R2 vs normScore
+jacIndR2NS <- sapply(names(resAllGSR2$globalBests), function(i) 
+  jaccardTopSet(
+    rankedMethods = resAllNS$resGlobal[[i]], 
+    referenceSet = resAllGSR2$globalBests[[i]]
+  )
+)
+
+# R1 vs R2
+jacIndR1R2 <- sapply(names(resAllGSR2$globalBests), function(i) 
+  jaccardIndex(
+    setA = resAllGS$globalBests[[i]], 
+    setB = resAllGSR2$globalBests[[i]]
+  )
+)
+
+
+dfJI <- data.frame(
+  Datasets = names(jacIndR1NS), 
+  R1NS = jacIndR1NS[names(jacIndR1NS)],
+  R2NS = jacIndR2NS[names(jacIndR1NS)],
+  R1R2 = jacIndR1R2[names(jacIndR1NS)]
+)
+
+
+dfJaccard <- dfJI %>%
+  tidyr::pivot_longer(
+    cols = -Datasets,
+    names_to = "Comparison", 
+    values_to = "Jaccard index"
+  )
+
+dfJaccard$Comparison <- factor(
+      dfJaccard$Comparison,
+      levels = c(
+        "R1NS", 
+        "R2NS", 
+        "R1R2"
+      ),
+      labels = c(
+        "NormScore vs Review 1",
+        "NormScore vs Review 2",
+        "Review 1 vs Review 2"
+      )
+    )
+
+dfJaccardCount <- dfJaccard %>%
+  count(Comparison, `Jaccard index`) %>%
+  mutate(`Jaccard index` = round(`Jaccard index`, 2)) %>%
+  tidyr::complete(
+    Comparison,
+    `Jaccard index`,
+    # `Jaccard index` = jaccardLevels,
+    fill = list(n = 0)
+  )
+
+
+df <- dfJaccard %>% 
+  group_by(Comparison)  %>%
+  summarise(
+    Median = median(`Jaccard index`), 
+    IQR = IQR(`Jaccard index`), 
+    Mean = mean(`Jaccard index`), 
+    SD = sd(`Jaccard index`), 
+    Minimum = min(`Jaccard index`),
+    Maximum = max(`Jaccard index`)
+  )
+
+
+
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+            options = list(ordering = T, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                            list(extend = "csv"),
+                            list(extend = "excel")),
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) |> 
+DT::formatStyle(1, font = 'bold') %>%
+  DT::formatRound(2:6, 2)
+df <- dfJaccard  
+colnames(df)[3] <- "JI"
+res <- Biostatech::tableDescr(formula = Comparison ~ JI, data = df, id.var = "Datasets")
+Biostatech::postHocAnalysis(tabla = res$tabla, df = df, varGroup = Comparison)
 ```
 
-#### MRR - all best methods{-}
+
+#### Boxplot {-}
 
 ```{r}
+ggplot(dfJaccard, aes(x = Comparison, y = `Jaccard index`, 
+                      fill = Comparison, colour = Comparison)) +
+  geom_boxplot(
+    width = 0.45,
+    outlier.shape = NA,
+    alpha = 0.3, 
+    linewidth = 0.4, whisker.linewidth = 0.4, median.linewidth = 0.7
+  ) +
+  scale_fill_manual(values = c("darkgrey","royalblue4", "#A80729"))+
+  scale_colour_manual(values = c("darkgrey","royalblue4",  "#A80729"))+
+  geom_jitter(
+    width = 0.10,
+    size = 1.8,
+    alpha = 0.65
+  ) +
+  ggpubr::stat_compare_means(
+    comparisons = comparisonsList,
+    method = "wilcox.test",
+    paired = TRUE,
+    label = "p.signif"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1.4),
+    breaks = seq(0, 1, 0.25)
+  ) +
+  labs(
+    x = NULL,
+    y = "Jaccard index",
+    title = NULL
+  ) +
+  ggpubr::theme_pubr(base_size = 16) +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "italic"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+#### Barplot (1) {-}
+
+```{r fig.height=8, fig.width=7}
+ggplot(dfJaccardCount, aes(x = factor(`Jaccard index`), y = n, fill = Comparison)) +
+  geom_col(width = 0.75, alpha = 0.8) +
+  facet_wrap(~ Comparison, 
+             ncol = 1,
+             # axes = "all",
+              strip.position = "right"
+             # nrow = 3, 
+             # axes = "all"
+             ) +
+  scale_fill_manual(values = c("grey", "royalblue3", "orange"))+
+  labs(
+    x = "Jaccard index",
+    y = "Number of datasets",
+    title = NULL
+  ) +
+  # ylim(c(0, 60))+
+  theme_bw(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(
+    size = 13,
+    face = "bold"),
+    strip.background = element_rect(
+    fill = "grey90",
+    colour = "black",
+    linewidth = 0.8),
+    strip.placement = "outside",
+    legend.position = "none",
+    plot.title = element_text(face = "bold", hjust = 0.5) 
+    # axis.line = ggplot2::element_line(linewidth = 0.5, colour = "black"),
+    # axis.ticks = ggplot2::element_line(linewidth = 0.5, colour = "black")
+  )
+```
+
+
+#### Barplot (2) {-}
+
+```{r}
+library(ggpattern)
+ggplot(
+  dfJaccardCount,
+  aes(
+    x = factor(`Jaccard index`),
+    y = n,
+    fill = Comparison, 
+    pattern = Comparison,
+  )
+) +
+  # geom_col(
+  #   position = position_dodge(width = 0.8),
+  #   width = 0.7
+  # ) +
+    geom_col_pattern(
+    position = position_dodge(width = 0.8),
+    width = 0.7,
+    colour = "black",
+    
+    pattern_fill = "black",
+    pattern_colour = "black",
+    
+    pattern_density = 0.3,
+    pattern_spacing = 0.03
+  ) +
+  scale_fill_manual(values = c("white", "white", "white")) + 
+  scale_pattern_manual(
+    values = c(
+      "stripe",
+      "circle",
+      "none"
+    )
+  ) +
+  
+  labs(
+    x = "Jaccard index",
+    y = "Number of datasets",
+    fill = "Comparison",
+    title = "Agreement distribution across comparisons"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(
+      face = "bold",
+      hjust = 0.5
+    )
+  )
+```
+
+
+#### Dotplot {-}
+
+```{r}
+ggplot(dfJaccard, aes(x = `Jaccard index`, y = Comparison)) +
+  geom_count(
+    aes(size = after_stat(n)),
+    alpha = 0.75
+  ) +
+  scale_size_area(
+    max_size = 10,
+    name = "N datasets"
+  ) +
+  scale_x_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, 0.1)
+  ) +
+  labs(
+    x = "Jaccard index",
+    y = NULL,
+    title = "Distribution of Jaccard values",
+    subtitle = "Point size represents the number of datasets"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+#### Heatplot {-}
+
+```{r}
+ggplot(dfJaccardCount, aes(x = factor(`Jaccard index`), y = Comparison, fill = n)) +
+  geom_tile(color = "white", linewidth = 0.8) +
+  geom_text(aes(label = n), size = 4) +
+  labs(
+    x = "Jaccard index",
+    y = NULL,
+    fill = "N datasets",
+    title = "Jaccard frequency map"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+### {- .toc-ignore}
+
+#### Relation with basal variables
+
+Para comprobar si los resultados de concordancia entre rankings está influenciado por covariables de los datasets, se ajustó un modelo lineal mixto para cada covariable considerándose la interacción entre cada comparación y los niveles de la covariable en cuestión:
+
+$$
+Y_{ij} =
+\beta_0 +
+\beta_{1}\,\mathrm{Comparison}_{ij} +
+\beta_{2}\,\mathrm{Covariable}_{i} +
+\beta_{3}\left(
+\mathrm{Comparison}_{ij}
+\times
+\mathrm{Covariable}_{i}
+\right) +
+u_i +
+\varepsilon_{ij}
+$$
+
+Donde:
+
+- $Y_{ij}$ es el índice de Jaccard para el dataset $i$ en la comparación $j$.
+- $\beta_0$ es el intercepto.
+- $\beta_1$ representa el efecto de la comparación.
+- $\beta_2$ representa el efecto de la covariable.
+- $\beta_3$ representa la interacción entre la comparación y la covariable.
+- $u_i$ es el intercepto aleatorio asociado al dataset, con $u_i \sim N(0,\sigma_u^2)$.
+- $\varepsilon_{ij}$ es el error residual, con $\varepsilon_{ij} \sim N(0,\sigma^2)$.
+
+
+```{r include=F}
+## Data index 
+dfIndex <- readxl::read_xlsx( 
+  path = "C:/Users/julia/Documents/GitHub/proteomicsNormalizationStudy/Data/_Index.xlsx", 
+  sheet = "In", 
+  col_names = T)
+
+# Aggregating Specie and Software (necessary for next analysis)
+dfIndex <- dfIndex %>%
+  as.data.frame() %>%
+  dplyr::mutate(
+    SpecieGrouped = 
+      if_else(
+        !(Specie %in% c("Mus musculus", "Homo sapiens")), 
+        "Others", 
+        Specie),
+    Software = 
+      if_else(
+        !(`Analysis Software` %in% c("DIANN", "MaxQuant")),
+        "Others", 
+        `Analysis Software`),
+  )
+
+dfBasales <- dfIndex %>%
+    dplyr::select(ID, Acquisition, `MS instrument (summary)`, 
+           Software, SpecieGrouped, #`Sample size`, `N groups`,
+            `Cell culture`) %>%
+  dplyr::rename(Datasets = ID, 
+               Instrument = `MS instrument (summary)`,
+               CellCulture = `Cell culture`, 
+               Specie = SpecieGrouped)
+
+## Merge data
+dfComp <- merge(dfJaccard, dfBasales, by = "Datasets")
+
+dfComp <- dfComp %>%
+  dplyr::rename(Jaccard = `Jaccard index`)
+
+
+## Complet model
+modeloCompleto <- lme4::lmer(
+  Jaccard ~ Comparison *
+    (
+      Acquisition +
+      Instrument +
+      CellCulture +
+      Software +
+      Specie
+    ) +
+    (1 | Datasets),
+  data = dfComp
+)
+
+car::Anova(modeloCompleto, type = 3)
+```
+
+```{r include=F}
+# Individual models
+library(car)
+covariables <- c("Acquisition", "Instrument", "CellCulture", "Software", 
+                 "Specie")
+dfComp <- dfComp %>%
+  mutate(
+    Comparison = factor(Comparison),
+    Datasets = factor(Datasets),
+    across(all_of(covariables), factor)
+  )
+resultadosGlobales <- purrr::map_dfr(
+  covariables,
+  function(covariable) {
+
+    formulaModelo <- as.formula(
+      paste0(
+        "Jaccard ~ Comparison * ",
+        covariable,
+        " + (1 | Datasets)"
+      )
+    )
+
+    modelo <- lme4::lmer(
+      formulaModelo,
+      data = dfComp
+    )
+
+    tabla <- as.data.frame(
+      car::Anova(modelo, type = 3)
+    )
+
+    terminoInteraccion <- paste0("Comparison:", covariable)
+
+    tibble(
+      covariable = covariable,
+      pValue = tabla[terminoInteraccion, "Pr(>Chisq)"]
+    )
+  }
+) %>%
+  mutate(
+    pAdjusted = p.adjust(pValue, method = "BH")
+  )
+```
+
+En la siguiente tabla se muestran los resultados de la significación estadística de los coeficientes de regresión para el término de interacción $Comparacion x Covariable$ para cada covariable, ajustados y sin ajustar:
+
+```{r}
+js <- c("function(row, data, num, index){", "  var $row = $(row);", 
+"  if($row.hasClass('even')){", "    $row.css('background-color', 'white');", 
+"    $row.hover(function(){", "      $(this).css('background-color', 'lightgrey');", 
+"     }, function(){", "      $(this).css('background-color', 'white');", 
+"     }", "    );", "  }else{", "    $row.css('background-color', '#EDFDFA');", 
+"    $row.hover(function(){", "      $(this).css('background-color', 'lightgrey');", 
+"     }, function(){", "      $(this).css('background-color', '#EDFDFA');", 
+"     }", "    );", "  }", "}")
+df <- resultadosGlobales
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+            options = list(ordering = T, dom = "Brt", scrollY = F,
+                            scrollX = F, pageLength = nrow(df),
+                            columnDefs = list(list(className = 'dt-center', targets = '_all')),
+                            full_width = TRUE, rowCallback = DT::JS(js),
+                            buttons = list(list(extend = "copy", text = "Copiar"),
+                            list(extend = "csv"),
+                            list(extend = "excel")),
+                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) |> 
+DT::formatStyle(1, font = 'bold') %>% 
+  DT::formatRound(2:3, digits = 3)
+
+```
+
+```{r include=F}
+library(lme4)
+library(emmeans)
+library(ggplot2)
+library(purrr)
+
+etiquetaP <- ifelse(
+      resultadosGlobales$pAdjusted < 0.05,
+      " x Comparison: p < 0.05",
+      paste0(
+        " x Comparison: p = ",
+        formatC(
+          resultadosGlobales$pAdjusted,
+          format = "f",
+          digits = 3
+        )
+      )
+    )
+etiquetaP <- paste0(resultadosGlobales$covariable, etiquetaP)
+names(etiquetaP) <- resultadosGlobales$covariable
+
+allOut <- map(
+  covariables,
+  function(covariable) {
+
+    formulaModelo <- as.formula(
+      paste0(
+        "Jaccard ~ Comparison * `",
+        covariable,
+        "` + (1 | Datasets)"
+      )
+    )
+
+    modelo <- lmer(
+      formulaModelo,
+      data = dfComp,
+    )
+
+    dfMedias <- emmeans(
+      modelo,
+      specs = as.formula(
+        paste0("~ Comparison * `", covariable, "`")
+      )
+    ) |>
+      as.data.frame()
+
+    p <- ggplot(
+      dfMedias,
+      aes(
+        x = Comparison,
+        y = emmean,
+        color = .data[[covariable]],
+        shape = .data[[covariable]],
+        group = .data[[covariable]]
+      )
+    ) +
+      geom_line(linewidth = 1) +
+      geom_point(size = 3) +
+      geom_errorbar(
+        aes(
+          ymin = lower.CL,
+          ymax = upper.CL
+        ),
+        width = 0.1
+      ) +
+      scale_color_manual(values = RColorBrewer::brewer.pal(
+        n = length(unique(dfComp[,covariable])), 
+        name = "Set1")) +
+      # scale_color_manual(values = colores[1:length(unique(dfComp[,covariable]))]) +
+      labs(
+        title = covariable,
+        subtitle = etiquetaP[covariable],
+        x = NULL,
+        y = "Jaccard index",
+        color = covariable
+      ) +
+      theme_minimal(base_size = 14) + 
+      ggplot2::theme(
+        axis.line = ggplot2::element_line(linewidth = 0.5, colour = "black"), 
+        axis.ticks = ggplot2::element_line(linewidth = 0.5, colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = "right"
+      )
+    
+    list(
+      grafico = p,
+      medias = dfMedias, 
+      modelo = modelo
+    )
+  }
+)
+
+
+
+names(allOut) <- covariables
+graficosCovariables <- sapply(allOut, "[[", 1, simplify = F)
+
+allOut[["Etiquetas"]] <- etiquetaP
+saveRDS(
+  object = allOut, # comentar grafico = p
+  file = "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
+```
+
+Los resultados se pueden observar a nivel gráfico mediante la siguiente imagen, donde se muestra la media de cada comparación en cada nivel de cada covariable, así como el p-valor ajustado del término de interacción comparación x covariable:
+
+```{r fig.height=15, fig.width=8}
+ggpubr::ggarrange(plotlist = graficosCovariables, ncol = 2, nrow = 3)
+```
+
+
+### Best methods (top) 
+
+<!-- #### Top 1 - only the best method {-} -->
+
+<!-- ```{r} -->
+<!-- summaryGlobal$Best$hitTable -->
+<!-- ``` -->
+
+<!-- #### Top 1 - all best methods {-} -->
+
+<!-- ```{r} -->
+<!-- summaryGlobal$Bests$hitTable -->
+<!-- ``` -->
+
+
+<!-- #### MRR - only the best method {-} -->
+
+<!-- ```{r} -->
+<!-- # allClassess <- rev(sort(unique(df$Pos))) -->
+<!-- allClassess <- 1/1:8 -->
+<!-- df <- data.frame(Pos = summaryGlobal$Best$mrrRes) -->
+<!-- df$Position <- factor( -->
+<!--   df$Pos,  -->
+<!--   levels = allClassess,  -->
+<!--   # levels = rev(sort(unique(df$Pos))),  -->
+<!--   labels = paste0("Posición ", 1:8)) -->
+<!-- Biostatech::getCatTable(df$Position)$tablaFormato -->
+<!-- ``` -->
+
+#### MRR top - all best methods {.tabset}
+
+##### R1 vs normScore {-}
+
+```{r}
+allClassess <- 1/1:8 
 df <- data.frame(Pos = summaryGlobal$Bests$mrrRes)
 df$Position <- factor(
   df$Pos, 
@@ -384,7 +1082,21 @@ df$Position <- factor(
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 
-#### MRR bottom - all best methods{-}
+##### R2 vs normScore {-}
+
+```{r}
+df <- data.frame(Pos = summaryGlobalR2$Bests$mrrRes)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
+```
+
+
+#### MRR bottom - all best methods  {.tabset}
+
+##### R1 vs normScore {-}
 
 La posición más baja de la mejor normalización del grupo determinado en el GS. 
 
@@ -397,29 +1109,48 @@ df$Position <- factor(
 Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 
+##### R2 vs normScore {-}
 
-
-### Worst methods - Bottom {.tabset}
-
-#### Bottom Coverage  - excluded methods {-}
+La posición más baja de la mejor normalización del grupo determinado en el GS. 
 
 ```{r}
-df <- data.frame(Prop = summaryGlobal$Worst$coverageRes)
-df$PropGroups <- ifelse(is.na(df$Prop), NA, 
-                        ifelse(df$Prop < 0.5, "< 0.5",
-                               ifelse(df$Prop<0.75, "0.5-0.75", 
-                                      ifelse(df$Prop < 1, "0.75-1", 
-                                             ifelse(df$Prop == 1, "1", "Error")
-                                             )
-                                      )
-                               )
-                        )
-colnames(df) <- c("Proportion", "Proportion by groups")
-df <- df[, 2:1]
-Biostatech::getCatTable(df)$tablaFormato
+df <- data.frame(Pos = summaryGlobalR2$Bests$mrrResBottom)
+df$Position <- factor(
+  df$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(df$Position)$tablaFormato
 ```
 
-#### MRR - excluded methods {-}
+
+
+
+
+### Worst methods 
+
+Only R1 provide excluded methods. 
+
+<!-- #### Bottom Coverage  - excluded methods {-} -->
+
+<!-- ```{r} -->
+<!-- df <- data.frame(Prop = summaryGlobal$Worst$coverageRes) -->
+<!-- df$PropGroups <- ifelse(is.na(df$Prop), NA,  -->
+<!--                         ifelse(df$Prop < 0.5, "< 0.5", -->
+<!--                                ifelse(df$Prop<0.75, "0.5-0.75",  -->
+<!--                                       ifelse(df$Prop < 1, "0.75-1",  -->
+<!--                                              ifelse(df$Prop == 1, "1", "Error") -->
+<!--                                              ) -->
+<!--                                       ) -->
+<!--                                ) -->
+<!--                         ) -->
+<!-- colnames(df) <- c("Proportion", "Proportion by groups") -->
+<!-- df <- df[, 2:1] -->
+<!-- Biostatech::getCatTable(df)$tablaFormato -->
+<!-- ``` -->
+
+#### MRR bottom - excluded methods {.tabset}
+
+##### R1 vs normScore {-}
 
 ```{r}
 dfW <- data.frame(Pos = summaryGlobal$Worst$mrrRes)
@@ -431,14 +1162,40 @@ dfW$Position <- factor(
 Biostatech::getCatTable(dfW$Position)$tablaFormato
 ```
 
+##### R2 vs normScore {-}
 
+```{r}
+dfW <- data.frame(Pos = summaryGlobalR2$Worst$mrrRes)
+dfW$Position <- factor(
+  dfW$Pos, 
+  # levels = rev(allClassess), 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
 
-#### MRR top - excluded methods {-}
+#### MRR top - excluded methods {.tabset}
+
+##### R1 vs normScore {-}
 
 Posición más alta de la normalización del grupo de excluidas por cada dataset. 
 
 ```{r}
 dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
+
+dfW$Position <- factor(
+  dfW$Pos, 
+  levels = allClassess, 
+  labels = paste0("Posición ", 1:8))
+Biostatech::getCatTable(dfW$Position)$tablaFormato
+```
+
+##### R2 vs normScore {-}
+
+Posición más alta de la normalización del grupo de excluidas por cada dataset. 
+
+```{r}
+dfW <- data.frame(Pos = summaryGlobalR2$Worst$mrrResTop)
 
 dfW$Position <- factor(
   dfW$Pos, 

@@ -144,6 +144,26 @@ summaryHit <- function(res){
   
 }
 
+jaccardTopSet <- function(rankedMethods, referenceSet) {
+  if (length(rankedMethods) == 0 || length(referenceSet) == 0) {
+    return(NA_real_)
+  }
+  
+  x <- length(referenceSet)
+  topX <- head(rankedMethods, x)
+  
+  length(intersect(referenceSet, topX)) / length(union(referenceSet, topX))
+}
+
+jaccardIndex <- function(setA, setB) {
+  if (length(setA) == 0 && length(setB) == 0) return(NA_real_)
+  
+  intersectionSize <- length(intersect(setA, setB))
+  unionSize <- length(union(setA, setB))
+  
+  intersectionSize / unionSize
+}
+
 
 
 #...........................................................................####
