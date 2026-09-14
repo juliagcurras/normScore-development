@@ -781,7 +781,7 @@ ggsave(filename = paste0(outputDir, "normScoreScheme/item3.svg"), plot = pI3,
 
 
 #.........................................................................####
-# Figure 2. Simulation Scheme ####
+# Supplementary Figure 1. Simulation Scheme ####
 
 ## Requiered functions ####
 source(file = "simulationFunction.R")
@@ -990,7 +990,7 @@ ggsave(filename = paste0(outputDir, "simulationScheme/error4.svg"),
 
 
 #.........................................................................####
-# Figure 5 ####
+# Figure 4 ####
 
 plotBoxChulo <- function(
     data, 
@@ -1129,16 +1129,26 @@ listPlots[["p6"]] <- plotBoxChulo(
   titulo = "Reviewer 1 vs Reviewer 2")
 
 
+p1 <- ggpubr::ggarrange(plotlist = listPlots, ncol = 2, nrow = 3, labels = "AUTO")
+p1
+ggsave(filename = paste0(outputDir, "Figure4.svg"), plot = p1, width = 7, height = 10)
+jpeg(filename = paste0(outputDir, "Figure4.jpeg"), 
+     width = 8, height = 12, units = "in", res = 600)
+p1
+dev.off()
+
+
+
 listPlots <- listPlots[paste0("p", 1:6)]
 p1 <- ggpubr::ggarrange(plotlist = listPlots, ncol = 3, nrow = 2, labels = "AUTO")
 p1
+ggsave(filename = paste0(outputDir, "Figure4Longer.svg"), plot = p1, width = 11, height = 7)
 
-ggsave(filename = paste0(outputDir, "OldFig3.svg"), plot = p1, width = 11, height = 7)
 
 
 
 #.........................................................................####
-# Figure 3 ####
+# Figure 2 ####
 
 df <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/Simulations/allSimulations.rds")
 df <- df %>% filter(!(especificos %in% c(1,4,8))) # quitamos o 1 que ten control negativo en item 3, o 4 pq é moi reiterativo co 3 e non aporta nada, e o 8 porque pa valores extremos en item3 a situación ponse rara.
@@ -1170,9 +1180,16 @@ graficos <- sapply(unique(df$especificos), function(i){
 
 
 p1 <- ggpubr::ggarrange(plotlist = graficos, ncol = 3, nrow = 2)
-p1
+ggsave(filename = paste0(outputDir, "Figure3Longer.svg"), plot = p1, width = 12, height = 8)
 
-ggsave(filename = paste0(outputDir, "Figure3.svg"), plot = p1, width = 12, height = 8)
+p1 <- ggpubr::ggarrange(plotlist = graficos, ncol = 2, nrow = 3)
+p1
+ggsave(filename = paste0(outputDir, "Figure2.svg"), plot = p1, width = 8, height = 12)
+
+jpeg(filename = paste0(outputDir, "Figure2.jpeg"), 
+     width = 8, height = 12, units = "in", res = 600)
+p1
+dev.off()
 
 
 
@@ -1385,7 +1402,7 @@ ggsave(filename = paste0(outputDir, "SupplementaryFigure1.svg"),
 
 
 #.........................................................................####
-# Figure 6 ####
+# Figure 5 ####
 ## Loading results ####
 inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/"
 resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
@@ -1593,6 +1610,12 @@ pC
 
 ggsave(filename = paste0(outputDir, "Figure6C.svg"), 
        plot = pC, width = 6, height = 6)
+
+jpeg(filename = paste0(outputDir, "Figure6.jpeg"), 
+     width = 6, height = 6, units = "in", res = 1000)
+pC
+dev.off()
+
 
 
 #.........................................................................####
