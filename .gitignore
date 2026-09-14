@@ -2,5 +2,11 @@ OneHundredDatasets/ProcessedDatasets
 OneHundredDatasets/Datasets
 OneHundredDatasets/2_ManualAssessment_pearson.html
 OneHundredDatasets/2_ManualAssessment_spearman.html
+OneHundredDatasets/4_Refinement.html
+OneHundredDatasets/4_Refinement.Rmd
+OneHundredDatasets/4_Refinement_Applying_GA_RS.R
+OneHundredDatasets/4_Refinement_AssessmentUsingRefinedWeights.R
 Simulations/ErrorFiles
 OneHundredDatasets/Evaluation
+R/normScore.R
+R/normScoreUse.R
