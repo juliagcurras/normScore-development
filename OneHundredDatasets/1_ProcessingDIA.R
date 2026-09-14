@@ -8,15 +8,15 @@
 # Julia G Curras - 2026/01/27
 rm(list=ls())
 graphics.off()
-setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets")
 
 #.............................................................................
 # Set up ####
 # Libraries
 library(dplyr)
 library(ggplot2)
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/Datasets/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
 
 
 

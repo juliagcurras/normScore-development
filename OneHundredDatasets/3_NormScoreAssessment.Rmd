@@ -47,8 +47,8 @@ library(ggpubr)
 
 ```{r}
 # variables
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
 js <- c(
 "function(row, data, num, index){",
 "  var $row = $(row);",
@@ -1029,7 +1029,7 @@ graficosCovariables <- sapply(allOut, "[[", 1, simplify = F)
 allOut[["Etiquetas"]] <- etiquetaP
 saveRDS(
   object = allOut, # comentar grafico = p
-  file = "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
+  file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
 ```
 
 Los resultados se pueden observar a nivel gráfico mediante la siguiente imagen, donde se muestra la media de cada comparación en cada nivel de cada covariable, así como el p-valor ajustado del término de interacción comparación x covariable:

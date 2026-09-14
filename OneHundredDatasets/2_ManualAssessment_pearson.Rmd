@@ -44,8 +44,8 @@ library(ggpubr)
 
 ```{r}
 # variables
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/Datasets/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore/OneHundredDatasets/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore/OneHundredDatasets/ProcessedDatasets/"
 items <- paste0("item", 0:6)
 itemsDesc <- c("Sum total intensity", "PCV", "Correlation (Spearman)", 
                "MAplot", "MeanSD plot", "RLE plot", "Total intensity distribution")

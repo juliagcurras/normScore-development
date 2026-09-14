@@ -8,8 +8,8 @@
 # Julia G Curras - 2026/03/31
 rm(list=ls())
 graphics.off()
-outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
-setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
+outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets")
 
 #...........................................................................####
 # Set up ####
@@ -20,7 +20,7 @@ library(boot)
 
 source(file = "../R/simulationFunction.R", encoding = "UTF-8")
 source(file = "../R/scoreFunction.R", encoding = "UTF-8")
-setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets")
 
 
 

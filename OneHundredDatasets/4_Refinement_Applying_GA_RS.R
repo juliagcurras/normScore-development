@@ -8,8 +8,8 @@
 # Julia G Curras - 2026/03/11
 rm(list=ls())
 graphics.off()
-outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
-setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
+outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets")
 
 source(file = "../R/scoreFunction.R", encoding = "UTF-8")
 

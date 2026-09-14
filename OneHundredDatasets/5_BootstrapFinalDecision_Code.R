@@ -6,7 +6,7 @@
 # Initial things ####
 rm(list=ls())
 graphics.off()
-setwd("C:/Users/julia/Documents/GitHub/normScore-development/goldStandard")
+setwd("C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets")
 library(dplyr)
 
 # Data from normScore ####

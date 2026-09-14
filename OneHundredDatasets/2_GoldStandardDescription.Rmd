@@ -46,8 +46,8 @@ library(ggpubr)
 
 ```{r}
 # variables
-inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/Datasets/"
-outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/ProcessedDatasets/"
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/Datasets/"
+outDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
 items <- paste0("item", 0:6)
 itemsDesc <- c("Sum total intensity", "PCV", "Correlation (Spearman)", 
                "MAplot", "MeanSD plot", "RLE plot", "Total intensity distribution")
@@ -266,7 +266,7 @@ printOutlierID(cuantitativas, varID = NULL)
 
 ```{r}
 dfAssess <- readxl::read_xlsx(path = "_Assessment.xlsx", sheet = 1, col_names = T)
-resAllGS <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/goldStandard/AssessmentFiles/results_Gold_Standard.rds")
+resAllGS <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/results_Gold_Standard.rds")
 ```
 
 ### By item 
