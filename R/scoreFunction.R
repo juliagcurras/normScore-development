@@ -549,7 +549,7 @@ normScore <- function(
   
   # Rank ####
   scores_matrix <- t(scoreDF_norm)
-  scoreDF_norm$Total <- rowSums(scoreDF_norm)
+  scoreDF_norm$Total <- rowSums(scoreDF_norm,  na.rm = TRUE)
   scoreDF_norm$TotalCorrected <- scoreDF_norm$Total
   scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "TotalCorrected"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"),  "TotalCorrected"]*item0
   # scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"] <- scoreDF_norm[which(rownames(scoreDF_norm) == "Log"), "Total"]*item0
