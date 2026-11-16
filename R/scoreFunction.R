@@ -461,9 +461,6 @@ normScore <- function(
   # ITEM 0 - correction factor ####
   totalIntensities <- colSums(dfRaw, na.rm = T)
   item0 <- cv(totalIntensities, proportion = T, na.rm = T)*4
-  # item0 <- cv(totalIntensities, proportion = T, na.rm = T)
-  # item0 <- 1+0.7*(item0 - 1) # suavizado # 0.75
-  # item0 <- adjustItem0(item0)
   
   
   # ITEM 1 - PVC ####
@@ -536,12 +533,8 @@ normScore <- function(
   # Corrections ####
   rownames(scoreDF_norm) <- rownames(scoreDF)
   # # 1) Low discrimination power for item2 (correlation)
-  # scoreDF_norm["CyclicLoess", 2] <- scoreDF_norm["CyclicLoess", 2]*0.1
   scoreDF_norm[, 2] <- scoreDF_norm[, 2]*0.1
-  # scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2] <- scoreDF_norm[which(rownames(scoreDF_norm) != "CyclicLoess"), 2]*0.1
-  # # 2) Worst performance of item3 (Maplot)
-  # scoreDF_norm[, 3] <- scoreDF_norm[, 3]*0.9
-  
+
   if (corrected){
     itemWeights <- readRDS(file = "AssessmentFiles/weigths_All.rds")
     scoreDF_norm <- sweep(scoreDF_norm, 2, itemWeights, `*`)
