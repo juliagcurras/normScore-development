@@ -86,91 +86,89 @@ resAllNSR2 <- formatNormScoreResults(finalList = resNSR2, item0 = T)
 ```
 
 
-# **Evaluación por ítem (By item)**
+# **Item-by-item evaluation**
 
-Para cada item, se evalúa en qué medida el método propuesto reproduce el **orden relativo de las normalizaciones** establecido por el Gold Standard para cada uno de los ítems considerados.
+For each item, we assess how closely the proposed method reproduces the **relative ranking of normalization methods** established by the gold standard.
 
-Dado que el Gold Standard puede contener **empates (niveles equivalentes)**, se emplean métricas robustas a este tipo de estructuras.
+Because the gold standard may contain **ties (methods assigned the same rank)**, we use metrics that can accommodate tied rankings.
 
+## Kendall's rank correlation (tau)
 
-## Correlación de Kendall (tau)
+### Definition
 
-### Definición
+Kendall's rank correlation measures agreement between two rankings by comparing the relative order of all pairs of items.
 
-La correlación de Kendall mide el grado de concordancia entre dos rankings basándose en la proporción de pares de elementos que mantienen el mismo orden relativo.
+It accounts for:
 
-Tiene en cuenta:
+* Concordant pairs (same order)
+* Discordant pairs (reversed order)
+* Ties through an adjustment
 
-* Pares concordantes (mismo orden)
-* Pares discordantes (orden invertido)
-* Ajuste por empates
+### What it assesses
 
-### Qué evalúa
+* **Overall agreement between rankings**
+* Consistency across pairwise comparisons
+* Agreement when the gold standard contains ties
 
-* La **coherencia global del orden**
-* La consistencia en comparaciones pareadas
-* Es especialmente adecuada cuando existen empates en el Gold Standard
+### Interpretation
 
-### Interpretación
+| Value   | Interpretation      |
+| ------- | ------------------- |
+| > 0.7   | Very high agreement |
+| 0.6–0.7 | High agreement      |
+| 0.4–0.6 | Moderate agreement  |
+| < 0.4   | Low agreement       |
 
-| Valor   | Interpretación   |
-| ------- | ---------------- |
-| > 0.7   | Muy alto acuerdo |
-| 0.6–0.7 | Alto             |
-| 0.4–0.6 | Moderado         |
-| < 0.4   | Bajo             |
+This is the most **stringent and conservative** metric.
 
-Es la métrica más **estricta y conservadora**.
+## Spearman's rank correlation (rho)
 
-## Correlación de Spearman (rho)
+### Definition
 
-### Definición
+Spearman's rank correlation measures the association between two sets of values by converting them to ranks and calculating the correlation between those ranks.
 
-La correlación de Spearman mide la relación entre dos rankings transformándolos en rangos y evaluando su correlación.
+### What it assesses
 
-### Qué evalúa
+* The **overall structure of the rankings**
+* The general ordering trend
+* Agreement with less sensitivity to small differences in rank than Kendall's correlation
 
-* La **estructura global del ranking**
-* La tendencia general del orden
-* Es menos sensible a pequeñas discrepancias que Kendall
+### Interpretation
 
-### Interpretación
+| Value   | Interpretation      |
+| ------- | ------------------- |
+| > 0.8   | Very high agreement |
+| 0.7–0.8 | High agreement      |
+| 0.5–0.7 | Moderate agreement  |
 
-| Valor   | Interpretación |
-| ------- | -------------- |
-| > 0.8   | Muy alto       |
-| 0.7–0.8 | Alto           |
-| 0.5–0.7 | Moderado       |
+This metric is intermediate in stringency.
 
-Es una métrica intermedia en exigencia.
+## Pairwise accuracy
 
-## Pairwise Accuracy
+### Definition
 
-### Definición
+Pairwise accuracy considers all pairs of normalization methods for which the gold standard establishes a clear order, excluding ties. It is the proportion of those pairs for which the proposed method reproduces the same order.
 
-Se basa en comparar todos los pares de métodos para los cuales el Gold Standard establece un orden claro (excluyendo empates), y calcular la proporción de comparaciones en las que el método evaluado coincide con dicho orden.
+### What it assesses
 
+* How often the proposed method reproduces the **clear preferences established by the gold standard**
+* Agreement among pairs with a clear reference order
+* Relative ordering between individual methods
 
-### Qué evalúa
+### Interpretation
 
-* El grado en que se respetan las **decisiones claras del Gold Standard**
-* Ignora comparaciones ambiguas (empates)
-* Se centra en relaciones locales entre métodos
+| Value     | Interpretation |
+| --------- | -------------- |
+| > 0.85    | Excellent      |
+| 0.75–0.85 | High           |
+| 0.65–0.75 | Good           |
+| ≈ 0.5     | Near chance    |
 
-### Interpretación
+This is the most **robust and interpretable** metric in the presence of ties.
 
-| Valor     | Interpretación  |
-| --------- | --------------- |
-| > 0.85    | Excelente       |
-| 0.75–0.85 | Alta            |
-| 0.65–0.75 | Buena           |
-| ≈ 0.5     | Similar al azar |
+## Results {.tabset}
 
-Es la métrica más **robusta e interpretable** en presencia de empates.
-
-## Resultados {.tabset}
-
-Resultados para el normScore sin pesos y para el total de datasets (100) de la base de datos de Gold Standard. 
+Results for unweighted normScore across all 100 datasets in the gold-standard collection. 
 
 ```{r include = F}
 ### By item ####
@@ -317,10 +315,9 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
                             scrollX = F, pageLength = nrow(df),
                             # columnDefs = list(list(className = 'dt-center', targets = '_all')),
                             full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
+                            buttons = list(list(extend = "copy"),
                                           list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+                                          list(extend = "excel")))) %>% 
   DT::formatStyle(1, font = "bold") %>%
   DT::formatStyle(valueColumns = 1, columns = 1:ncol(df), 
                   `border-top` = styleEqual(c("Kendall Tau", "Spearman", 
@@ -336,10 +333,9 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
                             scrollX = F, pageLength = nrow(df),
                             # columnDefs = list(list(className = 'dt-center', targets = '_all')),
                             full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
+                            buttons = list(list(extend = "copy"),
                                           list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+                                          list(extend = "excel")))) %>% 
   DT::formatStyle(1, font = "bold") %>%
   DT::formatStyle(valueColumns = 1, columns = 1:ncol(df), 
                   `border-top` = styleEqual(c("Kendall Tau", "Spearman", 
@@ -355,10 +351,9 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
                             scrollX = F, pageLength = nrow(df),
                             # columnDefs = list(list(className = 'dt-center', targets = '_all')),
                             full_width = TRUE, rowCallback = DT::JS(js),
-                            buttons = list(list(extend = "copy", text = "Copiar"),
+                            buttons = list(list(extend = "copy"),
                                           list(extend = "csv"), 
-                                          list(extend = "excel")), 
-                            language = list(url = "https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json"))) %>% 
+                                          list(extend = "excel")))) %>% 
   DT::formatStyle(1, font = "bold") %>%
   DT::formatStyle(valueColumns = 1, columns = 1:ncol(df), 
                   `border-top` = styleEqual(c("Kendall Tau", "Spearman", 
@@ -371,100 +366,99 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
 
 --- 
 
-# **Evaluación global**
+---
 
-En este nivel se evalúa la capacidad del método para identificar correctamente las **mejores y peores normalizaciones**, sin necesidad de reproducir el ranking completo.
+# **Overall evaluation**
 
-El Gold Standard define conjuntos de:
+At this level, we assess how well normScore identifies the **best and worst normalization methods** without requiring it to reproduce the full ranking.
 
-* Normalizaciones recomendadas (mejores)
-* Normalizaciones a descartar (peores)
+The gold standard defines two sets of methods:
+
+* Recommended normalization methods (best)
+* Normalization methods to avoid (worst)
 
 ## Hit@k (Top)
 
-### Definición
+### Definition
 
-Evalúa si al menos una de las normalizaciones consideradas como óptimas por el Gold Standard aparece dentro de las primeras *k* posiciones del ranking.
+For each dataset, Hit@k indicates whether at least one normalization method recommended by the gold standard appears among the top *k* positions in the normScore ranking. It is 1 if at least one recommended method appears in the top *k* and 0 otherwise. Averaged across datasets, Hit@k is the proportion of datasets for which this occurs.
 
-### Qué evalúa
+### What it assesses
 
-* La capacidad de recuperar **al menos una solución válida**
-* Relevante para escenarios prácticos donde basta con identificar una buena opción
+* The ability to **identify at least one recommended method**
+* Performance in practical settings where identifying one good option is sufficient
 
-### Interpretación
+### Interpretation
 
-* Valores cercanos a 1 indican alta capacidad de recuperación
-* El rendimiento se interpreta en relación con el azar
+* Values close to 1 indicate that at least one recommended method is found in the top *k* for most datasets.
+* Performance is interpreted relative to the expected value under random ranking.
 
-Por ejemplo, con 8 métodos:
+For example, with eight methods and **one** method recommended by the gold standard:
 
-* Top-1 por azar ≈ 12.5%
-* Valores sustancialmente superiores indican buen desempeño
-
+* The chance of a Top-1 hit is 12.5%.
+* Values substantially above this baseline indicate better-than-chance performance.
 
 ## Bottom Coverage (Worst)
 
-### Definición
+### Definition
 
-Evalúa cuántas de las normalizaciones consideradas como inadecuadas por el Gold Standard se sitúan correctamente en las últimas posiciones del ranking.
+Bottom coverage measures how many of the normalization methods flagged for exclusion by the gold standard appear among the lowest-ranked methods in the normScore ranking.
 
-Puede expresarse como:
+It can be expressed as:
 
-* Número absoluto de métodos correctamente ubicados
-* Proporción respecto al total de métodos a descartar
+* The number of methods correctly placed among the lowest-ranked positions
+* The proportion of all methods flagged for exclusion that appear in those positions
 
-### Qué evalúa
+### What it assesses
 
-* La capacidad de identificar **métodos que deben evitarse**
-* La coherencia en la parte inferior del ranking
+* The ability to identify **methods that should be avoided**
+* Agreement at the bottom of the ranking
 
 ---
 
-### Interpretación
+### Interpretation
 
-| Proporción | Interpretación          |
-| ---------- | ----------------------- |
-| 1.0        | Identificación perfecta |
-| 0.75–1.0   | Alta                    |
-| 0.5–0.75   | Moderada                |
-| < 0.5      | Baja                    |
+| Proportion      | Interpretation         |
+| --------------- | ---------------------- |
+| 1.0             | Complete coverage      |
+| 0.75 to < 1.0   | High coverage          |
+| 0.50 to < 0.75  | Moderate coverage      |
+| < 0.50          | Low coverage           |
 
-Es especialmente relevante para decisiones de exclusión.
+This metric is particularly relevant when deciding which normalization methods to exclude.
 
 ## Mean Reciprocal Rank (MRR)
 
-### Definición
+### Definition
 
-Mide la posición de la primera aparición de una normalización considerada óptima por el Gold Standard dentro del ranking.
+For each dataset, the reciprocal rank is the inverse of the position of the first normalization method recommended by the gold standard. For example, the reciprocal rank is:
 
-Se define como el inverso de dicha posición:
+* 1 if the first recommended method is ranked first
+* 1/2 if it is ranked second
+* 1/3 if it is ranked third
 
-* 1 si aparece en primera posición
-* 1/2 si aparece en segunda, etc.
+The mean reciprocal rank (MRR) is the average of these values across datasets.
 
-### Qué evalúa
+### What it assesses
 
-* Qué tan arriba se sitúan las mejores soluciones
-* Penaliza progresivamente posiciones más bajas
+* How high the first recommended method appears in the ranking
+* How far down the ranking one must look to find a recommended method
 
-### Interpretación
+### Interpretation
 
-Con un número finito de métodos (por ejemplo, 8):
+* Values close to 1 indicate that a recommended method usually appears near the top of the ranking.
+* With eight methods and **one** recommended method, the expected MRR under random ranking is approximately 0.34.
 
-* Valores cercanos a 1 indican que las mejores opciones se sitúan en las primeras posiciones
-* Existe un valor esperado bajo selección aleatoria (≈ 0.34 en este caso)
+| MRR            | Interpretation |
+| -------------- | -------------- |
+| > 0.60         | Very high      |
+| 0.50–0.60      | High           |
+| 0.40 to < 0.50 | Moderate       |
+| Near chance    | Low            |
 
-| MRR       | Interpretación |
-| --------- | -------------- |
-| > 0.60    | Muy alto       |
-| 0.50–0.60 | Alto           |
-| 0.40–0.50 | Moderado       |
-| ≈ azar    | Bajo           |
+## Results
 
-
-## Resultados
-
-Resultados para el normScore sin pesos y para el total de datasets (100) de la base de datos de Gold Standard, dividido según evaluación de mejores métodos (top) y peores (bottom). 
+Results for unweighted normScore across all 100 datasets in the gold-standard collection are presented separately for the identification of recommended methods (top) and methods to avoid (bottom).
 
 ```{r}
 ### Global ####
@@ -585,27 +579,81 @@ Biostatech::postHocAnalysis(tabla = res$tabla, df = df, varGroup = Comparison)
 
 #### Boxplot {-}
 
-```{r}
-ggplot(dfJaccard, aes(x = Comparison, y = `Jaccard index`, 
+```{r include=FALSE}
+comparisonsList <- list(
+  c("Review 1 vs Review 2", "NormScore vs Review 1"),
+  c("Review 1 vs Review 2", "NormScore vs Review 2"),
+  c("NormScore vs Review 1", "NormScore vs Review 2")
+)
+
+
+id_col <- "Datasets"
+stopifnot(id_col %in% names(dfJaccard))
+
+testsJaccard <- do.call(rbind, lapply(comparisonsList, function(grupos) {
+  g1 <- dfJaccard[dfJaccard$Comparison %in% grupos[1], ]
+  g2 <- dfJaccard[dfJaccard$Comparison %in% grupos[2], ]
+  
+  # Comprueba que hay un único valor por dataset en cada grupo.
+  stopifnot(
+    !anyNA(g1[[id_col]]), !anyNA(g2[[id_col]]),
+    !anyDuplicated(g1[[id_col]]), !anyDuplicated(g2[[id_col]])
+  )
+  
+  # Alinea los valores de ambos grupos por identificador de dataset.
+  ids <- intersect(g1[[id_col]], g2[[id_col]])
+  x <- g1[["Jaccard index"]][match(ids, g1[[id_col]])]
+  y <- g2[["Jaccard index"]][match(ids, g2[[id_col]])]
+  completos <- complete.cases(x, y)
+  
+  data.frame(
+    group1 = grupos[1],
+    group2 = grupos[2],
+    n_pairs = sum(completos),
+    p = stats::wilcox.test(x[completos], y[completos], paired = TRUE)$p.value
+  )
+}))
+
+testsJaccard$p.adj <- stats::p.adjust(testsJaccard$p, method = "BH")
+testsJaccard$p.adj.signif <- as.character(stats::symnum(
+  testsJaccard$p.adj,
+  cutpoints = c(0, 0.0001, 0.001, 0.01, 0.05, 1),
+  symbols = c("****", "***", "**", "*", "ns")
+))
+testsJaccard$y.position <- seq(1.06, 1.28, length.out = nrow(testsJaccard))
+
+testsJaccard
+
+
+coloresBP <- c("#00204DFF" , "#707173FF", "#F7D03CFF")
+
+pC <- ggplot(dfJaccard, aes(x = Comparison, y = `Jaccard index`, 
                       fill = Comparison, colour = Comparison)) +
   geom_boxplot(
-    width = 0.45,
+    width = 0.35,
     outlier.shape = NA,
     alpha = 0.3, 
     linewidth = 0.4, whisker.linewidth = 0.4, median.linewidth = 0.7
   ) +
-  scale_fill_manual(values = c("darkgrey","royalblue4", "#A80729"))+
-  scale_colour_manual(values = c("darkgrey","royalblue4",  "#A80729"))+
-  geom_jitter(
-    width = 0.10,
-    size = 1.8,
-    alpha = 0.65
-  ) +
-  ggpubr::stat_compare_means(
-    comparisons = comparisonsList,
-    method = "wilcox.test",
-    paired = TRUE,
-    label = "p.signif"
+  scale_fill_manual(values = coloresBP) + #c("darkgrey","royalblue4", "#A80729"))+
+  scale_colour_manual(values = coloresBP) +#c("darkgrey","royalblue4",  "#A80729"))+
+  ggrastr::rasterize(
+    geom_jitter(
+      width = 0.10,
+      size = 1.8,
+      alpha = 0.65
+    ), dpi = 400) +
+  # ggpubr::stat_compare_means(
+  #   comparisons = comparisonsList,
+  #   method = "wilcox.test",
+  #   paired = TRUE,
+  #   label = "p.signif"
+  # ) +
+  ggpubr::stat_pvalue_manual(
+    testsJaccard,
+    label = "p.adj.signif",
+    tip.length = 0.01,
+    inherit.aes = FALSE
   ) +
   scale_y_continuous(
     limits = c(0, 1.4),
@@ -614,7 +662,7 @@ ggplot(dfJaccard, aes(x = Comparison, y = `Jaccard index`,
   labs(
     x = NULL,
     y = "Jaccard index",
-    title = NULL
+    title = "Global assessment"
   ) +
   ggpubr::theme_pubr(base_size = 16) +
   theme(
@@ -623,6 +671,11 @@ ggplot(dfJaccard, aes(x = Comparison, y = `Jaccard index`,
     axis.text.x = element_text(angle = 45, hjust = 1, face = "italic"),
     plot.title = element_text(face = "bold", hjust = 0.5)
   )
+```
+
+
+```{r include=TRUE}
+pC
 ```
 
 #### Barplot (1) {-}
@@ -773,34 +826,26 @@ ggplot(dfJaccardCount, aes(x = factor(`Jaccard index`), y = Comparison, fill = n
 
 ### {- .toc-ignore}
 
-#### Relation with basal variables
+#### Association with dataset characteristics
 
-Para comprobar si los resultados de concordancia entre rankings está influenciado por covariables de los datasets, se ajustó un modelo lineal mixto para cada covariable considerándose la interacción entre cada comparación y los niveles de la covariable en cuestión:
+To assess whether agreement between rankings varied with dataset characteristics, we fitted a separate linear mixed-effects model for each covariate. Each model included fixed effects for the comparison and the covariate, their interaction, and a random intercept for the dataset:
+
 
 $$
-Y_{ij} =
-\beta_0 +
-\beta_{1}\,\mathrm{Comparison}_{ij} +
-\beta_{2}\,\mathrm{Covariable}_{i} +
-\beta_{3}\left(
-\mathrm{Comparison}_{ij}
-\times
-\mathrm{Covariable}_{i}
-\right) +
-u_i +
-\varepsilon_{ij}
+Y_{ij} = \beta_0 + \beta_1 C_j + \beta_2 X_i
+       + \beta_3 (C_j \times X_i) + u_i + \varepsilon_{ij}.
 $$
 
-Donde:
+In this model,
 
-- $Y_{ij}$ es el índice de Jaccard para el dataset $i$ en la comparación $j$.
-- $\beta_0$ es el intercepto.
-- $\beta_1$ representa el efecto de la comparación.
-- $\beta_2$ representa el efecto de la covariable.
-- $\beta_3$ representa la interacción entre la comparación y la covariable.
-- $u_i$ es el intercepto aleatorio asociado al dataset, con $u_i \sim N(0,\sigma_u^2)$.
-- $\varepsilon_{ij}$ es el error residual, con $\varepsilon_{ij} \sim N(0,\sigma^2)$.
-
+- $Y_{ij}$ is the Jaccard index for dataset $i$ in comparison $j$.
+- $C_j$ denotes the comparison, and $X_i$ denotes the covariate value or level for dataset $i$.
+- $\beta_0$ is the intercept.
+- $\beta_1$ represents the fixed effect of the comparison.
+- $\beta_2$ represents the fixed effect of the covariate.
+- $\beta_3$ represents the interaction between the comparison and the covariate.
+- $u_i$ is the dataset-specific random intercept, with $u_i \sim N(0, \sigma_u^2)$.
+- $\varepsilon_{ij}$ is the residual error, with $\varepsilon_{ij} \sim N(0, \sigma^2)$.
 
 ```{r include=F}
 ## Data index 
@@ -904,7 +949,7 @@ resultadosGlobales <- purrr::map_dfr(
   )
 ```
 
-En la siguiente tabla se muestran los resultados de la significación estadística de los coeficientes de regresión para el término de interacción $Comparacion x Covariable$ para cada covariable, ajustados y sin ajustar:
+The table below reports the unadjusted and adjusted p-values for the coefficients of the comparison-by-covariate interaction for each covariate.
 
 ```{r}
 js <- c("function(row, data, num, index){", "  var $row = $(row);", 
@@ -1028,12 +1073,12 @@ names(allOut) <- covariables
 graficosCovariables <- sapply(allOut, "[[", 1, simplify = F)
 
 allOut[["Etiquetas"]] <- etiquetaP
-saveRDS(
-  object = allOut, # comentar grafico = p
-  file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
+# saveRDS(
+#   object = allOut, # comentar grafico = p
+#   file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
 ```
 
-Los resultados se pueden observar a nivel gráfico mediante la siguiente imagen, donde se muestra la media de cada comparación en cada nivel de cada covariable, así como el p-valor ajustado del término de interacción comparación x covariable:
+The figure below shows the mean Jaccard index for each comparison at each covariate level, along with the adjusted p-value for the corresponding comparison-by-covariate interaction.
 
 ```{r fig.height=15, fig.width=8}
 ggpubr::ggarrange(plotlist = graficosCovariables, ncol = 2, nrow = 3)
@@ -1041,33 +1086,6 @@ ggpubr::ggarrange(plotlist = graficosCovariables, ncol = 2, nrow = 3)
 
 
 ### Best methods (top) 
-
-<!-- #### Top 1 - only the best method {-} -->
-
-<!-- ```{r} -->
-<!-- summaryGlobal$Best$hitTable -->
-<!-- ``` -->
-
-<!-- #### Top 1 - all best methods {-} -->
-
-<!-- ```{r} -->
-<!-- summaryGlobal$Bests$hitTable -->
-<!-- ``` -->
-
-
-<!-- #### MRR - only the best method {-} -->
-
-<!-- ```{r} -->
-<!-- # allClassess <- rev(sort(unique(df$Pos))) -->
-<!-- allClassess <- 1/1:8 -->
-<!-- df <- data.frame(Pos = summaryGlobal$Best$mrrRes) -->
-<!-- df$Position <- factor( -->
-<!--   df$Pos,  -->
-<!--   levels = allClassess,  -->
-<!--   # levels = rev(sort(unique(df$Pos))),  -->
-<!--   labels = paste0("Posición ", 1:8)) -->
-<!-- Biostatech::getCatTable(df$Position)$tablaFormato -->
-<!-- ``` -->
 
 #### MRR top - all best methods {.tabset}
 
@@ -1099,7 +1117,7 @@ Biostatech::getCatTable(df$Position)$tablaFormato
 
 ##### R1 vs normScore {-}
 
-La posición más baja de la mejor normalización del grupo determinado en el GS. 
+<!-- La posición más baja de la mejor normalización del grupo determinado en el GS.  -->
 
 ```{r}
 df <- data.frame(Pos = summaryGlobal$Bests$mrrResBottom)
@@ -1112,7 +1130,7 @@ Biostatech::getCatTable(df$Position)$tablaFormato
 
 ##### R2 vs normScore {-}
 
-La posición más baja de la mejor normalización del grupo determinado en el GS. 
+<!-- La posición más baja de la mejor normalización del grupo determinado en el GS.  -->
 
 ```{r}
 df <- data.frame(Pos = summaryGlobalR2$Bests$mrrResBottom)
@@ -1179,7 +1197,7 @@ Biostatech::getCatTable(dfW$Position)$tablaFormato
 
 ##### R1 vs normScore {-}
 
-Posición más alta de la normalización del grupo de excluidas por cada dataset. 
+<!-- Posición más alta de la normalización del grupo de excluidas por cada dataset.  -->
 
 ```{r}
 dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
@@ -1205,27 +1223,6 @@ dfW$Position <- factor(
 Biostatech::getCatTable(dfW$Position)$tablaFormato
 ```
 
----
-
-
-# Resumen conceptual
-
-* **Evaluación por ítem**:
-  Analiza si el método reproduce correctamente la **estructura del ranking completo**.
-
-* **Evaluación global**:
-  Analiza si el método permite tomar decisiones correctas en la práctica:
-
-  * Identificar buenas opciones
-  * Evitar malas opciones
-
-
-## 🎯 Idea clave
-
-Ambos niveles son complementarios:
-
-* El análisis por ítem valida la **coherencia interna del método**
-* El análisis global valida su **utilidad práctica**
 
 
 
