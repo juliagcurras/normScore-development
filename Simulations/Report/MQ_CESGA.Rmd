@@ -198,6 +198,85 @@ plotlyScatter <- function(df, xVar = "TotalThreads", yVar = "Time (s)",
     }
 }
 
+ggplotScatter <- function(df, xVar = "TotalThreads", yVar = "Time (s)",
+                          groupVar = NULL,
+                          tituloX = NULL, tituloY = NULL,
+                          tituloLeyenda = "Total threads",
+                          colores = "#005B9A", yLim = NULL, sizeBase = 16) {
+  
+  if (is.null(tituloX)) tituloX <- xVar
+  if (is.null(tituloY)) tituloY <- yVar
+  if (is.null(yLim)) yLim <- max(df[[yVar]], na.rm = TRUE) * 1.05
+  
+  if (is.null(groupVar)) {
+    
+    ggplot2::ggplot(
+      df,
+      ggplot2::aes(
+        x = .data[[xVar]],
+        y = .data[[yVar]]
+      )
+    ) +
+      ggplot2::geom_line(
+        linewidth = 1.1,
+        color = colores
+      ) +
+      ggplot2::geom_point(
+        size = 3,
+        color = colores
+      ) +
+      ggplot2::labs(
+        x = tituloX,
+        y = tituloY
+      ) +
+      ggplot2::coord_cartesian(
+        ylim = c(0, yLim)
+      ) +
+      ggplot2::theme_bw(base_size = sizeBase)
+    
+  } else {
+    
+    d <- df
+    
+    d[[groupVar]] <- as.factor(d[[groupVar]])
+    lev <- levels(d[[groupVar]])
+    
+    if (length(colores) != length(lev)) {
+      colores <- Biostatech::colorPalette(n = length(lev))
+    }
+    
+    col_map <- stats::setNames(colores, lev)
+    
+    ggplot2::ggplot(
+      d,
+      ggplot2::aes(
+        x = .data[[xVar]],
+        y = .data[[yVar]],
+        color = .data[[groupVar]],
+        group = .data[[groupVar]]
+      )
+    ) +
+      ggplot2::geom_line(
+        linewidth = 1
+      ) +
+      ggplot2::geom_point(
+        size = 2.5
+      ) +
+      ggplot2::scale_color_manual(
+        values = col_map,
+        name = tituloLeyenda
+      ) +
+      ggplot2::labs(
+        x = tituloX,
+        y = tituloY
+      ) +
+      ggplot2::coord_cartesian(
+        xlim = c(0, 9),
+        ylim = c(0, yLim)
+      ) +
+      ggplot2::theme_bw()
+  }
+}
 
 
 ```
@@ -279,6 +358,7 @@ plotlyScatter(df = dfPrin, colores = Biostatech::colorPalette(n=3)[1])
 plotlyScatter(df = dfPrin, yVar = "SpeedUp", 
               tituloX = "Total threads",
               colores = Biostatech::colorPalette(n=3)[2])
+ 
 ```
 
 
@@ -288,6 +368,7 @@ plotlyScatter(df = dfPrin, yVar = "SpeedUp",
 plotlyScatter(df = dfPrin, yVar = "Efficiency", 
               tituloX = "Total threads",
               colores = Biostatech::colorPalette(n=3)[3])
+
 ```
 
 
@@ -297,6 +378,7 @@ plotlyScatter(df = dfPrin, yVar = "Efficiency",
 plotlyScatter(df = dfPrin, yVar = "Memory Utilized (GB)", 
               tituloX = "Total threads",
               colores = "#C67DD8")
+
 ```
 
 ### Memory/thread {-}
@@ -305,7 +387,39 @@ plotlyScatter(df = dfPrin, yVar = "Memory Utilized (GB)",
 plotlyScatter(df = dfPrin, yVar = "Memory By Thread (GB)", 
               tituloX = "Total threads",
               colores = "#9389C7")
+
 ```
+
+```{r}
+
+p0 <- ggplotScatter(df = dfPrin, colores = "#2E2753", tituloX = "Total cores")
+p1 <- ggplotScatter(df = dfPrin, yVar = "SpeedUp", 
+              tituloX = "Total cores", tituloY = "Speed up",
+              colores = "#003C72")
+p2 <- ggplotScatter(df = dfPrin, yVar = "Efficiency", 
+              tituloX = "Total cores", 
+              colores = "#03609B") 
+p3 <- ggplotScatter(df = dfPrin, yVar = "Memory Utilized (GB)", 
+              tituloX = "Total cores",
+              colores = "#1D92A5")
+p4 <- ggplotScatter(df = dfPrin, yVar = "Memory By Thread (GB)", 
+                    tituloY = "Memory By Core (GB)",
+              tituloX = "Total cores",
+              colores = "#69C1C4")
+library(patchwork)
+png(
+  filename = "H:/Mi unidad/Doctorado/_TESIS/Figuras/Resultados/4_1_Normalizations/Figure6.png", 
+  res = 200, 
+  height = 1800, 
+  width = 1600
+)
+# ggpubr::ggarrange(
+#   p1, p2, p3, p4, ncol = 2, nrow = 2
+# )
+p0 / (p1+p2) / (p3+p4) + plot_layout(heights = c(0.4, 0.3, 0.3))
+dev.off()
+```
+
 
 
 ## Secondary results {.tabset}
