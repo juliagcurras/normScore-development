@@ -1,0 +1,466 @@
+---
+title: "Assessment: Performance metrics for normScore in benchmarking datasets"
+author: 
+- name: "Julia García Currás"
+  affiliation: "julia.garcia@biostatech.com"
+date: "`r Sys.Date()`"
+output: 
+  # rmarkdown::html_document:
+  #   theme:
+  #     version: 5
+  #     bootswatch: flatly
+  # prettydoc::html_pretty:
+  #   theme: cayman
+  #   toc: yes
+  #   self_contained: yes
+  rmdformats::readthedown:
+    # toc: yes
+    self_contained: yes
+    css: ./Complementos/cambios.css
+    includes:
+      in_header: "./Complementos/favicon.html"
+      after_body: ./Complementos/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  include = TRUE,
+  results = 'asis'
+)
+
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(ggpubr)
+library(forcats)
+
+# Color:
+# "#3d1308" = "#6C8092"
+# "#9F2042" = "#003C72"
+# "#c7254e"
+#"#d64a70"
+```
+
+```{r}
+# variables
+inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/Benchmarking/Data/"
+# outDir <- "C:/Users/julia/Documents/GitHub/normScore/goldStandard/ProcessedDatasets/"
+js <- c(
+"function(row, data, num, index){",
+"  var $row = $(row);",
+"  if($row.hasClass('even')){",
+"    $row.css('background-color', 'white');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', 'white');",
+"     }",
+"    );",  
+"  }else{",
+"    $row.css('background-color', '#EDFDFA');",
+"    $row.hover(function(){",
+"      $(this).css('background-color', 'lightgrey');",
+"     }, function(){",
+"      $(this).css('background-color', '#EDFDFA');",
+"     }",
+"    );",  
+"  }",
+"}"  
+)
+```
+
+```{r}
+source(file = "../OneHundredDatasets/3_AssessmentFunctions.R")
+```
+
+
+# Benchmarking PXD028735
+
+Reanalysis of DIA and DDA raw data obtained with SCIEX tripleTOF6600+ instrument:
+
+* DIA-SWATH data: using DIANN software
+* DDA data: using MaxQuant software
+
+Library for prediction of peptides were generated in silico using the following fasta files:
+
+- Homo sapiens: UP000005640_9606.fasta
+- Escherichia coli: UP000000625_83333.fasta
+- Saccharomyces cerevisiae: UP000002311_559292.fasta
+
+Due to experimental desing, the expeceted FC for B vs A (B/A) is:
+
+- 1 for Human proteins ($logFC = 0$).
+
+- 0.5 for Yeast proteins ($logFC = -1$).
+
+- 4 for Ecoli proteins ($logFC = 2$).
+
+```{r out.width="80%"}
+knitr::include_graphics(path = "Complementos/PXD028735_designeExp.png")
+```
+
+
+A similar preprocessing was applied for each type of data, including the aggregation of sample replicates, exploration of missing data with filtering for keeping proteinas present in all samples, logarithm transformation and the use of 7 different normalization methods.
+
+Then, for each normalized dataset, a differential abundance analysis was performed using a t test as the main statistical test, with p-value adjustment by the Benjamin-Hochberg method. LogFC was estimated for each protein, that were also classified based on their organism of origin. 
+
+To determine the ranking of methods based on variability criteria, normScore was applied for both DDA and DIA data across the 8 normalization (7 + log-transformed data), while real classification of normalization methods was assessed by two criteria: 
+
+1. Mean absolute error between expected and estimated logFC
+2. AUC values for the classification of Human proteins (non-significants) vs yeast/ecoli proteins (significant). 
+
+NormScore, AUC and MAE ranking of normalizations were then compared using Kendall correlation. 
+
+These results were first analysed together considering DIA and DDA datasets. Individual ranks and a new external rank, built by averaging MAE and AUC results, were compared against NormScore rank using again kendal correlation. 
+
+Then, DDA and DIA ranking positions were combined/aggregated, as well as the positions for the gold standard metrics, and compared again using kendal correlation. 
+
+
+## DIA results
+
+```{r fig.height=10, fig.width=12}
+allResults <- readRDS(file = "Data/PXD028735/PXD028735_DIA_Complete_Analysis.rds")
+```
+
+```{r fig.height=8, fig.width=8}
+corrplot::corrplot.mixed(allResults$correlationResults, upper = "ellipse")
+```
+
+```{r fig.height=10, fig.width=10}
+df <- allResults$allMetrics
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = T, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE,
+  # rowCallback = DT::JS(js),
+  buttons = list(list(extend = "copy", text = "Copiar"),
+  list(extend = "csv"),
+  list(extend = "excel")))) |>
+DT::formatStyle(1, font = 'bold') |>
+  DT::formatRound(c(2:7), digits = 3)
+  # DT::formatRound(c(2:4, 8, 10, 12, 14, 16, 18), digits = 5)
+```
+
+
+## DDA 
+
+
+```{r fig.height=10, fig.width=12}
+allResults <- readRDS(file = "Data/PXD028735/PXD028735_DDA_Complete_Analysis.rds")
+```
+
+```{r fig.height=8, fig.width=8}
+corrplot::corrplot.mixed(allResults$correlationResults, upper = "ellipse")
+```
+
+```{r fig.height=10, fig.width=10}
+df <- allResults$allMetrics
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = T, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE, 
+  # rowCallback = DT::JS(js),
+  buttons = list(list(extend = "copy", text = "Copiar"),
+  list(extend = "csv"),
+  list(extend = "excel")))) |> 
+DT::formatStyle(1, font = 'bold') |> 
+  DT::formatRound(c(2:7), digits = 3)
+```
+
+## Combined
+
+```{r}
+lista <- readRDS(
+  file = "Data/PXD028735/PXD028735_combined.rds"
+)
+```
+
+Across the DIA and DDA analyses of PXD028735, normScore showed a moderate positive agreement with independent benchmark-derived measures of normalization performance. Agreement was strongest for AUC (Kendall’s τ ≈ 0.47), whereas the combined external ranking yielded a Kendall’s τ of approximately 0.35 when individual DIA and DDA analyses were considered together. When normalization methods were summarized across both acquisition strategies, agreement increased to approximately τ = 0.44.
+
+Importantly, the benchmark-derived metrics themselves did not produce identical normalization rankings. This is not necessarily unexpected, as MAE and AUC capture complementary aspects of performance: MAE quantifies the accuracy with which the expected fold changes are recovered, whereas AUC evaluates the ability to discriminate truly altered from non-altered proteins. Thus, some disagreement between these metrics is expected even when the underlying reference composition is known.
+
+The moderate agreement observed with normScore should also be interpreted in the context of the relatively small differences in performance among normalization methods. Diagnostic evaluation suggested limited systematic bias in these data, and most normalization approaches therefore achieved relatively similar benchmark performance. Under these conditions, small absolute differences between methods may translate into larger differences in their ordinal ranking, making exact rank recovery intrinsically difficult. The bootstrap analysis of MAE differences provides an additional means of evaluating this effect by distinguishing statistically or practically relevant performance differences from small differences within a plateau of similarly performing methods.
+
+In addition, the artificial composition of benchmarking mixtures affects some of the distributional characteristics evaluated by normScore. Changes in intensity distributions or other global properties may reflect the experimental design itself rather than normalization-related technical bias. This may reduce the agreement between normScore and benchmark-derived rankings despite adequate normalization performance.
+
+
+### Analysing DDA and DIA together
+
+```{r}
+dfAll <- lista$allMetrics
+
+
+# df <- data.frame(
+#   Reference = "NormScore",
+#   MAE = cor(
+#     dfRanks$RankNS,
+#     dfRanks$RankMAE,
+#     method = "kendall"
+#   ),
+#   AUC = cor(
+#     dfRanks$RankNS,
+#     dfRanks$RankAUC,
+#     method = "kendall"
+#   ),
+#   ExternalCombined = cor(
+#     dfRanks$RankNS,
+#     dfRanks$RankExternal,
+#     method = "kendall"
+#   )
+# )
+df <- dfAll
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = F, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE)) |> 
+  DT::formatStyle(1, font = 'bold') |> 
+  DT::formatRound(2:7, digits = 3)
+```
+
+
+```{r fig.width=8, fig.height=8}
+dfCor <- lista$dfCor
+
+corrplot::corrplot.mixed(dfCor, upper = "ellipse")
+
+```
+
+### Aggregating DDA and DIA NS ranks
+
+Overall, most normalization methods occupied broadly comparable positions according to normScore and the external benchmark criteria, particularly at the extremes of the ranking. Quantile normalization tended to be ranked more favorably by normScore than by the benchmark-derived criteria, whereas Median normalization showed the opposite pattern.
+
+```{r}
+meanRanks <- lista$meanDDADIA
+df <- meanRanks
+df$KendallCorrelation <- c(
+  round(cor(
+    meanRanks$NormScore,
+    meanRanks$External,
+    method = "kendall", 
+    use = "pairwise.complete.obs"
+  ), 3), 
+  rep("", nrow(df)-1)
+)
+
+
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = F, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE)) |> 
+  DT::formatStyle(1, font = 'bold') |> 
+  DT::formatRound(3, digits = 1)
+
+
+Biostatech::plotScatter(
+  base = df, 
+  varX = "NormScore", 
+  tituloX = "Averaging normScore DDA-DIA", 
+  varY = "External",
+  interact =  FALSE, 
+  adjustLine = TRUE, 
+  corType =  "spearman"
+)$grafico
+
+```
+
+
+
+# Benchmarking PXD001819
+
+The datasets consists of yeast samples with a mixed of 48 UPS1 human protein at different concentrations in two groups (A and B):
+
+* 50 vs 0.5: ratio A/B with FC = 100 for UPS proteins. Only 8 UPS1 proteins present enough quantification values, therefore this comparison was excluded. 
+
+* 50 vs 5: ratio A/B with FC = 10 for UPS proteins. 
+
+* 25 vs 12.5: ratio A/B with FC = 2 for UPS proteins. 
+
+And for yeast proteins, FC  = 1 for all comparisons. MaxQuant data was used to performed this analysis.
+
+
+Again, after preprocesing, AUC and MAE were estimated considering the expected and estimated FC, as well as the AUC for significant (UPS1) and non significant proteins. NormScore was also applied to rank the normalizations based on variability criterias, and kendall correlations were estimated to compared gold standard metrics (MAE, AUC) vs NS ranking. 
+
+> calcular diferencias entre mejores métodos con MAE?
+
+For the PXD001819 benchmark under the FC = 10 condition, normScore showed moderate positive agreement with both external benchmark metrics, with Kendall’s τ ≈ 0.43 for both MAE- and AUC-based rankings. Again, the two benchmark-derived criteria did not yield identical rankings, with a Kendall correlation of approximately 0.71 between MAE and AUC. This supports the notion that normalization performance cannot necessarily be represented by a single unambiguous ordering, even in controlled benchmarking data.
+
+The internal structure of this dataset may contribute to this disagreement. In particular, normalization rankings obtained when considering the UPS protein subset differed substantially from rankings based on the remaining proteins, including inverse associations in some comparisons. This suggests that the behavior of the artificially varying protein subset can influence global performance metrics differently from the predominantly stable background proteome. This observation should nevertheless be interpreted cautiously because the altered protein subset represents a smaller fraction of the available proteins and therefore provides a less precise basis for method comparison.
+
+When the between-group difference was reduced to FC = 2, correlations among normScore, MAE and AUC decreased. At the same time, the ranges of AUC, MAE and normScore values across normalization methods became narrower than under FC = 10. These findings are consistent with a reduced ability to discriminate among normalization methods when their performances are highly similar. In this setting, relatively small numerical fluctuations may alter the ordering of methods despite minimal differences in their practical performance. Therefore, the weaker rank concordance observed at FC = 2 appears to reflect, at least in part, limited separation among normalization methods rather than a strong discrepancy between normScore and benchmark performance.
+
+
+
+## 50 vs 0.5: FC = 10
+
+```{r}
+res <- readRDS( file = "Data/PXD001819/completeResult50vs5_MaxQuant.rds")
+df <- res$dfRanks
+dfCor <- res$dfCorKendall
+```
+
+```{r fig.height=10, fig.width=10}
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = T, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE,
+  # rowCallback = DT::JS(js),
+  buttons = list(list(extend = "copy", text = "Copiar"),
+  list(extend = "csv"),
+  list(extend = "excel")))) |>
+DT::formatStyle(1, font = 'bold') |>
+DT::formatRound(c(2:6), digits = 3)
+```
+
+
+```{r fig.width=7, fig.height=7}
+corrplot::corrplot.mixed(corr = dfCor, upper = "ellipse")
+```
+
+
+
+## 25 vs 12.5: FC = 2
+
+```{r}
+res <- readRDS( file = "Data/PXD001819/completeResult25vs12.5_MaxQuant.rds")
+df <- res$dfRanks
+dfCor <- res$dfCorKendall
+```
+
+```{r fig.height=10, fig.width=10}
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = T, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE,
+  # rowCallback = DT::JS(js),
+  buttons = list(list(extend = "copy", text = "Copiar"),
+  list(extend = "csv"),
+  list(extend = "excel")))) |>
+DT::formatStyle(1, font = 'bold') |>
+DT::formatRound(c(2:6), digits = 3)
+```
+
+
+```{r fig.width=8, fig.height=8}
+corrplot::corrplot.mixed(corr = dfCor, upper = "ellipse")
+```
+
+
+
+# Benchmarking PXD039399 and the effect of benchmark structure
+
+## Antecedents
+
+Results from PXD028735 and PXD001819 suggested that normScore captures part of the structure identified by benchmark-derived performance metrics, although exact ranking agreement was moderate rather than complete. In both datasets, agreement appeared to be stronger for methods located toward the best and worst ends of the ranking, whereas discrimination among intermediate methods was less consistent.
+
+A possible explanation is that these benchmarking datasets contain relatively limited systematic technical bias. Controlled proteomic benchmarks are generally constructed from reproducible mixtures with predefined differences in protein abundance rather than with the explicit purpose of introducing normalization-related systematic artifacts. Consequently, several normalization methods may perform similarly, reducing the amount of performance variation available for normScore to discriminate.
+
+Furthermore, benchmark composition itself can affect the distributional features used for normalization assessment. To investigate this issue more directly, PXD039399 was used as an additional benchmark in which experimental groups show pronounced differences in their global protein abundance distributions. normScore was therefore evaluated both globally and separately within experimental groups.
+
+
+## Dataset description
+
+This dataset consists of four groups with 3 samples, each of them with different concentrations of yeast proteins:
+
+* Y1H: 200ng
+* Y2H: 100ng
+* Y3H: 50ng
+* Y4H: 25ng
+
+Quantification matrices obtained with DIANN were the input of the analysis.
+
+The number of missing data increased according to lower concentration, so three comparisons involving the Y1H group were used to assess the real/gold standard ranking:
+
+* Y1H vs Y2H: FC = 2
+* Y1H vs Y3H: FC = 4
+* Y1H vs Y4H: FC = 8
+
+MAE was estimated between expected and estimated FC considering all comparisons, and NS was estimated in global, considering the four groups, and separately for each of them. Then, an average NS ranking was performed for each pairs of groups involved in each comparison.  
+
+
+## Results {.tabset}
+
+This analysis showed that data structure substantially affected normScore performance. Many conventional normalization diagnostics rely, either explicitly or implicitly, on a degree of comparability in the overall abundance distributions across samples. They are particularly informative when technical effects perturb samples that otherwise share a broadly comparable proteomic background and when biological differential abundance affects only a subset of the measured proteome.
+
+These assumptions are challenged when experimental groups are intentionally characterized by strong global differences in protein abundance. Under this design, differences in total intensity, sample distributions or related diagnostic features do not necessarily represent unwanted technical variation; instead, they may constitute an expected consequence of the experimental design. A global normalization-quality assessment can therefore penalize methods for preserving genuine group-associated differences, effectively interpreting biologically or experimentally induced structure as technical bias.
+
+Consistent with this interpretation, evaluating normScore within groups, where samples had more comparable underlying abundance structures, improved its agreement with benchmark-derived performance relative to the global assessment. This indicates that the reduced concordance observed under the global analysis was at least partly attributable to the structure of the benchmark rather than solely to a failure of normScore to identify appropriate normalization methods.
+
+
+```{r}
+listaCompleta <- readRDS(
+    file = "Data/PXD039399//completeResult.rds")
+df <- listaCompleta$dfRanks
+```
+
+```{r fig.height=10, fig.width=10}
+scrollY <- ifelse(nrow(df)>12, '500px', FALSE)
+DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
+  options = list(ordering = T, dom = "Bfrt", scrollY = scrollY,
+  scrollX = "TRUE", pageLength = nrow(df),
+  columnDefs = list(list(className = 'dt-center', targets = '_all')),
+  full_width = TRUE,
+  # rowCallback = DT::JS(js),
+  buttons = list(list(extend = "copy", text = "Copiar"),
+  list(extend = "csv"),
+  list(extend = "excel")))) |>
+DT::formatStyle(1, font = 'bold') |>
+DT::formatRound(c(2:9), digits = 3)
+```
+
+### Only NS {-}
+
+```{r fig.width=10, fig.height=10}
+dfCor <- listaCompleta$dfCorKendall
+dfCor <- dfCor[c(2, 1, 3:5), c(2, 1, 3:5)]
+
+corrplot::corrplot.mixed(corr = dfCor, upper = "ellipse")
+```
+
+### By comparison {-}
+
+```{r fig.width=12, fig.height=10}
+dfCor <- listaCompleta$dfCorKendall
+dfCor <- dfCor[c(2, 1, 3:8), c(2, 1, 3:8)]
+
+corrplot::corrplot.mixed(corr = dfCor, upper = "ellipse")
+```
+
+
+# Overall interpretation
+
+Initial evaluation using PXD028735 showed a consistent positive, although moderate, agreement between normScore and independent benchmark-derived measures of normalization performance. Importantly, perfect agreement was not observed even between the two external reference metrics, MAE and AUC, indicating that normalization performance could not be represented by a unique and unequivocal ranking. Moreover, when differences in absolute performance are reduced, ordinal agreement may underestimate the ability of normScore to identify similarly well-performing normalization strategies.
+
+We hypothesized that two characteristics of controlled benchmarking datasets could contribute to this moderate agreement. 
+
+* First, these datasets contain **highly controlled replicates** generated from predefined mixtures and are **not specifically designed to introduce heterogeneous systematic normalization biases**. Consequently, several normalization methods may perform similarly, reducing the performance range available for discrimination. 
+
+* Second,* **their artificial composition can produce distributional differences between experimental groups that are expected consequences of the study design rather than unwanted technical variation**. Because several normalization diagnostics rely on broad comparability of sample distributions and on the assumption that large global shifts are uncommon, such artificial structures may affect normScore independently of the ability of a normalization method to recover the expected fold changes.
+
+Two additional benchmarking datasets were therefore used **to examine these effects separately**.
+
+PXD001819 was used to investigate the effect of **benchmark discriminative strength**. When the expected fold change was large (FC = 10), MAE, AUC and normScore showed greater separation among normalization methods and moderate positive rank agreement. In contrast, under the lower FC = 2 condition, differences among normalization methods became substantially smaller for all three metrics and rank agreement disappeared. This supports the interpretation that rank concordance becomes intrinsically unstable when normalization methods exhibit nearly indistinguishable performance.
+
+PXD039399 was subsequently used to investigate **the effect of strong group-dependent abundance structure**. When normScore was calculated globally, expected differences in protein abundance distributions between experimental groups affected several of its diagnostic criteria, reducing agreement with benchmark-derived performance. However, when normScore was calculated within groups of samples sharing a comparable abundance structure, thereby removing the between-group artificial shift from the normalization diagnostics, moderate agreement with the external benchmark metrics was recovered.
+
+Together, these analyses indicate that the performance of normScore in benchmarking experiments depends not only on its ability to characterize normalization quality but also on the amount of systematic variation present, the degree of performance separation among normalization methods, and the compatibility between the structure of the benchmark and the assumptions underlying normalization-quality criteria that is the base of the normScore metric. 
+
+> A ranking metric can only be validated reliably when the benchmark itself provides enough information to distinguish the methods being ranked.
+
+Importantly, **normScore should not be interpreted as a standalone substitute for the underlying normalization diagnostics**. The score was developed from a set of previously described and validated qualitative criteria used to assess normalization performance through complementary graphical and distributional features. Its purpose is therefore to provide a quantitative framework that facilitates the joint and individual evaluation of these criteria and allows normalization methods to be compared in a reproducible manner. However, the final ranking should always be interpreted together with the corresponding diagnostic plots, as visual inspection can reveal dataset-specific structures, atypical abundance patterns or group-dependent shifts that may not be fully captured by the aggregated metric. 

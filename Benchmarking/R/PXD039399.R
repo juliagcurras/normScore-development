@@ -262,7 +262,7 @@ resNS$finalRanking
 
 pDiag <- normScore::plotNormScoreDiagnostics(
   normalizedDataList = listaNorm,
-  groupData = dmSub,
+  groupData = dm,
   rawData = dataFinal,
   refGroup = "Y1H", 
   altGroup = "Y2H"
@@ -274,6 +274,11 @@ pDiag$item3
 pDiag$item4
 pDiag$item5
 pDiag$item6
+Biomics::plotBoxMulti(
+  base = listaNorm$Log, varResumen = colnames(listaNorm$Log), 
+  interact = FALSE, color = rep("royalblue4", 12), tituloY = "Log(Intensitie)"
+  )$grafico + theme_bw(base_size = 16) + 
+  theme(axis.text.x = element_text(angle = 65, vjust = 0.5), legend.position = "none")
 
 ## By groups ####
 nsByNorm <- lapply(
