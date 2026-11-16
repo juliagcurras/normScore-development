@@ -216,78 +216,54 @@ Considering all error scenarios:
 specific type of distortion it is designed to capture, and that the combined 
 score behaves consistently across heterogeneous scenarios.
 
-### Gold-standard benchmarking
+### One-hundred datasets
 
 To evaluate the performance of the `normScore` framework beyond simulations, a
 curated gold-standard dataset was assembled. This dataset consisted of 100 
 proteomics studies from PRIDE, for which eight normalization methods were applied.
 
-Each dataset was manually annotated by ranking normalization methods according 
+Each dataset was manually annotated twice, by two independent reviewers, 
+by ranking normalization methods according 
 to each individual criterion, and by identifying the best-performing methods 
 overall. In some cases, clearly suboptimal methods were also flagged for 
-exclusion.
+exclusion. Then, normScore was also applied to the collection to get the 
+item and global level rankings. 
 
-This gold-standard collection was used to assess the performance of `normScore` 
-using ranking-based metrics, including Hit@TopK and Mean Reciprocal Rank (MRR).
-
-
-### Score optimization strategies
-
-In addition to evaluation, two strategies were explored to improve the scoring
-system using the gold-standard datasets:
+Results were compared between normScore and manual reviewers using Spearman's 
+correlation and pairwise correlation for item-levels rankings, as well as the 
+Jaccard index for global rankings. 
 
 
-#### Genetic algorithm-based weighting
+### Benchmarking datasets
 
-Genetic algorithms were used to search for optimal weights for the six scoring 
-items. Three different fitness functions were tested:
+Finally, we used three publicly available proteomics benchmark datasets with 
+known abundance ratios to assess how closely normScore rankings agreed with 
+rankings based on independent measures of normalization performance.
 
-* A function prioritizing agreement between the top-ranked method by `normScore` 
-and the manually selected top method, with a secondary penalty based on 
-disagreement with all manually selected best methods.
-* A reversed version of the previous fitness formulation.
-* A variant considering both the top1 and top2 methods from `normScore` relative 
-to the manually selected top method.
+- **PXD028735** contains DDA and DIA data from mixtures of human, 
+*Escherichia coli*, and yeast proteins. The expected B/A fold changes (FCs) 
+were 1, 4, and 0.5, respectively. We reanalysed the raw DDA data with MaxQuant 
+v2.6.4 and the raw DIA data with DIA-NN v2.7.
+- **PXD001819** contains yeast samples spiked with human UPS1 proteins and 
+quantified using MaxQuant. We retained comparisons with expected UPS1 FCs of 
+2 and 10. Yeast protein abundances were expected to remain unchanged.
+- **PXD039399** contains four groups of yeast samples with protein inputs 
+of 200, 100, 50, and 25 ng, quantified using DIA-NN. The expected FCs for 
+the 200-ng group relative to the 100-, 50-, and 25-ng groups were 2, 4, and 8, 
+respectively.
 
-Despite extensive exploration, no combination of weights consistently improved 
-the performance of the original unweighted scoring scheme.
+We preprocessed each dataset separately and applied the normalization methods 
+under evaluation. To assess performance against the known experimental ratios, 
+we calculated the mean absolute error (MAE) between estimated and expected FCs. 
+Where applicable, we also calculated the area under the receiver operating 
+characteristic curve (AUC) to assess how well the analysis distinguished proteins 
+expected to be differentially abundant from those expected to remain unchanged.
+We then used Kendall’s rank correlation to compare the normalization method 
+rankings derived from each benchmark metric with those obtained using normScore.
 
-#### Bootstrap-based pairwise comparison and parsimony
-
-An alternative strategy was based on bootstrap resampling of item scores to 
-derive confidence intervals for each normalization method. Pairwise comparisons 
-were then performed, and in cases where differences were not statistically 
-significant, the simplest method was selected following the principle of parsimony.
-
-While this approach yielded reasonable results, it did not outperform the 
-standard `normScore` ranking.
-
-### Experimental benchmarking (DIA and DDA datasets)
-
-Finally, `normScore` was evaluated on a set of controlled benchmarking datasets,
-including 10 DIA and 10 DDA experiments with varying chromatographic conditions
-and sample loads.
-
-These datasets were constructed using mixtures of *E. coli*, human, and yeast 
-proteins across two groups (A and B), with known expected log fold changes:
-
-* *E. coli*: −2
-* Human: 0
-* Yeast: +1
-
-The normalization methods selected by `normScore` were compared against those 
-minimizing the mean absolute percentage error (MAPE) between observed and 
-expected logFC values.
-
-This analysis provided an independent validation of the scoring framework under 
-controlled experimental conditions.
+For **PXD039399**, we computed normScore rankings both across all samples and 
+separately within each group. For each pairwise comparison, we averaged the
+rankings from the two groups involved.
 
 
 ---
-
-
-
-
-
-
-
