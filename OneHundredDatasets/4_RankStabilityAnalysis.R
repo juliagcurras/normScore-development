@@ -17,6 +17,7 @@ library(ggplot2)
 library(ggpubr)
 
 outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
+outputDir <- "G:/Mi unidad/_General/DoctoradoIndustrial2022/Publicaciones/NORMALIZACIONES/Paper_normScore/Figures/"
 
 
 #...........................................................................####
@@ -28,6 +29,7 @@ compareNSvsLOO <- function(
     rankLOO, 
     normalization = "Median",
     nNormExcluded = 1,
+    minColor = "white",
     maxColor = "darkblue"){
   
   
@@ -109,19 +111,27 @@ compareNSvsLOO <- function(
   dfHeatmap$rankOriginal <- as.numeric(as.character(dfHeatmap$rankOriginal))
   dfHeatmap$rankLOO <- as.numeric(as.character(dfHeatmap$rankLOO))
   
+  meanKendall <- mean(dfKendall$kendall, na.rm = TRUE)
+  sdKendall <- sd(dfKendall$kendall, na.rm = TRUE)
+  
   pHeatmap <- ggplot(dfHeatmap, aes(x = rankOriginal, y = rankLOO, fill = frequency)) +
     geom_tile() +
     geom_text(aes(label = frequency)) +
     scale_x_continuous(breaks = 1:nComparisons) +
     scale_y_continuous(breaks = 1:nComparisons) +
     scale_fill_gradient(
-      low = "white",
+      low = minColor,
       high = maxColor, limits = c(0, 100)
     ) +
     theme_bw() +
     theme(panel.grid = element_blank(), 
           legend.position = "bottom") +
     labs(
+      subtitle = sprintf(
+        "Average Kendall's τ: %.3f \n(SD = %.3f)",
+        meanKendall,
+        sdKendall
+      ),
       x = "Original rank",
       y = paste0("LOO ", normLabel, " rank"),
       fill = "Frequency"
@@ -195,6 +205,10 @@ names(nsListLOO) <- allNorms
 
 saveRDS(object = nsListLOO, file = "AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01.rds")
 
+nsListLOO <- readRDS(
+  file = "AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01.rds")
+
+
 ## Just ranking by dataset ####
 rankingNsLoo <- lapply(nsListLOO, function(resNsLOO){
   lapply(resNsLOO, function(df){
@@ -208,14 +222,42 @@ rankingNsLoo <- lapply(nsListLOO, function(resNsLOO){
 ## Global comparison  ####
 # abc <- compareNSvsLOO(rankingNS, rankLOO = rankingNsLoo$Median, normalization = "Median")
 res <- lapply(names(rankingNsLoo), function(i) 
-  compareNSvsLOO(rankNS = rankingNS, rankLOO = rankingNsLoo[[i]], normalization = i))
+  compareNSvsLOO(rankNS = rankingNS, rankLOO = rankingNsLoo[[i]], 
+                 normalization = i, maxColor = "#8C2981FF", minColor = "grey100"))
 names(res) <- names(rankingNsLoo)
+saveRDS(object = res, file = "AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01_plots.rds")
+
+
+pmatrix <- ggpubr::ggarrange(plotlist = sapply(res, "[[", 4), nrow = 2, ncol = 4, common.legend = TRUE)
 ggpubr::ggarrange(plotlist = sapply(res, "[[", 3), nrow = 2, ncol = 4)
-ggpubr::ggarrange(plotlist = sapply(res, "[[", 4), nrow = 2, ncol = 4, common.legend = TRUE)
+
+pmatrix
+ggsave(filename = paste0(outputDir, "NewFigure4C.svg"), 
+       plot = pmatrix, width = 13, height = 8)
+
+plegend <- sapply(res, "[[", 4)[[1]] + theme(legend.position = "right")
+ggsave(filename = paste0(outputDir, "NewFigure4C_Legend.svg"), 
+       plot = plegend, width = 8, height = 8)
+
 
 
 # Testing...
 dfKendall <- do.call(rbind, sapply(res, "[[", 2, USE.NAMES = T, simplify = F))
+median(dfKendall$kendall)
+mean(dfKendall$kendall)
+IQR(dfKendall$kendall)
+range(dfKendall$kendall)
+min(dfKendall$kendall)
+
+dfKendall |> 
+  group_by(normalization) |> 
+  summarise(
+    mean = mean(kendall), 
+    sd = sd(kendall), 
+    median = median(kendall), 
+    IQR = IQR(kendall), 
+    min = min(kendall), 
+    max = max(kendall))
 
 # Test first
 dfTest <- dfKendall |>
@@ -304,13 +346,14 @@ rankingNsPairsLoo <- lapply(listPairsLOO, function(resNsLOO){
 
 ## Global comparison  ####
 dfPairs <- as.data.frame(dfPairs)
+dfPairs$Name <- paste0(dfPairs$V1, "_", dfPairs$V2)
 resPairs <- lapply(dfPairs$Name, function(i){
   cat(i, "\n")
   compareNSvsLOO(
     rankNS = rankingNS, 
     rankLOO = rankingNsPairsLoo[[i]], 
     normalization = unname(unlist(as.vector(dfPairs[dfPairs$Name == i, 1:2]))), 
-    nNormExcluded = 2
+    nNormExcluded = 2, maxColor = "#FE9F6DFF", minColor = "grey100"
     )
   }
 )
@@ -318,7 +361,7 @@ names(resPairs) <- names(rankingNsPairsLoo)
 ggpubr::ggarrange(
   plotlist = sapply(resPairs, "[[", 3), nrow = 7, ncol = 3)
 ggpubr::ggarrange(
-  plotlist = sapply(resPairs, "[[", 4), nrow = 7, ncol = 3, 
+  plotlist = sapply(resPairs, "[[", 4), nrow = 4, ncol = 6, 
   common.legend = TRUE)
 
 

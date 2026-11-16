@@ -861,8 +861,9 @@ car::Anova(modeloCompleto, type = 3)
 ```{r include=F}
 # Individual models
 library(car)
+dfComp <- dfComp |> dplyr::rename(Species = Specie)
 covariables <- c("Acquisition", "Instrument", "CellCulture", "Software", 
-                 "Specie")
+                 "Species")
 dfComp <- dfComp %>%
   mutate(
     Comparison = factor(Comparison),

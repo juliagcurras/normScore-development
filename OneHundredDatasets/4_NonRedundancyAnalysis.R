@@ -184,7 +184,35 @@ corListWeight <- lapply(resNS, function(df){
 })
 
 corArray <- simplify2array(corListWeight)
-apply(corArray, c(1, 2), median, na.rm = TRUE)
+dfCorWeight <- apply(corArray, c(1, 2), median, na.rm = TRUE)
+
+saveRDS(
+  list(corList = corListWeight, dfCor = dfCorWeight), 
+  "AssessmentFiles/nonRedundancyResults.rds")
+
+
+pH1 <- pheatmap::pheatmap(
+  dfCorWeight, 
+  cluster_cols = TRUE,  
+  cluster_rows = TRUE,
+  fontsize = 14,
+  fontsize_row = 16,
+  fontsize_col = 14,
+  border_color = "white",
+  angle_col = 45,
+  # clustering_callback = callback, 
+  # color = grDevices::colorRampPalette(c(rev(RColorBrewer::brewer.pal(n = 9, name = "PuBu")), "white", "white", "white"))(319), # Top 1
+  color = grDevices::colorRampPalette(rev(viridis::inferno(n =5)))(22), # Top 1
+  # color = RColoseq(-1, 1, 0.5)rBrewer::brewer.pal(n = 6, name = "PuBu"), # Average -->
+  # color = grDevices::colorRampPalette(colores)(351), # Average -->
+  breaks = seq(0, 1, 0.05),
+  legend_breaks = seq(0, 1, 0.25),
+  legend_labels = seq(0, 1, 0.25)
+)
+svg(filename = paste0(outputDir, "NewFigure4A.svg"), width = 6, height = 6)
+pH1
+dev.off()
+
 
 # With item 2 (without weights)
 corListNoWeight <- lapply(resNsNoWeight, function(df){
@@ -193,9 +221,9 @@ corListNoWeight <- lapply(resNsNoWeight, function(df){
 })
 
 corArrayNoW <- simplify2array(corListNoWeight)
-apply(corArrayNoW, c(1, 2), median, na.rm = TRUE)
+dfCorNoWeight <- apply(corArrayNoW, c(1, 2), median, na.rm = TRUE)
 
-
+pheatmap::pheatmap(dfCorNoWeight)
 
 ## Boxplots ####
 corList <- corListNoWeight
@@ -222,259 +250,63 @@ corLong <- do.call(rbind, lapply(seq_along(corList), function(i) {
 
 # Pair names
 corLong$pair <- paste(corLong$var1, corLong$var2, sep = " - ")
+corLong |> 
+  rename(kendall = correlation) |> 
+  summarise(
+    mean = mean(kendall), 
+    sd = sd(kendall), 
+    median = median(kendall), 
+    IQR = IQR(kendall), 
+    min = min(kendall), 
+    max = max(kendall), 
+    q1 = quantile(kendall)[[2]],
+    q3 = quantile(kendall)[[4]])
+
+# mean        sd    median       IQR       min max
+# 0.4036418 0.4277955 0.4910268 0.5584513 -0.952381   1
+# mean        sd    median       IQR       min max        q1        q3
+# 1 0.4036418 0.4277955 0.4910268 0.5584513 -0.952381   1 0.1796439 0.7380952
 
 ### Distribution by item ####
 ggplot(corLong, aes(x = var1, y = correlation, group = var1)) +
-  geom_boxplot(aes(fill = var1), alpha = 0.5) +
+  geom_boxplot(aes(fill = var1), alpha = 0.75) +
   theme_bw() +
   labs(
     x = "Pairs within each item",
     y = "Correlation"
   ) +
-  scale_fill_manual(values = viridis::viridis(n = 6)) +
+  scale_fill_manual(values = viridis::inferno(n =6)) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
 ### Distribution by pairs ####
-ggplot(corLong, aes(x = pair, y = correlation, color = var1)) +
-  geom_boxplot(aes(fill = var1, colour = var1), alpha = 0.5) +
-  theme_bw() +
+outputDir <- "G:/Mi unidad/_General/DoctoradoIndustrial2022/Publicaciones/NORMALIZACIONES/Paper_normScore/Figures/"
+
+pByPairs <- ggplot(corLong, aes(x = pair, y = correlation, color = var1)) +
+  # geom_boxplot(aes(fill = var1, colour = var1), alpha = 0.8) +
+  geom_boxplot(aes(fill = var1), colour = "black", alpha = 0.8) +
+  theme_bw(base_size = 18) +
   labs(
-    x = "All pairs",
-    y = "Correlation"
+    x = "All pairs of items",
+    y = "Spearman's correlation", 
+    fill = "Item"
   ) +
-  scale_fill_manual(values = viridis::viridis(n = 6)) +
-  scale_colour_manual(values = viridis::viridis(n = 6)) +
+  scale_fill_manual(values = viridis::inferno(n =6)) +
+  # scale_colour_manual(values = viridis::inferno(n =6)) +
   theme(
+    # panel.grid = element_blank(),
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
+ggsave(filename = paste0(outputDir, "NewFigure4B.svg"), 
+       plot = pByPairs, width = 15, height = 6)
+
+# jpeg(filename = paste0(outputDir, "Figure6.jpeg"), 
+#      width = 6, height = 6, units = "in", res = 1000)
+# pC
+# dev.off()
 
 
 
 
-#...........................................................................####
-# LOO ####
-
-## RANKING WITH WEITGHTED ITEM 2 ####
-
-### Ranking with all items ####
-rankingNS <- lapply(resNS, function(df){
-  scoreDF_norm <- df |> dplyr::arrange(TotalCorrected)
-  finalRank <- stats::setNames(scoreDF_norm$TotalCorrected, rownames(scoreDF_norm))
-})
-rankingNoItem0 <- lapply(resNS, function(df){
-  scoreDF_norm <- df |> dplyr::arrange(Total)
-  finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
-})
-
-
-### Ranking removing one item ####
-rankingLOO <- lapply(1:6, function(i) {
-  lapply(resNS, function(df){
-  recalculateNS(df, itemToRemove = i)
-  })
-})
-names(rankingLOO) <- paste0("Item ", 1:6)
-
-rankingLOO$`Item 0` <- rankingNoItem0
-
-### Comparison with kendall cor and graphs ####
-res <- lapply(names(rankingLOO), function(i) 
-  compareNSvsLOO(rankNS = rankingNS, rankLOO = rankingLOO[[i]], item = i))
-names(res) <- names(rankingLOO)
-ggpubr::ggarrange(plotlist = sapply(res, "[[", 3), nrow = 2, ncol = 4)
-ggpubr::ggarrange(plotlist = sapply(res, "[[", 4), nrow = 2, ncol = 4, common.legend = TRUE)
-
-
-# Testing...
-dfKendall <- do.call(rbind, sapply(res, "[[", 2, USE.NAMES = T, simplify = F))
-
-# Test first
-dfTest <- dfKendall |>
-  rstatix::pairwise_wilcox_test(
-    kendall ~ item,
-    paired = TRUE,
-    p.adjust.method = "holm"
-  )
-
-# Plot without test
-
-ggplot(dfKendall, aes(x = item, y = kendall)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.12, alpha = 0.25) +
-  theme_bw() +
-  labs(
-    x = NULL,
-    y = "Kendall's tau"
-  )
-
-# plot with test result
-
-dfTest <- dfTest %>%
-  rstatix::add_xy_position(x = "item")
-dfTest$y.position <- 1+seq(0.1, 1.1, 0.05)
-
-ggplot(dfKendall, aes(x = item, y = kendall)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.12, alpha = 0.25) +
-  stat_pvalue_manual(
-    dfTest,
-    label = "p.adj.signif",
-    hide.ns = TRUE
-  ) +
-  theme_bw() +
-  labs(
-    x = NULL,
-    y = "Kendall's tau"
-  )
-
-
-
-
-
-## RANKING WITH NON-WEITGHTED ITEM 2 ####
-
-### Ranking with all items ####
-rankingNS <- lapply(resNsNoWeight, function(df){
-  scoreDF_norm <- df |> dplyr::arrange(TotalCorrected)
-  finalRank <- stats::setNames(scoreDF_norm$TotalCorrected, rownames(scoreDF_norm))
-})
-rankingNoItem0 <- lapply(resNsNoWeight, function(df){
-  scoreDF_norm <- df |> dplyr::arrange(Total)
-  finalRank <- stats::setNames(scoreDF_norm$Total, rownames(scoreDF_norm))
-})
-
-
-### Ranking removing one item ####
-rankingLOO <- lapply(1:6, function(i) {
-  lapply(resNsNoWeight, function(df){
-  recalculateNS(df, itemToRemove = i)
-  })
-})
-names(rankingLOO) <- paste0("Item ", 1:6)
-
-rankingLOO$`Item 0` <- rankingNoItem0
-
-### Comparison with kendall cor and graphs ####
-res <- lapply(names(rankingLOO), function(i) 
-  compareNSvsLOO(rankNS = rankingNS, rankLOO = rankingLOO[[i]], 
-                 item = i, maxColor = "darkgreen"))
-names(res) <- names(rankingLOO)
-ggpubr::ggarrange(plotlist = sapply(res, "[[", 3), nrow = 2, ncol = 4)
-ggpubr::ggarrange(plotlist = sapply(res, "[[", 4), nrow = 2, ncol = 4, common.legend = TRUE)
-
-
-# Testing...
-dfKendall <- do.call(rbind, sapply(res, "[[", 2, USE.NAMES = T, simplify = F))
-
-# Test first
-dfTest <- dfKendall |>
-  rstatix::pairwise_wilcox_test(
-    kendall ~ item,
-    paired = TRUE,
-    p.adjust.method = "holm"
-  )
-
-# Plot without test
-
-ggplot(dfKendall, aes(x = item, y = kendall)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.12, alpha = 0.25) +
-  theme_bw() +
-  labs(
-    x = NULL,
-    y = "Kendall's tau"
-  )
-
-# plot with test result
-library(ggpubr)
-
-dfTest <- dfTest %>%
-  rstatix::add_xy_position(x = "item")
-dfTest$y.position <- 1+seq(0.1, 1.1, 0.05)
-
-ggplot(dfKendall, aes(x = item, y = kendall)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(width = 0.12, alpha = 0.25) +
-  stat_pvalue_manual(
-    dfTest,
-    label = "p.adj.signif",
-    hide.ns = TRUE
-  ) +
-  theme_bw() +
-  labs(
-    x = NULL,
-    y = "Kendall's tau"
-  )
-
-
-
-### Additional result: discrimination ability ####
-ordenNormalizations <- c(
-  "Log", 
-  "Median", 
-  "Mean", 
-  "TI",
-  "Quantile", 
-  "CyclicLoess",
-  "RLR",
-  "VSN" 
-)
-rankList <- lapply(seq_len(6), function(item) {
-  
-  dfRank <- do.call(rbind, lapply(resNsNoWeight, function(df) {
-    df[ordenNormalizations, item]
-  }))
-  
-  dfRank <- as.data.frame(dfRank)
-  
-  # Nombres de las normalizaciones
-  colnames(dfRank) <- ordenNormalizations
-  
-  dfRank
-})
-
-names(rankList) <- paste0("Item", 1:6)
-dim(rankList[[1]])
-head(rankList[[1]])
-
-
-heatmapList <- lapply(seq_along(rankList), function(i) {
-  
-  df <- rankList[[i]]
-  
-  dfLong <- data.frame(
-    dataset = rep(seq_len(nrow(df)), times = ncol(df)),
-    normalization = rep(colnames(df), each = nrow(df)),
-    rank = unlist(df, use.names = FALSE)
-  )
-  
-  ggplot(dfLong, aes(x = normalization, y = dataset, fill = rank)) +
-    geom_tile() +
-    scale_fill_gradient(
-      # low = "#543005",
-      low = "#F5F5F5",
-      high = "#003C30",
-      limits = c(0, 1),
-      name = "Scaled item-score"
-    ) +
-    # scale_fill_gradientn(
-    #   colours = RColorBrewer::brewer.pal(9, "PuOr"), 
-    #   limits = c(0, 1), 
-    #   name = "Scaled item-score",
-    #   values = scales::rescale(c(0, 0.5, 1)))+
-    labs(
-      title = paste("Item", i),
-      x = NULL,
-      y = "Dataset"
-    ) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1), 
-      panel.grid = element_blank()
-    )
-})
-
-ggpubr::ggarrange(plotlist = heatmapList, nrow = 2, ncol = 3, common.legend = TRUE)

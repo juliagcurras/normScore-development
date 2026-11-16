@@ -146,7 +146,7 @@ resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 
 ### By item ####
 summaryByItem <- resultsByItem(resNormScore = resAllNS$resByItem, 
-                                        resGS = resAllGS$byItem)
+                               resGS = resAllGS$byItem)
 summaryByItem$tabla %>% View
 
 ### Global ####
