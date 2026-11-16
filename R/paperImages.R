@@ -390,7 +390,7 @@ listaPorItem <- map(itemsKeep, function(item) {
         names_from = Normalizacion,
         values_from = Score
       ) %>%
-      select(all_of(ordenNorm))
+      select(all_of(normOrder))
     
   }, .id = "ID")
   
