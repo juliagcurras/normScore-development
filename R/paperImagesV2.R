@@ -68,9 +68,9 @@ source(file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredD
 inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/"
 
 ## Load data ####
-resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
-resAllGSR2 <- readRDS(file = paste0(inputDir, "results_Gold_Standard_R2.rds")) # Manual ranking
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
+resAllGS <- readRDS(file = paste0(inputDir, "3_Reviewer1_results_100dataset.rds")) # Manual ranking
+resAllGSR2 <- readRDS(file = paste0(inputDir, "3_Reviewer2_results_100dataset.rds")) # Manual ranking
+resNS <- readRDS(file = paste0(inputDir, "3_normScore_results_100datasets.rds")) # Originales
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 resAllNS$resByItem <- resAllNS$resByItem %>%
   group_by(ID, Item) %>%
@@ -1052,10 +1052,9 @@ plotBoxChulo <- function(
 
 ## Loading results ####
 inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/"
-resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
-resAllGSR2 <- readRDS(file = paste0(inputDir, "results_Gold_Standard_R2.rds")) # Manual ranking
-resNSR2 <- readRDS(file = paste0(inputDir, "normScore_dataR2_All_Item0_x4_Item2_01.rds")) # Originales
+resAllGS <- readRDS(file = paste0(inputDir, "3_Reviewer1_results_100dataset.rds")) # Manual ranking
+resNS <- readRDS(file = paste0(inputDir, "3_normScore_results_100datasets.rds")) # Originales
+resAllGSR2 <- readRDS(file = paste0(inputDir, "3_Reviewer2_results_100dataset.rds")) # Manual ranking
 
 source(file = "../OneHundredDatasets/3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
@@ -1394,14 +1393,13 @@ ggsave(filename = paste0(outputDir, "SupplementaryFigure1.svg"),
 # Figure 3G ####
 ## Loading results ####
 inputDir <- "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/"
-resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
-resAllGSR2 <- readRDS(file = paste0(inputDir, "results_Gold_Standard_R2.rds")) # Manual ranking
-resNSR2 <- readRDS(file = paste0(inputDir, "normScore_dataR2_All_Item0_x4_Item2_01.rds")) # Originales
+resAllGS <- readRDS(file = paste0(inputDir, "3_Reviewer1_results_100dataset.rds")) # Manual ranking
+resNS <- readRDS(file = paste0(inputDir, "3_normScore_results_100datasets.rds")) # Originales
+resAllGSR2 <- readRDS(file = paste0(inputDir, "3_Reviewer2_results_100dataset.rds")) # Manual ranking
 
-source(file = "../OneHundredDatasets//3_AssessmentFunctions.R")
+source(file = "../OneHundredDatasets/3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
-resAllNSR2 <- formatNormScoreResults(finalList = resNSR2, item0 = T)
+resAllNSR2 <- resAllNS
 
 
 ## Estimating data ####
@@ -1657,7 +1655,7 @@ ggsave(filename = paste0(outputDir, "Figure6G.svg"),
 
 ## Figure 4 B ####
 lista <- readRDS(
-  "../OneHundredDatasets/AssessmentFiles/nonRedundancyResults.rds"
+  "../OneHundredDatasets/AssessmentFiles/4_nonRedundancyResults.rds"
 )
 pH1 <- pheatmap::pheatmap(
   lista$dfCor, 
@@ -1726,7 +1724,7 @@ pByPairs
 #        plot = pByPairs, width = 15, height = 6)
 
 ## Figure 4 C ####
-res <- readRDS(file = "../OneHundredDatasets/AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01_plots.rds")
+res <- readRDS(file = "../OneHundredDatasets/AssessmentFiles/4_rankStability_LOO_normalization_plots.rds")
 
 pmatrix <- ggpubr::ggarrange(plotlist = sapply(res, "[[", 4), nrow = 2, ncol = 4, 
                              common.legend = TRUE)
@@ -1978,7 +1976,7 @@ pBMulti
 #.........................................................................####
 # Supplementary Figure 2 ####
 allOut <- readRDS(
-  file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
+  file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/3_NormScoreAssesment_models_Covars.rds")
 # names(allOut) <- c(names(allOut)[1:5, "Species"])
 # allOut$Specie
 covariables <- c("Acquisition", "Instrument", "CellCulture", "Software", 
