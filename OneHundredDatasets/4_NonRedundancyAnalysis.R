@@ -145,7 +145,7 @@ compareNSvsLOO <- function(rankNS, rankLOO, item = "Item 1", maxColor = "darkred
 # Loading data ####
 
 # normScore results over 100 dataset
-resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x4_Item2_01.rds")
+resNS <- readRDS(file = "AssessmentFiles/3_normScore_results_100datasets.rds")
 
 # what will happen if we reset item2 to 0-1?
 resNsNoWeight <- lapply(resNS, function(scoreDF_norm){
@@ -188,7 +188,7 @@ dfCorWeight <- apply(corArray, c(1, 2), median, na.rm = TRUE)
 
 saveRDS(
   list(corList = corListWeight, dfCor = dfCorWeight), 
-  "AssessmentFiles/nonRedundancyResults.rds")
+  "AssessmentFiles/4_nonRedundancyResults.rds")
 
 
 pH1 <- pheatmap::pheatmap(
@@ -298,6 +298,7 @@ pByPairs <- ggplot(corLong, aes(x = pair, y = correlation, color = var1)) +
     # panel.grid = element_blank(),
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+pByPairs
 
 ggsave(filename = paste0(outputDir, "NewFigure4B.svg"), 
        plot = pByPairs, width = 15, height = 6)

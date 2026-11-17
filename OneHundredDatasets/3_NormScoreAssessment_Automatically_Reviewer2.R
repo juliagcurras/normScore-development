@@ -1,11 +1,11 @@
 ###############################################################################-
 
-############             Refinement using weights             #################-
+##########  Comparing normScore vs Reviewer 2 for 100 dataset   ###############-
 
 ###############################################################################-
 
 
-# Julia G Curras - 2026/05/25
+# Julia G Curras - 2026/03/02
 rm(list=ls())
 graphics.off()
 outDir <-  "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/ProcessedDatasets/"
@@ -28,33 +28,13 @@ setwd("C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets"
 dataGS <- readxl::read_excel(path = "_Assessment_R2.xlsx", sheet = "Main", col_names = T)[-1,]
 allFiles <- dataGS[, "ID", drop = T]
 
-## Apply normScore by dataset ####
-# Done at R1 script
-# normScoreList <- sapply(allFiles, function(i){
-#   cat("\t* ", i , "\n")
-#   output <- readRDS(file = paste0(outDir, i, ".rds"))
-#   return(normScore(
-#     normMatrixList = output$listaNorm,
-#     designMatrix = output$dm,
-#     dfRaw = output$data,
-#     corrected = F,
-#     onlyFinalRank = F,
-#     onlyDetailRanking = T
-#   )$detailRanking)
-# },simplify = F, USE.NAMES = T)
-# saveRDS(object = normScoreList, file = "AssessmentFiles/normScore_dataR2_All_Item0_x4_Item2_01.rds")
-
-
-
 ## Retrieve manual ranking GS ####
 ### BY ITEM  ####
 items <- paste0("Item", 1:6) # Sheet names = items from score
 resGS <- purrr::map_dfr(items, function(sh) {
   # load
   df <- readxl::read_excel(path = "_Assessment_R2.xlsx", sheet = sh) %>%
-    dplyr::select(-Number, -Final) #%>%
-  # slice(1:50) %>%
-  # filter(ID != "PXD005025")# Number col
+    dplyr::select(-Number, -Final) 
   
   # change format
   df %>%
@@ -88,8 +68,6 @@ if (!all(sapply(resGlobalGS_BEST, function(i) any(i %in% normalizationNames)))){
   stop("Algún nombre de normalization no coincide!!")
 }
 bestNormVec <- resGlobalGS_BEST
-Biostatech::getCatTable(df = as.data.frame(bestNormVec))$tablaFormato
-
 
 
 # Best normalizations
@@ -121,42 +99,8 @@ allResultsGS <- list(
   globalWorst = resGlobalGS_WORST
 )
 
-saveRDS(allResultsGS, file = "AssessmentFiles/results_Gold_Standard_R2.rds")
+saveRDS(allResultsGS, file = "AssessmentFiles/3_Reviewer2_results_100dataset.rds")
 
 
 
 
-
-#...........................................................................####
-# Assessment ####
-source(file = "3_AssessmentFunctions.R")
-
-# SAME INFO AS THE ONE INCLUDED AT 3_NormScoreAssesment.rmd file
-
-## All ####
-
-### Format data ####
-resAllGS <- readRDS(file = "AssessmentFiles/results_Gold_Standard.rds") # Manual ranking
-resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x4_Item2_01.rds") # NS results non corrected
-
-resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
-
-### By item ####
-summaryByItem <- resultsByItem(resNormScore = resAllNS$resByItem, 
-                                        resGS = resAllGS$byItem)
-summaryByItem$tabla %>% View
-
-### Global ####
-# Non corrected
-summaryGlobal <- resultsGlobal(resGlobalNS = resAllNS$resGlobal, 
-                               resGlobalGS_BEST = resAllGS$globalBest,
-                               resGlobalGS_BESTS = resAllGS$globalBests,
-                               resGlobalGS_WORST = resAllGS$globalWorst)
-summaryGlobal$Best$hitTable
-summaryGlobal$Bests$hitTable
-table(summaryGlobal$Worst$coverageRes)
-table(summaryGlobal$Worst$mrrRes)
-
-
-
-#

@@ -75,14 +75,13 @@ js <- c(
 
 
 ```{r}
-resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
-resAllGSR2 <- readRDS(file = paste0(inputDir, "results_Gold_Standard_R2.rds")) # Manual ranking
-resNSR2 <- readRDS(file = paste0(inputDir, "normScore_dataR2_All_Item0_x4_Item2_01.rds")) # Originales
+resAllGS <- readRDS(file = paste0(inputDir, "3_Reviewer1_results_100dataset.rds")) # Manual ranking
+resAllGSR2 <- readRDS(file = paste0(inputDir, "3_Reviewer2_results_100dataset.rds")) # Manual ranking
+resNS <- readRDS(file = paste0(inputDir, "3_normScore_results_100datasets.rds")) # Originales
 
 source(file = "3_AssessmentFunctions.R")
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
-resAllNSR2 <- formatNormScoreResults(finalList = resNSR2, item0 = T)
+resAllNSR2 <- resAllNS
 ```
 
 
@@ -168,7 +167,11 @@ This is the most **robust and interpretable** metric in the presence of ties.
 
 ## Results {.tabset}
 
-Results for unweighted normScore across all 100 datasets in the gold-standard collection. 
+Distribution of Kendall's tau, Spearman correlation and Pairwise accucary between: 
+
+* NormScore assessment vs Reviewer 1
+* NormScore assessment vs Reviewer 2
+* Reviewer 1 vs Reviewer 2
 
 ```{r include = F}
 ### By item ####
@@ -293,16 +296,7 @@ listPlots <- listPlots[paste0("p", 1:9)]
 
 
 ```{r fig.width=12, fig.height=12}
-
 ggpubr::ggarrange(plotlist = listPlots, ncol = 3, nrow = 3)
-
-# cowplot::plot_grid(
-#     cowplot::plot_grid(p1+theme(legend.position = "none"),
-#                        p2+theme(legend.position = "none"),
-#                        ncol = 2, nrow = 1),
-#     cowplot::plot_grid(NULL, p3, NULL, rel_widths = c(0.5, 1, 0.5), nrow = 1),
-#     nrow = 2,
-#     rel_heights = c(1, 1))
 ```
 
 
@@ -362,10 +356,6 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F,
 
 
 
-
-
---- 
-
 ---
 
 # **Overall evaluation**
@@ -376,6 +366,25 @@ The gold standard defines two sets of methods:
 
 * Recommended normalization methods (best)
 * Normalization methods to avoid (worst)
+
+## Jaccard index
+
+### Definition
+
+The Jaccard index measures the overlap between two sets, $A$ and $B$, as the proportion of methods in either set that appear in both:
+
+$$
+J(A, B) = \frac{|A \cap B|}{|A \cup B|}.
+$$
+
+### What it assesses
+
+It measures agreement between normScore and the reviewer on which normalization methods to recommend or exclude. It uses set membership, so the order of methods within each set does not affect the result.
+
+### Interpretation
+
+Values range from 0 (no overlap) to 1 (identical sets). For example, a value of 0.5 means that half of the methods selected by either assessment were selected by both. If both sets are empty, the formula is undefined and requires an explicit convention.
+
 
 ## Hit@k (Top)
 
@@ -643,12 +652,6 @@ pC <- ggplot(dfJaccard, aes(x = Comparison, y = `Jaccard index`,
       size = 1.8,
       alpha = 0.65
     ), dpi = 400) +
-  # ggpubr::stat_compare_means(
-  #   comparisons = comparisonsList,
-  #   method = "wilcox.test",
-  #   paired = TRUE,
-  #   label = "p.signif"
-  # ) +
   ggpubr::stat_pvalue_manual(
     testsJaccard,
     label = "p.adj.signif",
@@ -710,9 +713,7 @@ ggplot(dfJaccardCount, aes(x = factor(`Jaccard index`), y = n, fill = Comparison
     linewidth = 0.8),
     strip.placement = "outside",
     legend.position = "none",
-    plot.title = element_text(face = "bold", hjust = 0.5) 
-    # axis.line = ggplot2::element_line(linewidth = 0.5, colour = "black"),
-    # axis.ticks = ggplot2::element_line(linewidth = 0.5, colour = "black")
+    plot.title = element_text(face = "bold", hjust = 0.5)
   )
 ```
 
@@ -730,10 +731,6 @@ ggplot(
     pattern = Comparison,
   )
 ) +
-  # geom_col(
-  #   position = position_dodge(width = 0.8),
-  #   width = 0.7
-  # ) +
     geom_col_pattern(
     position = position_dodge(width = 0.8),
     width = 0.7,
@@ -850,7 +847,7 @@ In this model,
 ```{r include=F}
 ## Data index 
 dfIndex <- readxl::read_xlsx( 
-  path = "C:/Users/julia/Documents/GitHub/proteomicsNormalizationStudy/Data/_Index.xlsx", 
+  path = "_Index.xlsx", 
   sheet = "In", 
   col_names = T)
 
@@ -1075,7 +1072,7 @@ graficosCovariables <- sapply(allOut, "[[", 1, simplify = F)
 allOut[["Etiquetas"]] <- etiquetaP
 # saveRDS(
 #   object = allOut, # comentar grafico = p
-#   file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/NormScoreAssesment_models_Covars.rds")
+#   file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/3_NormScoreAssesment_models_Covars.rds")
 ```
 
 The figure below shows the mean Jaccard index for each comparison at each covariate level, along with the adjusted p-value for the corresponding comparison-by-covariate interaction.
@@ -1130,7 +1127,6 @@ Biostatech::getCatTable(df$Position)$tablaFormato
 
 ##### R2 vs normScore {-}
 
-<!-- La posición más baja de la mejor normalización del grupo determinado en el GS.  -->
 
 ```{r}
 df <- data.frame(Pos = summaryGlobalR2$Bests$mrrResBottom)
@@ -1146,26 +1142,6 @@ Biostatech::getCatTable(df$Position)$tablaFormato
 
 
 ### Worst methods 
-
-Only R1 provide excluded methods. 
-
-<!-- #### Bottom Coverage  - excluded methods {-} -->
-
-<!-- ```{r} -->
-<!-- df <- data.frame(Prop = summaryGlobal$Worst$coverageRes) -->
-<!-- df$PropGroups <- ifelse(is.na(df$Prop), NA,  -->
-<!--                         ifelse(df$Prop < 0.5, "< 0.5", -->
-<!--                                ifelse(df$Prop<0.75, "0.5-0.75",  -->
-<!--                                       ifelse(df$Prop < 1, "0.75-1",  -->
-<!--                                              ifelse(df$Prop == 1, "1", "Error") -->
-<!--                                              ) -->
-<!--                                       ) -->
-<!--                                ) -->
-<!--                         ) -->
-<!-- colnames(df) <- c("Proportion", "Proportion by groups") -->
-<!-- df <- df[, 2:1] -->
-<!-- Biostatech::getCatTable(df)$tablaFormato -->
-<!-- ``` -->
 
 #### MRR bottom - excluded methods {.tabset}
 
@@ -1197,7 +1173,6 @@ Biostatech::getCatTable(dfW$Position)$tablaFormato
 
 ##### R1 vs normScore {-}
 
-<!-- Posición más alta de la normalización del grupo de excluidas por cada dataset.  -->
 
 ```{r}
 dfW <- data.frame(Pos = summaryGlobal$Worst$mrrResTop)
@@ -1211,7 +1186,6 @@ Biostatech::getCatTable(dfW$Position)$tablaFormato
 
 ##### R2 vs normScore {-}
 
-Posición más alta de la normalización del grupo de excluidas por cada dataset. 
 
 ```{r}
 dfW <- data.frame(Pos = summaryGlobalR2$Worst$mrrResTop)

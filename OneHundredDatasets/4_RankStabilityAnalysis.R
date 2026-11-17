@@ -155,11 +155,11 @@ compareNSvsLOO <- function(
 
 #...........................................................................####
 # Loading data ####
-dataGS <- readxl::read_excel(path = "_Assessment.xlsx", sheet = "Main", col_names = T)[-1,]
+dataGS <- readxl::read_excel(path = "_Assessment_R1.xlsx", sheet = "Main", col_names = T)[-1,]
 allFiles <- dataGS[, "ID", drop = T]
 
 # normScore results over 100 dataset - 8 normalization methods
-resNS <- readRDS(file = "AssessmentFiles/normScore_dataGS_All_Item0_x4_Item2_01.rds")
+resNS <- readRDS(file = "AssessmentFiles/3_normScore_results_100datasets.rds")
 rankingNS <- lapply(resNS, function(df){
   scoreDF_norm <- df |> dplyr::arrange(TotalCorrected)
   finalRank <- stats::setNames(scoreDF_norm$TotalCorrected, rownames(scoreDF_norm))
@@ -203,10 +203,10 @@ nsListLOO <- lapply(allNorms, function(normToRemove){
 })
 names(nsListLOO) <- allNorms
 
-saveRDS(object = nsListLOO, file = "AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01.rds")
+saveRDS(object = nsListLOO, file = "AssessmentFiles/4_rankStability_LOO_normalization.rds")
 
 nsListLOO <- readRDS(
-  file = "AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01.rds")
+  file = "AssessmentFiles/4_rankStability_LOO_normalization.rds")
 
 
 ## Just ranking by dataset ####
@@ -225,7 +225,7 @@ res <- lapply(names(rankingNsLoo), function(i)
   compareNSvsLOO(rankNS = rankingNS, rankLOO = rankingNsLoo[[i]], 
                  normalization = i, maxColor = "#8C2981FF", minColor = "grey100"))
 names(res) <- names(rankingNsLoo)
-saveRDS(object = res, file = "AssessmentFiles/rankStability_LOO_normalization_Item0_x4_Item2_01_plots.rds")
+saveRDS(object = res, file = "AssessmentFiles/4_rankStability_LOO_normalization_plots.rds")
 
 
 pmatrix <- ggpubr::ggarrange(plotlist = sapply(res, "[[", 4), nrow = 2, ncol = 4, common.legend = TRUE)
@@ -330,8 +330,8 @@ listPairsLOO <- apply(dfPairs, 1, function(normToRemove){
 dfPairs$Name <- paste0(dfPairs$V1, "_", dfPairs$V2)
 names(listPairsLOO) <- dfPairs$Name
 
-saveRDS(object = listPairsLOO, file = "AssessmentFiles/rankStability_LOO_Pairs_normalization_Item0_x4_Item2_01.rds")
-listPairsLOO <- readRDS(file = "AssessmentFiles/rankStability_LOO_Pairs_normalization_Item0_x4_Item2_01.rds")
+saveRDS(object = listPairsLOO, file = "AssessmentFiles/4_rankStability_LOO_Pairs_normalization.rds")
+listPairsLOO <- readRDS(file = "AssessmentFiles/4_rankStability_LOO_Pairs_normalization.rds")
 
 ## Just ranking by dataset ####
 rankingNsPairsLoo <- lapply(listPairsLOO, function(resNsLOO){

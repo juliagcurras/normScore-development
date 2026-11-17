@@ -66,11 +66,11 @@ source(file = "3_AssessmentFunctions.R")
 #...........................................................................####
 # Datasets ####
 ## Gold Standard results ####
-resAllGS <- readRDS(file = paste0(inputDir, "results_Gold_Standard.rds")) # Manual ranking
+resAllGS <- readRDS(file = paste0(inputDir, "3_Reviewer1_results_100dataset.rds")) # Manual ranking
 
 ## NormScore final results ####
 # Item0x3 and Item2 scaledx0.1
-resNS <- readRDS(file = paste0(inputDir, "normScore_dataGS_All_Item0_x4_Item2_01.rds")) # Originales
+resNS <- readRDS(file = paste0(inputDir, "3_normScore_results_100datasets.rds")) # Originales
 resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
 
 

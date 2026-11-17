@@ -1,5 +1,5 @@
 ---
-title: "Gold Standard - Normalization Assessment"
+title: "100 datasets description and normScore result"
 author: 
 - name: "Julia García Currás"
   affiliation: "julia.garcia@biostatech.com"
@@ -127,7 +127,7 @@ DT::datatable(df, extensions = "Buttons", rownames = F, escape = F, filter = "to
 
 <br><br>
 
-## Descriptivo variables categóricas {.tabset}
+## Categorical variables: description {.tabset}
 
 ```{r fig.height=8}
 ## Automáticamente:
@@ -138,7 +138,6 @@ categoricas <- df %>%
            `Tissue (summary)`, `Cell culture`, `N groups`)
 
 
-printTabTitle("Análisis descriptivo de variables categóricas.")
 getCatTable(categoricas)$tablaFormato
 
 #--- Gráficos
@@ -167,7 +166,6 @@ for (i in 1:ncol(categoricas)) {
 </div>
 
 ")
-  printFigTitle(paste0("Representación gráfica de la variable ", ifelse(Hmisc::label(categoricas[i]) == "", colnames(categoricas)[i], Hmisc::label(categoricas[i])), "."))
   cat("
 
 ")
@@ -185,14 +183,13 @@ htmltools::tagList(graficos[1:2]) # Necesario para iniciar la impresión de los 
 
 
 
-## Descriptivo variables cuantitativas {.tabset}
+## Quantitative variables: description {.tabset}
 
 ```{r}
 
 ## Seleccionar manualmente o bien automáticamente usando:
 cuantitativas <- df %>% dplyr::select(`Sample size`, `N groups`)
 
-printTabTitle("Análisis descriptivo de variables numéricas.")
 getNumTable(cuantitativas)$tablaFormato
 
 #--- Gráficos
@@ -237,16 +234,8 @@ for (i in 1:ncol(cuantitativas)) {
   print(htmltools::tagList(plotly::subplot(graficos[i][[1]]$grafico,
     graficosHist[i][[1]]$grafico,
     titleY = TRUE, shareX = TRUE
-  ))) #%>% layout(title = "")))
-
-  printFigTitle(paste0(
-    "Representación gráfica de la variable ",
-    ifelse(Hmisc::label(cuantitativas[i]) == "",
-      colnames(cuantitativas)[i],
-      Hmisc::label(cuantitativas[i])
-    ),
-    " en forma de diagrama de cajas y de histograma."
-  ))
+  )))
+  
   cat("
 ")
 }
@@ -261,12 +250,200 @@ printOutlierID(cuantitativas, varID = NULL)
 ```
 
 
-## Assessment results
+
+
+# Assessment results
+
+## NormScore
+
+```{r}
+resNS <- readRDS(file = "AssessmentFiles/3_normScore_results_100datasets.rds")
+source(file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/3_AssessmentFunctions.R")
+resAllNS <- formatNormScoreResults(finalList = resNS, item0 = T)
+resAllNS$resByItem <- resAllNS$resByItem %>%
+  group_by(ID, Item) %>%
+  mutate(Ranking = min_rank(Ranking)) %>%
+  ungroup() #%>%
+
+```
+
+### By item 
+
+#### Top 1 normalizations
+
+```{r}
+dfItem <- resAllNS$resByItem
+
+tab <- dfItem %>%
+  filter(Ranking == 1) %>%
+  count(Item, Normalization, name = "nBest") %>%
+  tidyr::pivot_wider(
+    names_from = Normalization,
+    values_from = nBest,
+    values_fill = 0
+  ) %>%
+  arrange(Item)
+tab$Item <- NULL
+rownames(tab) <- paste0("Item ", 1:6)
+
+
+pheatmap::pheatmap(mat = (tab), cluster_rows = F, cluster_cols = T, 
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 9, name = "OrRd"))(100))
+```
+
+#### Worst normalizations
+
+```{r}
+tab <- dfItem %>%
+  group_by(ID, Item) %>%
+  filter(Ranking == max(Ranking, na.rm = TRUE)) %>%
+  ungroup() %>%
+  count(Item, Normalization, name = "nWorst") %>%
+  complete(Item, Normalization, fill = list(nWorst = 0)) %>%
+  pivot_wider(
+    names_from = Normalization,
+    values_from = nWorst
+  ) %>%
+  arrange(Item)
+tab$Item <- NULL
+rownames(tab) <- paste0("Item ", 1:6)
+
+pheatmap::pheatmap(mat = tab, cluster_rows = F, cluster_cols = T, 
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 9, name = "Blues"))(100))
+```
+
+
+
+### Global
+
+```{r}
+metodos <- unique(unlist(resAllNS$resGlobal))
+
+matRanking <- t(sapply(resAllNS$resGlobal, function(x) {
+  match(metodos, x)
+}))
+
+colnames(matRanking) <- metodos
+rownames(matRanking) <- names(resAllNS$resGlobal)
+
+matRanking <- 9-matRanking
+
+pheatmap::pheatmap(
+  mat = matRanking, 
+  cluster_cols = T,  
+  cluster_rows = T,
+  show_rownames  = F,
+  fontsize = 14,
+  fontsize_row = 16,
+  fontsize_col = 14,
+  border_color = NA, 
+  angle_col = 45,
+  color = RColorBrewer::brewer.pal(n = 9, name = "YlOrRd"), # Average -->
+  breaks = 0:8,
+  legend_breaks = 1:8,
+  legend_labels = as.character(8:1)
+)
+```
+
+
+
+
+
+
+
+## Reviewer 1
+
+```{r}
+dfAssess <- readxl::read_xlsx(path = "_Assessment_R1.xlsx", sheet = 1, col_names = T)
+resAllGS <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/3_Reviewer1_results_100dataset.rds")
+```
+
+### By item 
+
+#### Top 1 normalizations
+
+```{r}
+dfItem <- resAllGS$byItem
+
+tab <- dfItem %>%
+  filter(RankGS == 1) %>%
+  count(Item, Normalization, name = "nBest") %>%
+  tidyr::pivot_wider(
+    names_from = Normalization,
+    values_from = nBest,
+    values_fill = 0
+  ) %>%
+  arrange(Item)
+tab$Item <- NULL
+rownames(tab) <- paste0("Item ", 1:6)
+
+
+pheatmap::pheatmap(mat = (tab), cluster_rows = F, cluster_cols = T, 
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 9, name = "OrRd"))(100))
+```
+
+
+#### Worst normalizations
+
+```{r}
+tab <- dfItem %>%
+  group_by(ID, Item) %>%
+  filter(RankGS == max(RankGS, na.rm = TRUE)) %>%
+  ungroup() %>%
+  count(Item, Normalization, name = "nWorst") %>%
+  complete(Item, Normalization, fill = list(nWorst = 0)) %>%
+  pivot_wider(
+    names_from = Normalization,
+    values_from = nWorst
+  ) %>%
+  arrange(Item)
+tab$Item <- NULL
+rownames(tab) <- paste0("Item ", 1:6)
+
+pheatmap::pheatmap(mat = tab, cluster_rows = F, cluster_cols = T, 
+                  color = colorRampPalette(RColorBrewer::brewer.pal(n = 9, name = "Blues"))(100))
+```
+
+
+
+
+### Global
+
+#### Best (unique)
+
+```{r}
+dfBest <- data.frame(
+  ID =  names(resAllGS$globalBest),
+  Normalization = sapply(resAllGS$globalBest, "[[", 1))
+
+Biostatech::getCatTable(dfBest$Normalization)$tablaFormato
+```
+
+#### Bests
+
+```{r}
+dfBests <- data.frame(Normalizations  = unname(unlist(resAllGS$globalBests)))
+
+Biostatech::getCatTable(dfBests$Normalizations)$tablaFormato
+```
+
+#### Worst
+
+```{r}
+dfWorst <- data.frame(Normalizations  = unname(unlist(resAllGS$globalWorst)))
+
+Biostatech::getCatTable(dfWorst$Normalizations)$tablaFormato
+```
+
+
+
+
+## Reviewer 2
 
 
 ```{r}
-dfAssess <- readxl::read_xlsx(path = "_Assessment.xlsx", sheet = 1, col_names = T)
-resAllGS <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/results_Gold_Standard.rds")
+dfAssess <- readxl::read_xlsx(path = "_Assessment_R2.xlsx", sheet = 1, col_names = T)
+resAllGS <- readRDS(file = "C:/Users/julia/Documents/GitHub/normScore-development/OneHundredDatasets/AssessmentFiles/3_Reviewer2_results_100dataset.rds")
 ```
 
 ### By item 
