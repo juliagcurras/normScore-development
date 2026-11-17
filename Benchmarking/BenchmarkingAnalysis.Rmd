@@ -293,8 +293,6 @@ And for yeast proteins, FC  = 1 for all comparisons. MaxQuant data was used to p
 
 Again, after preprocesing, AUC and MAE were estimated considering the expected and estimated FC, as well as the AUC for significant (UPS1) and non significant proteins. NormScore was also applied to rank the normalizations based on variability criterias, and kendall correlations were estimated to compared gold standard metrics (MAE, AUC) vs NS ranking. 
 
-> calcular diferencias entre mejores métodos con MAE?
-
 For the PXD001819 benchmark under the FC = 10 condition, normScore showed moderate positive agreement with both external benchmark metrics, with Kendall’s τ ≈ 0.43 for both MAE- and AUC-based rankings. Again, the two benchmark-derived criteria did not yield identical rankings, with a Kendall correlation of approximately 0.71 between MAE and AUC. This supports the notion that normalization performance cannot necessarily be represented by a single unambiguous ordering, even in controlled benchmarking data.
 
 The internal structure of this dataset may contribute to this disagreement. In particular, normalization rankings obtained when considering the UPS protein subset differed substantially from rankings based on the remaining proteins, including inverse associations in some comparisons. This suggests that the behavior of the artificially varying protein subset can influence global performance metrics differently from the predominantly stable background proteome. This observation should nevertheless be interpreted cautiously because the altered protein subset represents a smaller fraction of the available proteins and therefore provides a less precise basis for method comparison.
